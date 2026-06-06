@@ -1,0 +1,259 @@
+Create a modern and professional web-based tourism management system UI/UX design in Figma for a capstone project titled:
+
+“VistaBalayan: A Web-Based Tourism Data Analytics and Decision Support System for Visitor Monitoring in Balayan, Batangas”
+
+Design Style:
+
+* Clean, modern, minimal, and professional government-style dashboard
+* White background with grayscale, black, and dark gray color palette
+* Use subtle blue accents for buttons, charts, and highlights
+* Rounded cards with soft shadows
+* Responsive desktop-first layout
+* Consistent spacing and typography
+* Use modern sans-serif fonts like Inter or Poppins
+* Organized and easy-to-navigate interface
+* Focus on readability and data visualization
+* Tourism and analytics inspired aesthetic
+* Avoid overly colorful or playful designs
+
+System Roles:
+
+1. Municipal Tourism Officer
+2. Establishment Staff
+
+Role Description:
+
+* Municipal Tourism Officer manages tourism data, monitors submissions, reviews reports, analyzes tourism trends, and accesses analytics dashboards and AI insights.
+* Establishment Staff are responsible for encoding and submitting visitor and accommodation reports to the system.
+
+System Modules to Design:
+
+1. LOGIN PAGE
+
+* Government/tourism inspired login page
+* Municipality of Balayan branding
+* Left side hero section with tourism image/banner
+* Right side login form
+* Username/email field
+* Password field
+* Login button
+* “Forgot Password” link
+* Clean modern layout
+
+2. MUNICIPAL TOURISM OFFICER DASHBOARD
+   Create a professional analytics dashboard containing:
+
+* Sidebar navigation
+* Top navbar with profile and notifications
+* KPI cards:
+
+  * Total Visitors
+  * Total Establishments
+  * Monthly Tourist Arrivals
+  * Occupancy Rate
+* Interactive charts:
+
+  * Monthly visitor trends
+  * Seasonal patterns
+  * Tourist establishment performance
+  * Visitor demographics
+* Recent submissions table
+* Recent anomaly detections
+* Quick action buttons
+* Tourism analytics widgets
+* Report summary cards
+
+Sidebar Menu:
+
+* Dashboard
+* Establishments
+* Visitor Monitoring
+* Accommodation Monitoring
+* Reports
+* Analytics
+* AI Insights
+* User Management
+* Settings
+* Logout
+
+3. ESTABLISHMENT STAFF DASHBOARD
+   Design a simpler dashboard focused on report submissions.
+
+Features:
+
+* Welcome panel
+* Submission status cards
+* Recent submitted reports
+* Notifications and reminders
+* Quick action buttons
+
+Sidebar Menu:
+
+* Dashboard
+* Submit Visitor Report
+* Submit Accommodation Report
+* Submission History
+* Profile
+* Logout
+
+4. VISITOR MONITORING FORM (FOR ESTABLISHMENTS WITHOUT ROOMS)
+   Create a clean data entry form based on the tourism visitor monitoring form.
+
+Fields:
+
+* Establishment Name
+* Month and Year
+* Date
+* Guest/Group Name
+* Total Male
+* Total Female
+* Total Guests
+* Residence Type
+
+  * Batangas Resident
+  * Outside Batangas
+  * Foreign
+* Place of Residence
+* Municipality/Province
+* Add Row button
+* Submit Report button
+* Save Draft button
+
+Design Requirements:
+
+* Table-style encoding layout
+* Spreadsheet-inspired structure
+* Professional government reporting appearance
+* Easy-to-read rows and columns
+* Sticky table headers
+
+5. ACCOMMODATION MONITORING FORM (FOR ESTABLISHMENTS WITH ROOMS)
+   Create a separate accommodation reporting form.
+
+Fields:
+
+* Establishment Name
+* Month and Year
+* Total Number of Rooms
+* Room Identification Codes
+* Daily Room Occupancy
+* Guest Check-ins
+* Guest Nights
+* Occupied Rooms
+
+Computed Analytics Section:
+
+* Average Guest Night
+* Average Room Occupancy Rate
+* Average Guest Per Room
+
+Features:
+
+* Dynamic room columns
+* Monthly occupancy table
+* Auto-computed statistics panel
+* Spreadsheet-like government reporting layout
+
+6. REPORTS PAGE
+   Design a tourism reports management page containing:
+
+* Filters:
+
+  * Weekly
+  * Monthly
+  * Quarterly
+  * Yearly
+* Export options:
+
+  * PDF
+  * Excel
+  * Print
+* Charts and summaries
+* Downloadable report cards
+* Data tables
+* Search and filtering tools
+
+7. ANALYTICS DASHBOARD
+   Create a dedicated tourism analytics page with:
+
+* Visitor trend charts
+* Seasonal tourism analysis
+* High-performing destinations
+* Underperforming destinations
+* Occupancy analytics
+* Comparative charts
+* Near real-time tourism monitoring widgets
+
+8. AI INSIGHTS PAGE
+   Design an AI-powered anomaly detection and insights page.
+
+Features:
+
+* AI anomaly alerts
+* Suspicious or inconsistent tourism records
+* Unusual visitor spikes and drops
+* Recommendation cards
+* Automated tourism insights
+* Risk level indicators
+* Data quality monitoring
+
+9. ESTABLISHMENT MANAGEMENT PAGE
+   Design establishment management interface:
+
+* Establishment table
+* Add/Edit/Delete establishment
+* Search functionality
+* Filters
+* Status indicators
+* Pagination
+
+10. USER MANAGEMENT PAGE
+    Design user management interface for the Municipal Tourism Officer:
+
+* User table
+* Role management
+* Add/Edit/Delete users
+* Account status indicators
+* Search and filters
+
+11. SETTINGS PAGE
+    Include:
+
+* Profile settings
+* Security settings
+* Password management
+* Notification settings
+* System preferences
+
+12. RESPONSIVE DESIGN
+    Also create:
+
+* Tablet-responsive layouts
+* Mobile-responsive versions
+* Collapsible sidebar
+* Responsive tables and charts
+
+Important UI/UX Requirements:
+
+* Use reusable components
+* Create clean card-based layouts
+* Use simple modern icons
+* Add hover states and active states
+* Use modern minimal charts
+* Design tables similar to government reporting systems
+* Prioritize clarity, usability, and professionalism
+* Maintain consistent spacing and alignment
+* Avoid cluttered layouts
+
+Additional Requirements:
+
+* Include loading states
+* Include empty states
+* Include confirmation modals
+* Include notification toasts
+* Include success/error validation states
+* Include breadcrumb navigation
+* Include dashboard widgets
+
+Design Goal:
+The overall interface should look like a professional Tourism Data Analytics and Decision Support System used by a local government unit, combining modern analytics dashboards with formal tourism reporting interfaces.
