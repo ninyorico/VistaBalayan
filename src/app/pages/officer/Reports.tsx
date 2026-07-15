@@ -44,7 +44,7 @@ interface Submission {
 }
 
 export default function Reports() {
-  const [filterType, setFilterType] = useState<"year" | "quarter" | "month" | "date">("month");
+  const [filterType, setFilterType] = useState<"year" | "quarter" | "month" | "week">("month");
   const [selectedYear, setSelectedYear] = useState(getCurrentYear());
   const [selectedQuarter, setSelectedQuarter] = useState("1");
   const [selectedMonth, setSelectedMonth] = useState("");
@@ -145,10 +145,17 @@ export default function Reports() {
   };
 
   const getReportRange = () => {
-    if (filterType === "date" && selectedDate) {
-      return { startDate: selectedDate, endDate: selectedDate };
+    if (filterType === "week" && selectedDate) {
+      const start = new Date(selectedDate);
+      const day = start.getDay();
+      start.setDate(start.getDate() - day);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return {
+        startDate: start.toISOString().slice(0, 10),
+        endDate: end.toISOString().slice(0, 10),
+      };
     }
-
 
     if (filterType === "month" && selectedYear && selectedMonth) {
       const monthNum = months.indexOf(selectedMonth) + 1;
@@ -178,7 +185,7 @@ export default function Reports() {
   };
 
   const getChartPeriod = (date: Date, reportDate: string) => {
-    if (filterType === "date") return reportDate;
+    if (filterType === "week") return date.toLocaleDateString("default", { weekday: "short" });
     if (filterType === "month") return `Week ${Math.ceil(date.getDate() / 7)}`;
     if (filterType === "quarter") return date.toLocaleString("default", { month: "short" });
     return date.toLocaleString("default", { month: "short" });
@@ -330,7 +337,10 @@ export default function Reports() {
 
   // Get filter label for display
   const getFilterLabel = () => {
-    if (filterType === "date" && selectedDate) return `Daily Report: ${selectedDate}`;
+    if (filterType === "week" && selectedDate) {
+      const { startDate, endDate } = getReportRange();
+      return `Weekly Report: ${startDate} to ${endDate}`;
+    }
     if (filterType === "month" && selectedYear && selectedMonth) {
       return `Monthly Report: ${selectedMonth} ${selectedYear}`;
     }
@@ -376,14 +386,14 @@ export default function Reports() {
         <div className="flex flex-wrap items-center gap-4">
           {/* Filter Type Toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-            {["year", "quarter", "month", "date"].map((type) => (
+            {["year", "quarter", "month", "week"].map((type) => (
               <button
                 key={type}
                 onClick={() => {
                   setFilterType(type as any);
                   if (type === "year") { setSelectedMonth(""); setSelectedQuarter("1"); }
                   if (type === "quarter") setSelectedMonth("");
-                  if (type === "date") { setSelectedYear(getCurrentYear()); setSelectedMonth(""); }
+                  if (type === "week") { setSelectedYear(getCurrentYear()); setSelectedMonth(""); }
                 }}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   filterType === type
@@ -397,7 +407,7 @@ export default function Reports() {
           </div>
 
           {/* Year Dropdown */}
-          {filterType !== "date" && (
+          {filterType !== "week" && (
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
@@ -437,14 +447,14 @@ export default function Reports() {
             </select>
           )}
 
-          {/* Date Picker */}
-          {filterType === "date" && (
+          {/* Week Picker */}
+          {filterType === "week" && (
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
-              title="Select report date"
+              title="Select any date within the week"
             />
           )}
 
