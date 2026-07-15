@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router";
 import Login from "./pages/Login";
 import OfficerLayout from "./layouts/OfficerLayout";
 import StaffLayout from "./layouts/StaffLayout";
-// import { ProtectedRoute } from "./components/ProtectedRoute"; // <-- commented out for now
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import OfficerDashboard from "./pages/officer/Dashboard";
 import Establishments from "./pages/officer/Establishments";
 import VisitorMonitoring from "./pages/officer/VisitorMonitoring";
@@ -42,7 +42,11 @@ export const router = createBrowserRouter([
   // Officer Routes (Admin System)
   {
     path: "/officer",
-    Component: OfficerLayout,
+    element: (
+      <ProtectedRoute allowedRoles={["municipal_officer"]}>
+        <OfficerLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, Component: OfficerDashboard },
       { path: "establishments", Component: Establishments },
@@ -58,7 +62,11 @@ export const router = createBrowserRouter([
   // Staff Routes (Admin System)
   {
     path: "/staff",
-    Component: StaffLayout,
+    element: (
+      <ProtectedRoute allowedRoles={["establishment_staff"]}>
+        <StaffLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, Component: StaffDashboard },
       { path: "submit-visitor-report", Component: SubmitVisitorReport },
