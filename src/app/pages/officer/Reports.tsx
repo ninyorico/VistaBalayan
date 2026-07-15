@@ -39,8 +39,9 @@ interface Submission {
 }
 
 export default function Reports() {
-  const [filterType, setFilterType] = useState<"year" | "month" | "date">("month");
+  const [filterType, setFilterType] = useState<"year" | "quarter" | "month" | "week" | "date">("month");
   const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedQuarter, setSelectedQuarter] = useState("1");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -138,28 +139,60 @@ export default function Reports() {
     setLoading(false);
   };
 
-  const fetchChartData = async () => {
-    let startDate = "";
-    let endDate = "";
-    
-    // Build date range based on selected filter type
+  const getReportRange = () => {
     if (filterType === "date" && selectedDate) {
-      startDate = selectedDate;
-      endDate = selectedDate;
-    } else if (filterType === "month" && selectedYear && selectedMonth) {
-      const monthNum = months.indexOf(selectedMonth) + 1;
-      const monthStr = String(monthNum).padStart(2, '0');
-      const lastDay = new Date(parseInt(selectedYear), monthNum, 0).getDate();
-      startDate = `${selectedYear}-${monthStr}-01`;
-      endDate = `${selectedYear}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
-    } else if (filterType === "year" && selectedYear) {
-      startDate = `${selectedYear}-01-01`;
-      endDate = `${selectedYear}-12-31`;
-    } else {
-      // Default: show all 2025 data
-      startDate = "2025-01-01";
-      endDate = "2025-12-31";
+      return { startDate: selectedDate, endDate: selectedDate };
     }
+
+    if (filterType === "week" && selectedDate) {
+      const start = new Date(selectedDate);
+      const day = start.getDay();
+      start.setDate(start.getDate() - day);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return {
+        startDate: start.toISOString().slice(0, 10),
+        endDate: end.toISOString().slice(0, 10),
+      };
+    }
+
+    if (filterType === "month" && selectedYear && selectedMonth) {
+      const monthNum = months.indexOf(selectedMonth) + 1;
+      const monthStr = String(monthNum).padStart(2, "0");
+      const lastDay = new Date(parseInt(selectedYear), monthNum, 0).getDate();
+      return {
+        startDate: `${selectedYear}-${monthStr}-01`,
+        endDate: `${selectedYear}-${monthStr}-${String(lastDay).padStart(2, "0")}`,
+      };
+    }
+
+    if (filterType === "quarter" && selectedYear && selectedQuarter) {
+      const quarter = parseInt(selectedQuarter);
+      const startMonth = (quarter - 1) * 3 + 1;
+      const endMonth = startMonth + 2;
+      const endDay = new Date(parseInt(selectedYear), endMonth, 0).getDate();
+      return {
+        startDate: `${selectedYear}-${String(startMonth).padStart(2, "0")}-01`,
+        endDate: `${selectedYear}-${String(endMonth).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`,
+      };
+    }
+
+    return {
+      startDate: `${selectedYear || "2025"}-01-01`,
+      endDate: `${selectedYear || "2025"}-12-31`,
+    };
+  };
+
+  const getChartPeriod = (date: Date, reportDate: string) => {
+    if (filterType === "date") return reportDate;
+    if (filterType === "week") return date.toLocaleDateString("default", { weekday: "short" });
+    if (filterType === "month") return `Week ${Math.ceil(date.getDate() / 7)}`;
+    if (filterType === "quarter") return date.toLocaleString("default", { month: "short" });
+    return date.toLocaleString("default", { month: "short" });
+  };
+
+  const fetchChartData = async () => {
+    const { startDate, endDate } = getReportRange();
 
     const { data } = await supabase
       .from("visitor_reports")
@@ -173,16 +206,7 @@ export default function Reports() {
       const grouped: Record<string, number> = {};
       data.forEach((item: any) => {
         const date = new Date(item.report_date);
-        let key = "";
-        
-        if (filterType === "date") {
-          key = item.report_date;
-        } else if (filterType === "month") {
-          const week = Math.ceil(date.getDate() / 7);
-          key = `Week ${week}`;
-        } else {
-          key = date.toLocaleString('default', { month: 'short' });
-        }
+        const key = getChartPeriod(date, item.report_date);
         grouped[key] = (grouped[key] || 0) + (item.total_guests || 0);
       });
 
@@ -201,7 +225,7 @@ export default function Reports() {
         previousTotal,
         difference,
         percentageChange,
-        isIncrease: difference > 0,
+        isIncrease: difference >= 0,
       });
     } else {
       setChartData([]);
@@ -221,7 +245,7 @@ export default function Reports() {
 
   useEffect(() => {
     fetchChartData();
-  }, [filterType, selectedYear, selectedMonth, selectedDate]);
+  }, [filterType, selectedYear, selectedQuarter, selectedMonth, selectedDate]);
 
   const handleExport = () => {
     downloadCsv(
@@ -313,11 +337,18 @@ export default function Reports() {
 
   // Get filter label for display
   const getFilterLabel = () => {
-    if (filterType === "date" && selectedDate) return `Date: ${selectedDate}`;
-    if (filterType === "month" && selectedYear && selectedMonth) {
-      return `${selectedMonth} ${selectedYear}`;
+    if (filterType === "date" && selectedDate) return `Daily Report: ${selectedDate}`;
+    if (filterType === "week" && selectedDate) {
+      const { startDate, endDate } = getReportRange();
+      return `Weekly Report: ${startDate} to ${endDate}`;
     }
-    if (filterType === "year" && selectedYear) return `Year: ${selectedYear}`;
+    if (filterType === "month" && selectedYear && selectedMonth) {
+      return `Monthly Report: ${selectedMonth} ${selectedYear}`;
+    }
+    if (filterType === "quarter" && selectedYear && selectedQuarter) {
+      return `Quarterly Report: Q${selectedQuarter} ${selectedYear}`;
+    }
+    if (filterType === "year" && selectedYear) return `Yearly Report: ${selectedYear}`;
     return "All Data";
   };
 
@@ -325,25 +356,24 @@ export default function Reports() {
   const filteredReports = submissions.filter((report) => {
     const matchesSearch = report.establishment.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === "all" || report.status.toLowerCase() === filterStatus.toLowerCase();
-    
-    let matchesDate = true;
-    if (filterType === "date" && selectedDate) {
-      matchesDate = report.reportDate === selectedDate;
-    } else if (filterType === "month" && selectedYear && selectedMonth) {
-      const monthNum = months.indexOf(selectedMonth) + 1;
-      const monthStr = String(monthNum).padStart(2, '0');
-      matchesDate = report.reportDate.startsWith(`${selectedYear}-${monthStr}`);
-    } else if (filterType === "year" && selectedYear) {
-      matchesDate = report.reportDate.startsWith(selectedYear);
-    }
+    const { startDate, endDate } = getReportRange();
+    const matchesDate = report.reportDate >= startDate && report.reportDate <= endDate;
     
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const totalSubmissions = submissions.length;
-  const pendingCount = submissions.filter((s) => s.status === "pending").length;
-  const approvedCount = submissions.filter((s) => s.status === "approved").length;
-  const rejectedCount = submissions.filter((s) => s.status === "rejected").length;
+  const totalSubmissions = filteredReports.length;
+  const pendingCount = filteredReports.filter((s) => s.status === "pending").length;
+  const approvedCount = filteredReports.filter((s) => s.status === "approved").length;
+  const rejectedCount = filteredReports.filter((s) => s.status === "rejected").length;
+  const totalVisitors = filteredReports.reduce((sum, report) => sum + report.visitors, 0);
+  const establishmentsCovered = new Set(filteredReports.map((report) => report.establishment)).size;
+  const topEstablishment = Object.entries(
+    filteredReports.reduce<Record<string, number>>((acc, report) => {
+      acc[report.establishment] = (acc[report.establishment] || 0) + report.visitors;
+      return acc;
+    }, {})
+  ).sort((a, b) => b[1] - a[1])[0];
 
   return (
     <div className="space-y-6">
@@ -357,13 +387,14 @@ export default function Reports() {
         <div className="flex flex-wrap items-center gap-4">
           {/* Filter Type Toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-            {["year", "month", "date"].map((type) => (
+            {["year", "quarter", "month", "week", "date"].map((type) => (
               <button
                 key={type}
                 onClick={() => {
                   setFilterType(type as any);
-                  if (type === "year") setSelectedMonth("");
-                  if (type === "date") { setSelectedYear(""); setSelectedMonth(""); }
+                  if (type === "year") { setSelectedMonth(""); setSelectedQuarter("1"); }
+                  if (type === "quarter") setSelectedMonth("");
+                  if (type === "week" || type === "date") { setSelectedYear("2025"); setSelectedMonth(""); }
                 }}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   filterType === type
@@ -377,7 +408,7 @@ export default function Reports() {
           </div>
 
           {/* Year Dropdown */}
-          {filterType !== "date" && (
+          {filterType !== "date" && filterType !== "week" && (
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
@@ -386,6 +417,20 @@ export default function Reports() {
               <option value="2024">2024</option>
               <option value="2025">2025</option>
               <option value="2026">2026</option>
+            </select>
+          )}
+
+          {/* Quarter Dropdown */}
+          {filterType === "quarter" && (
+            <select
+              value={selectedQuarter}
+              onChange={(e) => setSelectedQuarter(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="1">Q1</option>
+              <option value="2">Q2</option>
+              <option value="3">Q3</option>
+              <option value="4">Q4</option>
             </select>
           )}
 
@@ -404,12 +449,13 @@ export default function Reports() {
           )}
 
           {/* Date Picker */}
-          {filterType === "date" && (
+          {(filterType === "date" || filterType === "week") && (
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+              title={filterType === "week" ? "Select any date within the week" : "Select report date"}
             />
           )}
 
@@ -465,6 +511,42 @@ export default function Reports() {
         ) : (
           <div className="text-center py-12 text-gray-500">No data available for the selected period</div>
         )}
+      </div>
+
+      {/* Administrative Summary Output */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Administrative Report Summary</h3>
+            <p className="text-sm text-gray-600">Summarized output for review and reference: {getFilterLabel()}</p>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium uppercase">
+            {filterType} report
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase">Total Visitors / Check-ins</p>
+            <p className="mt-2 text-2xl font-bold text-slate-900">{totalVisitors.toLocaleString()}</p>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase">Reports Included</p>
+            <p className="mt-2 text-2xl font-bold text-slate-900">{totalSubmissions}</p>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase">Establishments Covered</p>
+            <p className="mt-2 text-2xl font-bold text-slate-900">{establishmentsCovered}</p>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-xs font-medium text-slate-500 uppercase">Top Establishment</p>
+            <p className="mt-2 text-base font-bold text-slate-900">{topEstablishment ? topEstablishment[0] : "N/A"}</p>
+            {topEstablishment && <p className="text-sm text-slate-500">{topEstablishment[1].toLocaleString()} visitors/check-ins</p>}
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-slate-600">
+          Summary: {approvedCount} approved, {pendingCount} pending, and {rejectedCount} rejected reports are included in this selected period.
+          {visitorStats.difference !== 0 && ` The latest chart period changed by ${visitorStats.difference.toLocaleString()} visitors/check-ins (${visitorStats.percentageChange}%).`}
+        </p>
       </div>
 
       {/* Visitor Count Cards */}

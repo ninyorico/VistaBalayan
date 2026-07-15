@@ -16,7 +16,7 @@ import { supabase } from "../../../lib/supabase";
 
 interface AnalyticsData {
   seasonalData: { month: string; visitors: number; guestNights: number }[];
-  performanceData: { name: string; score: number }[];
+  performanceData: { name: string; visitors: number; occupancyRate: number; score: number }[];
   visitorOrigins: { location: string; visitors: number; growth: number }[];
   lowPerformers: {
     establishment: string;
@@ -28,6 +28,34 @@ interface AnalyticsData {
   topOrigin: { location: string; percentage: number };
   growthRate: number;
 }
+
+type VisitorReport = {
+  report_date: string;
+  total_guests: number | null;
+  residence_type: string | null;
+  place_of_residence: string | null;
+  establishments?: { name: string } | null;
+};
+
+type AccommodationReport = {
+  report_date: string;
+  total_rooms: number | null;
+  total_occupied_rooms: number | null;
+  establishments?: { name: string } | null;
+};
+
+const monthLabel = (date: string) =>
+  new Date(date).toLocaleString("default", { month: "short", year: "numeric" });
+
+const monthKey = (date: string) => date.slice(0, 7);
+
+const daysInReportMonth = (date: string) => {
+  const [year, month] = date.split("-").map(Number);
+  return new Date(year, month, 0).getDate();
+};
+
+const percentChange = (current: number, previous: number) =>
+  previous > 0 ? ((current - previous) / previous) * 100 : current > 0 ? 100 : 0;
 
 export default function Analytics() {
   const [data, setData] = useState<AnalyticsData>({
@@ -48,7 +76,6 @@ export default function Analytics() {
   const fetchAnalytics = async () => {
     setLoading(true);
 
-    // Fetch all approved visitor reports
     const { data: visitorData, error: visitorError } = await supabase
       .from("visitor_reports")
       .select(`
@@ -63,7 +90,6 @@ export default function Analytics() {
 
     if (visitorError) console.error("Error fetching visitor data:", visitorError);
 
-    // Fetch accommodation reports for occupancy calculations
     const { data: accommodationData, error: accError } = await supabase
       .from("accommodation_reports")
       .select(`
@@ -72,128 +98,153 @@ export default function Analytics() {
         total_occupied_rooms,
         establishments (name)
       `)
-      .eq("status", "approved");
+      .eq("status", "approved")
+      .order("report_date", { ascending: true });
 
     if (accError) console.error("Error fetching accommodation data:", accError);
 
-    // 1. Seasonal Data (monthly visitor trends)
-    const monthlyData: Record<string, { visitors: number; guestNights: number }> = {};
-    (visitorData || []).forEach((item: any) => {
-      const month = new Date(item.report_date).toLocaleString('default', { month: 'short' });
-      if (!monthlyData[month]) {
-        monthlyData[month] = { visitors: 0, guestNights: 0 };
+    const visitors = (visitorData || []) as VisitorReport[];
+    const accommodations = (accommodationData || []) as AccommodationReport[];
+
+    const monthlyData: Record<string, { label: string; visitors: number; guestNights: number }> = {};
+    visitors.forEach((item) => {
+      const key = monthKey(item.report_date);
+      if (!monthlyData[key]) {
+        monthlyData[key] = { label: monthLabel(item.report_date), visitors: 0, guestNights: 0 };
       }
-      monthlyData[month].visitors += item.total_guests || 0;
-      // Note: guest_nights not in visitor_reports, using visitors as proxy
-      monthlyData[month].guestNights += item.total_guests || 0;
+      monthlyData[key].visitors += item.total_guests || 0;
     });
 
-    const seasonalData = Object.entries(monthlyData).map(([month, values]) => ({
-      month,
-      visitors: values.visitors,
-      guestNights: values.guestNights,
+    accommodations.forEach((item) => {
+      const key = monthKey(item.report_date);
+      if (!monthlyData[key]) {
+        monthlyData[key] = { label: monthLabel(item.report_date), visitors: 0, guestNights: 0 };
+      }
+      monthlyData[key].guestNights += item.total_occupied_rooms || 0;
+    });
+
+    const sortedMonthKeys = Object.keys(monthlyData).sort();
+    const seasonalData = sortedMonthKeys.map((key) => ({
+      month: monthlyData[key].label,
+      visitors: monthlyData[key].visitors,
+      guestNights: monthlyData[key].guestNights,
     }));
 
-    // 2. High-Performing Establishments (by visitor count)
-    const establishmentVisitors: Record<string, { name: string; visitors: number }> = {};
-    (visitorData || []).forEach((item: any) => {
-      const name = item.establishments?.name;
-      if (name) {
-        if (!establishmentVisitors[name]) {
-          establishmentVisitors[name] = { name, visitors: 0 };
-        }
-        establishmentVisitors[name].visitors += item.total_guests || 0;
+    const visitorsByEstablishment: Record<string, { name: string; visitors: number; monthly: Record<string, number> }> = {};
+    visitors.forEach((item) => {
+      const name = item.establishments?.name || "Unknown";
+      const key = monthKey(item.report_date);
+      if (!visitorsByEstablishment[name]) {
+        visitorsByEstablishment[name] = { name, visitors: 0, monthly: {} };
       }
+      visitorsByEstablishment[name].visitors += item.total_guests || 0;
+      visitorsByEstablishment[name].monthly[key] =
+        (visitorsByEstablishment[name].monthly[key] || 0) + (item.total_guests || 0);
     });
 
-    const performanceData = Object.values(establishmentVisitors)
-      .sort((a, b) => b.visitors - a.visitors)
-      .slice(0, 5)
-      .map((est, index) => ({
-        name: est.name.length > 15 ? est.name.slice(0, 15) + "..." : est.name,
-        score: index === 0 ? 95 : index === 1 ? 88 : index === 2 ? 82 : index === 3 ? 75 : 68,
-      }));
+    const occupancyByEstablishment: Record<string, { occupiedRoomNights: number; availableRoomNights: number }> = {};
+    accommodations.forEach((item) => {
+      const name = item.establishments?.name || "Unknown";
+      if (!occupancyByEstablishment[name]) {
+        occupancyByEstablishment[name] = { occupiedRoomNights: 0, availableRoomNights: 0 };
+      }
+      occupancyByEstablishment[name].occupiedRoomNights += item.total_occupied_rooms || 0;
+      occupancyByEstablishment[name].availableRoomNights +=
+        (item.total_rooms || 0) * daysInReportMonth(item.report_date);
+    });
 
-    // 3. Visitor Origins
+    const maxVisitors = Math.max(1, ...Object.values(visitorsByEstablishment).map((est) => est.visitors));
+    const performanceData = Object.values(visitorsByEstablishment)
+      .map((est) => {
+        const occ = occupancyByEstablishment[est.name];
+        const occupancyRate = occ?.availableRoomNights
+          ? (occ.occupiedRoomNights / occ.availableRoomNights) * 100
+          : 0;
+        const visitorScore = (est.visitors / maxVisitors) * 70;
+        const occupancyScore = Math.min(occupancyRate, 100) * 0.3;
+        return {
+          name: est.name.length > 18 ? est.name.slice(0, 18) + "..." : est.name,
+          visitors: est.visitors,
+          occupancyRate,
+          score: Math.round(visitorScore + occupancyScore),
+        };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 7);
+
+    const residenceByMonth: Record<string, Record<string, number>> = {};
     const residenceCounts: Record<string, number> = {};
-    (visitorData || []).forEach((item: any) => {
-      const residence = item.residence_type || "Unknown";
+    visitors.forEach((item) => {
+      const residence = item.residence_type || item.place_of_residence || "Unknown";
+      const key = monthKey(item.report_date);
       residenceCounts[residence] = (residenceCounts[residence] || 0) + (item.total_guests || 0);
+      if (!residenceByMonth[residence]) residenceByMonth[residence] = {};
+      residenceByMonth[residence][key] = (residenceByMonth[residence][key] || 0) + (item.total_guests || 0);
     });
 
-    const totalVisitors = Object.values(residenceCounts).reduce((a, b) => a + b, 0);
-    const visitorOrigins = Object.entries(residenceCounts).map(([location, visitors]) => ({
-      location,
-      visitors,
-      growth: Math.floor(Math.random() * 20) + 5, // Note: Calculate real growth if you have historical data
-    }));
-
-    // 4. Low Performing Establishments (based on occupancy)
-    const establishmentOccupancy: Record<string, { name: string; totalRooms: number; totalOccupied: number; reportCount: number }> = {};
-    (accommodationData || []).forEach((item: any) => {
-      const name = item.establishments?.name;
-      if (name) {
-        if (!establishmentOccupancy[name]) {
-          establishmentOccupancy[name] = { name, totalRooms: 0, totalOccupied: 0, reportCount: 0 };
-        }
-        establishmentOccupancy[name].totalRooms += item.total_rooms || 0;
-        establishmentOccupancy[name].totalOccupied += item.total_occupied_rooms || 0;
-        establishmentOccupancy[name].reportCount++;
-      }
-    });
-
-    const lowPerformers = Object.values(establishmentOccupancy)
-      .map(est => ({
-        establishment: est.name,
-        occupancyRate: est.totalRooms > 0 ? (est.totalOccupied / est.totalRooms) * 100 : 0,
-        visitorTrend: -Math.floor(Math.random() * 20) - 5, // Placeholder - calculate real trend
-        issue: est.totalRooms > 0 && (est.totalOccupied / est.totalRooms) < 0.6 
-          ? "Below average occupancy" 
-          : "Declining visitor numbers",
+    const latestMonth = sortedMonthKeys[sortedMonthKeys.length - 1];
+    const previousMonth = sortedMonthKeys[sortedMonthKeys.length - 2];
+    const visitorOrigins = Object.entries(residenceCounts)
+      .map(([location, total]) => ({
+        location,
+        visitors: total,
+        growth: percentChange(
+          residenceByMonth[location]?.[latestMonth] || 0,
+          residenceByMonth[location]?.[previousMonth] || 0
+        ),
       }))
-      .filter(est => est.occupancyRate < 70)
-      .sort((a, b) => a.occupancyRate - b.occupancyRate)
-      .slice(0, 3);
+      .sort((a, b) => b.visitors - a.visitors)
+      .slice(0, 8);
 
-    // 5. Peak Season
-    let peakMonth = "";
-    let peakVisitors = 0;
-    Object.entries(monthlyData).forEach(([month, values]) => {
-      if (values.visitors > peakVisitors) {
-        peakVisitors = values.visitors;
-        peakMonth = month;
-      }
-    });
+    const lowPerformers = Object.values(visitorsByEstablishment)
+      .map((est) => {
+        const occ = occupancyByEstablishment[est.name];
+        const occupancyRate = occ?.availableRoomNights
+          ? (occ.occupiedRoomNights / occ.availableRoomNights) * 100
+          : 0;
+        const current = est.monthly[latestMonth] || 0;
+        const previous = est.monthly[previousMonth] || 0;
+        const visitorTrend = percentChange(current, previous);
+        const issue =
+          visitorTrend < -20
+            ? "Visitor count decreased by more than 20% from the previous month"
+            : occupancyRate > 0 && occupancyRate < 35
+            ? "Low accommodation occupancy rate"
+            : "Lower total visitor volume compared with other establishments";
+        return { establishment: est.name, occupancyRate, visitorTrend, issue, visitors: est.visitors };
+      })
+      .filter((est) => est.visitorTrend < -20 || (est.occupancyRate > 0 && est.occupancyRate < 35) || est.visitors < maxVisitors * 0.08)
+      .sort((a, b) => a.visitors - b.visitors)
+      .slice(0, 5);
 
-    // 6. Top Origin
-    let topLocation = "";
-    let topPercentage = 0;
-    Object.entries(residenceCounts).forEach(([location, visitors]) => {
-      const pct = totalVisitors > 0 ? (visitors / totalVisitors) * 100 : 0;
-      if (pct > topPercentage) {
-        topPercentage = pct;
-        topLocation = location;
-      }
-    });
+    const peakKey = sortedMonthKeys.reduce(
+      (best, key) => (monthlyData[key].visitors > (monthlyData[best]?.visitors || 0) ? key : best),
+      sortedMonthKeys[0] || ""
+    );
+    const peakIndex = sortedMonthKeys.indexOf(peakKey);
+    const beforePeakKey = peakIndex > 0 ? sortedMonthKeys[peakIndex - 1] : "";
 
-    // 7. Growth Rate (compare last 2 months)
-    const months = Object.keys(monthlyData).sort();
-    const lastMonth = months[months.length - 1];
-    const prevMonth = months[months.length - 2];
-    const lastMonthVisitors = lastMonth ? monthlyData[lastMonth]?.visitors || 0 : 0;
-    const prevMonthVisitors = prevMonth ? monthlyData[prevMonth]?.visitors || 0 : 0;
-    const growthRate = prevMonthVisitors > 0 
-      ? ((lastMonthVisitors - prevMonthVisitors) / prevMonthVisitors) * 100 
-      : 0;
+    const totalVisitors = Object.values(residenceCounts).reduce((sum, count) => sum + count, 0);
+    const [topLocation, topVisitors] = Object.entries(residenceCounts).sort((a, b) => b[1] - a[1])[0] || ["", 0];
 
     setData({
       seasonalData,
       performanceData,
       visitorOrigins,
       lowPerformers,
-      peakSeason: { month: peakMonth, visitors: peakVisitors, growth: 28 },
-      topOrigin: { location: topLocation, percentage: Math.round(topPercentage) },
-      growthRate,
+      peakSeason: {
+        month: monthlyData[peakKey]?.label || "N/A",
+        visitors: monthlyData[peakKey]?.visitors || 0,
+        growth: percentChange(monthlyData[peakKey]?.visitors || 0, monthlyData[beforePeakKey]?.visitors || 0),
+      },
+      topOrigin: {
+        location: topLocation,
+        percentage: totalVisitors > 0 ? Math.round((topVisitors / totalVisitors) * 100) : 0,
+      },
+      growthRate: percentChange(
+        monthlyData[latestMonth]?.visitors || 0,
+        monthlyData[previousMonth]?.visitors || 0
+      ),
     });
 
     setLoading(false);
@@ -202,8 +253,10 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1CA7C9] mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading analytics data...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1CA7C9] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading analytics data...</p>
+        </div>
       </div>
     );
   }
@@ -212,10 +265,9 @@ export default function Analytics() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-        <p className="text-gray-600 mt-1">Comprehensive tourism analytics and insights</p>
+        <p className="text-gray-600 mt-1">Data-driven tourism analytics and decision support</p>
       </div>
 
-      {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
@@ -223,7 +275,9 @@ export default function Analytics() {
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
           <p className="text-2xl font-bold text-gray-900">{data.peakSeason.month || "N/A"}</p>
-          <p className="text-sm text-green-600 mt-1">{data.peakSeason.visitors.toLocaleString()} visitors</p>
+          <p className="text-sm text-green-600 mt-1">
+            {data.peakSeason.visitors.toLocaleString()} visitors ({data.peakSeason.growth.toFixed(1)}% vs previous month)
+          </p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
@@ -235,7 +289,7 @@ export default function Analytics() {
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Growth Rate</p>
+            <p className="text-sm text-gray-600">Latest Monthly Growth</p>
             {data.growthRate >= 0 ? (
               <TrendingUp className="w-5 h-5 text-green-600" />
             ) : (
@@ -247,9 +301,8 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Seasonal Analysis */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Seasonal Tourism Analysis</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tourism Trends and Seasonal Patterns</h3>
         {data.seasonalData.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart data={data.seasonalData}>
@@ -258,7 +311,8 @@ export default function Analytics() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Area type="monotone" dataKey="visitors" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} name="Visitors" />
+              <Area type="monotone" dataKey="visitors" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.45} name="Visitors" />
+              <Area type="monotone" dataKey="guestNights" stroke="#10b981" fill="#10b981" fillOpacity={0.25} name="Occupied room nights" />
             </AreaChart>
           </ResponsiveContainer>
         ) : (
@@ -266,7 +320,6 @@ export default function Analytics() {
         )}
       </div>
 
-      {/* High-Performing Establishments */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">High-Performing Establishments</h3>
         {data.performanceData.length > 0 ? (
@@ -274,8 +327,8 @@ export default function Analytics() {
             <BarChart data={data.performanceData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" domain={[0, 100]} />
-              <YAxis dataKey="name" type="category" width={150} />
-              <Tooltip />
+              <YAxis dataKey="name" type="category" width={170} />
+              <Tooltip formatter={(value, name) => [name === "score" ? `${value}/100` : value, name === "score" ? "Performance Score" : name]} />
               <Bar dataKey="score" fill="#10b981" name="Performance Score" />
             </BarChart>
           </ResponsiveContainer>
@@ -284,10 +337,9 @@ export default function Analytics() {
         )}
       </div>
 
-      {/* Visitor Origins */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Visitor Origins & Growth</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Visitor Origins & Actual Growth</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -306,12 +358,14 @@ export default function Analytics() {
                     <td className="px-6 py-4 font-medium text-gray-900">{origin.location}</td>
                     <td className="px-6 py-4 text-gray-900">{origin.visitors.toLocaleString()}</td>
                     <td className="px-6 py-4">
-                      <span className="text-green-600 font-medium">+{origin.growth}%</span>
+                      <span className={`font-medium ${origin.growth >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {origin.growth >= 0 ? "+" : ""}{origin.growth.toFixed(1)}%
+                      </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-green-600">
-                        <TrendingUp className="w-4 h-4" />
-                        <span className="text-sm font-medium">Growing</span>
+                      <div className={`flex items-center gap-1 ${origin.growth >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {origin.growth >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                        <span className="text-sm font-medium">{origin.growth >= 0 ? "Growing" : "Declining"}</span>
                       </div>
                     </td>
                   </tr>
@@ -326,12 +380,11 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Low Performing Establishments */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Low Performing Establishments</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Underperforming Establishments</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Establishments requiring attention based on visitor trends and occupancy rates
+            Establishments requiring attention based on actual visitor trends, total visitor volume, and occupancy rates
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -341,8 +394,7 @@ export default function Analytics() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Establishment</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Occupancy Rate</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Visitor Trend</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Issue</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Decision Support Note</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -351,28 +403,29 @@ export default function Analytics() {
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 font-medium text-gray-900">{establishment.establishment}</td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
-                          <div className="h-2 rounded-full bg-red-500" style={{ width: `${establishment.occupancyRate}%` }}></div>
+                      {establishment.occupancyRate > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
+                            <div className="h-2 rounded-full bg-red-500" style={{ width: `${Math.min(establishment.occupancyRate, 100)}%` }}></div>
+                          </div>
+                          <span className="text-sm font-medium text-red-600">{establishment.occupancyRate.toFixed(1)}%</span>
                         </div>
-                        <span className="text-sm font-medium text-red-600">{establishment.occupancyRate.toFixed(0)}%</span>
-                      </div>
+                      ) : (
+                        <span className="text-sm text-gray-500">No accommodation data</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-red-600">
-                        <TrendingDown className="w-4 h-4" />
-                        <span className="font-medium text-sm">{establishment.visitorTrend}%</span>
+                      <div className={`flex items-center gap-1 ${establishment.visitorTrend >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {establishment.visitorTrend >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                        <span className="font-medium text-sm">{establishment.visitorTrend.toFixed(1)}%</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{establishment.issue}</td>
-                    <td className="px-6 py-4">
-                      <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">View Details</button>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No low performing establishments detected</td>
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">No underperforming establishments detected</td>
                 </tr>
               )}
             </tbody>
