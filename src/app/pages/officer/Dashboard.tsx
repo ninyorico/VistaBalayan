@@ -47,19 +47,16 @@ interface Demographic {
 
 export default function OfficerDashboard() {
   const [totalVisitors, setTotalVisitors] = useState(0);
-  const [totalVisitorsChange, setTotalVisitorsChange] = useState({ value: 0, isIncrease: true });
   const [monthlyArrivals, setMonthlyArrivals] = useState(0);
-  const [monthlyArrivalsChange, setMonthlyArrivalsChange] = useState({ value: 0, isIncrease: true });
   const [occupancyRate, setOccupancyRate] = useState(0);
-  const [occupancyRateChange, setOccupancyRateChange] = useState({ value: 0, isIncrease: true });
   const [totalEstablishments, setTotalEstablishments] = useState(0);
-  const [newEstablishments, setNewEstablishments] = useState(0);
   const [visitorTrends, setVisitorTrends] = useState<any[]>([]);
   const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
   const [demographics, setDemographics] = useState<Demographic[]>([]);
   const [topEstablishments, setTopEstablishments] = useState<TopEstablishment[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAllDashboardData();
@@ -67,195 +64,184 @@ export default function OfficerDashboard() {
 
   const fetchAllDashboardData = async () => {
     setLoading(true);
-
-    const currentYear = new Date().getFullYear();
-    const lastYear = currentYear - 1;
-    const currentMonth = new Date().getMonth();
-    const lastMonth = currentMonth - 1;
-    const twoMonthsAgo = currentMonth - 2;
-
-    // 1. Total Visitors (current year vs last year)
-    const { data: visitorData, error: visitorError } = await supabase
-      .from("visitor_reports")
-      .select("report_date, total_guests")
-      .eq("status", "approved");
-
-    if (!visitorError && visitorData) {
-      const currentYearVisitors = visitorData
-        .filter(v => new Date(v.report_date).getFullYear() === currentYear)
-        .reduce((sum, v) => sum + (v.total_guests || 0), 0);
+    setError(null);
+    
+    try {
+      console.log('=== FETCHING DASHBOARD DATA ===');
       
-      const lastYearVisitors = visitorData
-        .filter(v => new Date(v.report_date).getFullYear() === lastYear)
-        .reduce((sum, v) => sum + (v.total_guests || 0), 0);
-      
-      setTotalVisitors(currentYearVisitors);
-      
-      const yearChange = lastYearVisitors > 0 
-        ? ((currentYearVisitors - lastYearVisitors) / lastYearVisitors) * 100 
-        : 0;
-      setTotalVisitorsChange({
-        value: Math.abs(yearChange),
-        isIncrease: yearChange >= 0,
-      });
+      // 1. Fetch all approved visitor reports
+      const { data: visitorData, error: visitorError } = await supabase
+        .from('visitor_reports')
+        .select('report_date, total_guests')
+        .in('status', ['pending', 'approved'])
+        .order('report_date', { ascending: true });
 
-      // Monthly trends
+      if (visitorError) {
+        console.error('Visitor data error:', visitorError);
+        setError('Failed to load visitor data');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Visitor data count:', visitorData?.length || 0);
+      
+      // Calculate total visitors
+      const total = visitorData?.reduce((sum, v) => sum + (v.total_guests || 0), 0) || 0;
+      setTotalVisitors(total);
+      console.log('Total visitors set to:', total);
+
+      // Calculate monthly trends
       const monthly: Record<string, number> = {};
-      visitorData.forEach((v) => {
+      visitorData?.forEach((v) => {
         const month = new Date(v.report_date).toLocaleString('default', { month: 'short' });
         monthly[month] = (monthly[month] || 0) + (v.total_guests || 0);
       });
       const trends = Object.entries(monthly).map(([month, visitors]) => ({ month, visitors }));
       setVisitorTrends(trends);
+      console.log('Monthly trends:', trends);
 
-      // Monthly arrivals (this month vs last month)
-      const thisMonthVisitors = visitorData
-        .filter(v => new Date(v.report_date).getMonth() === currentMonth)
-        .reduce((sum, v) => sum + (v.total_guests || 0), 0);
+// Calculate monthly arrivals (current month from data)
+if (visitorData && visitorData.length > 0) {
+  // Get the most recent month with data
+  const sortedDates = visitorData
+    .map(v => new Date(v.report_date))
+    .sort((a: Date, b: Date) => b.getTime() - a.getTime());  // ← Fixed: use getTime()
+  
+  const latestDate = sortedDates[0];
+  const currentMonthStr = latestDate.toLocaleString('default', { month: 'short' });
+  const currentMonthVisitors = monthly[currentMonthStr] || 0;
+  setMonthlyArrivals(currentMonthVisitors);
+  console.log('Monthly arrivals (current month) set to:', currentMonthVisitors);
+}
+
+      // 2. Fetch accommodation reports
+// Get the number of days in the month for each report
+// If your reports are monthly, you need to know which month each report is for
+
+// Option 1: If you have report_date in accommodation_reports
+const { data: accommodationData } = await supabase
+  .from('accommodation_reports')
+  .select('total_rooms, total_occupied_rooms, report_date')
+  .in('status', ['pending', 'approved']);
+
+let totalRoomDays = 0;
+let totalGuestNights = 0;
+
+accommodationData?.forEach((report) => {
+  const date = new Date(report.report_date);
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  totalRoomDays += report.total_rooms * daysInMonth;
+  totalGuestNights += report.total_occupied_rooms;
+});
+
+const occupancyRate = totalRoomDays > 0 ? (totalGuestNights / totalRoomDays) * 100 : 0;
+setOccupancyRate(occupancyRate);
+
+      // 3. Fetch establishments count
+      const { count: establishmentsCount, error: estError } = await supabase
+        .from('establishments')
+        .select('*', { count: 'exact', head: true });
+
+      if (!estError) {
+        setTotalEstablishments(establishmentsCount || 0);
+        console.log('Total establishments set to:', establishmentsCount);
+      }
+
+      // 4. Fetch demographics
+      const { data: demoData } = await supabase
+        .from('visitor_reports')
+        .select('residence_type, total_guests')
+        .in('status', ['pending', 'approved']);
+
+      if (demoData && demoData.length > 0) {
+        const dist: Record<string, number> = {};
+        demoData.forEach((item) => {
+          const type = item.residence_type || "Unknown";
+          dist[type] = (dist[type] || 0) + (item.total_guests || 0);
+        });
+        const totalDemo = Object.values(dist).reduce((a, b) => a + b, 0);
+        const chartData = Object.entries(dist).map(([name, value]) => ({
+          name,
+          value: totalDemo > 0 ? Math.round((value / totalDemo) * 100) : 0,
+          color: name === "Batangas Resident" ? "#3b82f6" : name === "Outside Batangas" ? "#8b5cf6" : "#10b981",
+        }));
+        setDemographics(chartData);
+        console.log('Demographics set:', chartData);
+      }
+
+      // 5. Fetch top establishments
+      const { data: topData } = await supabase
+        .from('visitor_reports')
+        .select(`establishment_id, total_guests, establishments(name)`)
+        .in('status', ['pending', 'approved']);
+
+      if (topData && topData.length > 0) {
+        const stats: Record<string, { name: string; visitors: number }> = {};
+        topData.forEach((item: any) => {
+          const id = item.establishment_id;
+          const name = item.establishments?.name;
+          if (id && name) {
+            if (!stats[id]) stats[id] = { name, visitors: 0 };
+            stats[id].visitors += item.total_guests || 0;
+          }
+        });
+        const sorted = Object.values(stats).sort((a, b) => b.visitors - a.visitors).slice(0, 5);
+        setTopEstablishments(sorted);
+        console.log('Top establishments:', sorted);
+      }
+
+      // 6. Fetch recent submissions
+      const { data: visitorRecent } = await supabase
+        .from('visitor_reports')
+        .select(`id, report_date, status, created_at, establishments(name)`)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      const { data: accommodationRecent } = await supabase
+        .from('accommodation_reports')
+        .select(`id, report_date, status, created_at, establishments(name)`)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      const combined = [
+        ...(visitorRecent || []).map((v: any) => ({
+          id: v.id,
+          establishment_name: v.establishments?.name || "Unknown",
+          type: "Visitor Report",
+          status: v.status,
+          date: v.report_date,
+          created_at: v.created_at,
+        })),
+        ...(accommodationRecent || []).map((a: any) => ({
+          id: a.id,
+          establishment_name: a.establishments?.name || "Unknown",
+          type: "Accommodation Report",
+          status: a.status,
+          date: a.report_date,
+          created_at: a.created_at,
+        })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+       .slice(0, 5);
+
+      setRecentSubmissions(combined);
+
+      // 7. Fetch anomalies
+      const { data: anomalyData } = await supabase
+        .from('ai_anomalies_cache')
+        .select('*')
+        .eq('status', 'active')
+        .order('detected_at', { ascending: false })
+        .limit(5);
+      setAnomalies(anomalyData || []);
+
+      console.log('=== DASHBOARD DATA LOAD COMPLETE ===');
       
-      const lastMonthVisitors = visitorData
-        .filter(v => new Date(v.report_date).getMonth() === lastMonth)
-        .reduce((sum, v) => sum + (v.total_guests || 0), 0);
-      
-      setMonthlyArrivals(thisMonthVisitors);
-      
-      const monthChange = lastMonthVisitors > 0 
-        ? ((thisMonthVisitors - lastMonthVisitors) / lastMonthVisitors) * 100 
-        : 0;
-      setMonthlyArrivalsChange({
-        value: Math.abs(monthChange),
-        isIncrease: monthChange >= 0,
-      });
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
     }
-
-    // 2. Occupancy Rate (current month vs last month)
-    const { data: accommodationData, error: accError } = await supabase
-      .from("accommodation_reports")
-      .select("report_date, total_rooms, total_occupied_rooms")
-      .eq("status", "approved");
-
-    if (!accError && accommodationData && accommodationData.length > 0) {
-      const currentMonthOcc = accommodationData.filter(a => new Date(a.report_date).getMonth() === currentMonth);
-      const lastMonthOcc = accommodationData.filter(a => new Date(a.report_date).getMonth() === lastMonth);
-      
-      const currentTotalRooms = currentMonthOcc.reduce((sum, a) => sum + (a.total_rooms || 0), 0);
-      const currentTotalOccupied = currentMonthOcc.reduce((sum, a) => sum + (a.total_occupied_rooms || 0), 0);
-      const currentRate = currentTotalRooms > 0 ? (currentTotalOccupied / currentTotalRooms) * 100 : 0;
-      
-      const lastTotalRooms = lastMonthOcc.reduce((sum, a) => sum + (a.total_rooms || 0), 0);
-      const lastTotalOccupied = lastMonthOcc.reduce((sum, a) => sum + (a.total_occupied_rooms || 0), 0);
-      const lastRate = lastTotalRooms > 0 ? (lastTotalOccupied / lastTotalRooms) * 100 : 0;
-      
-      setOccupancyRate(currentRate);
-      
-      const rateChange = lastRate > 0 ? ((currentRate - lastRate) / lastRate) * 100 : 0;
-      setOccupancyRateChange({
-        value: Math.abs(rateChange),
-        isIncrease: rateChange >= 0,
-      });
-    }
-
-    // 3. Establishments count and new this month
-    const { data: establishmentsData, error: estError } = await supabase
-      .from("establishments")
-      .select("created_at");
-
-    if (!estError && establishmentsData) {
-      setTotalEstablishments(establishmentsData.length);
-      
-      const newThisMonth = establishmentsData.filter(e => {
-        const createdAt = new Date(e.created_at);
-        return createdAt.getMonth() === currentMonth && createdAt.getFullYear() === currentYear;
-      }).length;
-      setNewEstablishments(newThisMonth);
-    }
-
-    // 4. Demographics
-    const { data: demoData } = await supabase
-      .from("visitor_reports")
-      .select("residence_type, total_guests")
-      .eq("status", "approved");
-
-    if (demoData && demoData.length > 0) {
-      const dist: Record<string, number> = {};
-      demoData.forEach((item) => {
-        const type = item.residence_type || "Unknown";
-        dist[type] = (dist[type] || 0) + (item.total_guests || 0);
-      });
-      const total = Object.values(dist).reduce((a, b) => a + b, 0);
-      const chartData = Object.entries(dist).map(([name, value]) => ({
-        name,
-        value: total > 0 ? Math.round((value / total) * 100) : 0,
-        color: name === "Batangas Resident" ? "#3b82f6" : name === "Outside Batangas" ? "#8b5cf6" : "#10b981",
-      }));
-      setDemographics(chartData);
-    }
-
-    // 5. Top establishments
-    const { data: topData } = await supabase
-      .from("visitor_reports")
-      .select(`establishment_id, total_guests, establishments(name)`)
-      .eq("status", "approved");
-
-    if (topData && topData.length > 0) {
-      const stats: Record<string, { name: string; visitors: number }> = {};
-      topData.forEach((item: any) => {
-        const id = item.establishment_id;
-        const name = item.establishments?.name;
-        if (id && name) {
-          if (!stats[id]) stats[id] = { name, visitors: 0 };
-          stats[id].visitors += item.total_guests || 0;
-        }
-      });
-      const sorted = Object.values(stats).sort((a, b) => b.visitors - a.visitors).slice(0, 5);
-      setTopEstablishments(sorted);
-    }
-
-    // 6. Recent submissions
-    const { data: visitorRecent } = await supabase
-      .from("visitor_reports")
-      .select(`id, report_date, status, created_at, establishments(name)`)
-      .order("created_at", { ascending: false })
-      .limit(3);
-
-    const { data: accommodationRecent } = await supabase
-      .from("accommodation_reports")
-      .select(`id, report_date, status, created_at, establishments(name)`)
-      .order("created_at", { ascending: false })
-      .limit(3);
-
-    const combined = [
-      ...(visitorRecent || []).map((v: any) => ({
-        id: v.id,
-        establishment_name: v.establishments?.name || "Unknown",
-        type: "Visitor Report",
-        status: v.status,
-        date: v.report_date,
-        created_at: v.created_at,
-      })),
-      ...(accommodationRecent || []).map((a: any) => ({
-        id: a.id,
-        establishment_name: a.establishments?.name || "Unknown",
-        type: "Accommodation Report",
-        status: a.status,
-        date: a.report_date,
-        created_at: a.created_at,
-      })),
-    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-     .slice(0, 5);
-
-    setRecentSubmissions(combined);
-
-    // 7. Anomalies
-    const { data: anomalyData } = await supabase
-      .from("ai_anomalies")
-      .select("*")
-      .eq("status", "active")
-      .order("detected_at", { ascending: false })
-      .limit(5);
-    setAnomalies(anomalyData || []);
-
-    setLoading(false);
   };
 
   if (loading) {
@@ -267,6 +253,22 @@ export default function OfficerDashboard() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-red-600">{error}</p>
+          <button 
+            onClick={fetchAllDashboardData}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -274,18 +276,13 @@ export default function OfficerDashboard() {
         <p className="text-gray-600 mt-1">Welcome to VistaBalayan Tourism Management System</p>
       </div>
 
-      {/* KPI Cards with real comparisons */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Visitors</p>
               <p className="text-3xl font-bold text-gray-900">{totalVisitors.toLocaleString()}</p>
-              {totalVisitorsChange.value > 0 && (
-                <p className={`text-sm mt-1 ${totalVisitorsChange.isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                  {totalVisitorsChange.isIncrease ? '+' : '-'}{totalVisitorsChange.value.toFixed(1)}% vs last year
-                </p>
-              )}
             </div>
             <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
               <Users className="w-6 h-6 text-blue-600" />
@@ -298,11 +295,6 @@ export default function OfficerDashboard() {
             <div>
               <p className="text-sm text-gray-600 mb-1">Monthly Arrivals</p>
               <p className="text-3xl font-bold text-gray-900">{monthlyArrivals.toLocaleString()}</p>
-              {monthlyArrivalsChange.value > 0 && (
-                <p className={`text-sm mt-1 ${monthlyArrivalsChange.isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                  {monthlyArrivalsChange.isIncrease ? '+' : '-'}{monthlyArrivalsChange.value.toFixed(1)}% vs last month
-                </p>
-              )}
             </div>
             <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-purple-600" />
@@ -315,11 +307,6 @@ export default function OfficerDashboard() {
             <div>
               <p className="text-sm text-gray-600 mb-1">Occupancy Rate</p>
               <p className="text-3xl font-bold text-gray-900">{occupancyRate.toFixed(1)}%</p>
-              {occupancyRateChange.value > 0 && (
-                <p className={`text-sm mt-1 ${occupancyRateChange.isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-                  {occupancyRateChange.isIncrease ? '+' : '-'}{occupancyRateChange.value.toFixed(1)}% vs last month
-                </p>
-              )}
             </div>
             <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
               <Bed className="w-6 h-6 text-orange-600" />
@@ -332,9 +319,6 @@ export default function OfficerDashboard() {
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Establishments</p>
               <p className="text-3xl font-bold text-gray-900">{totalEstablishments}</p>
-              {newEstablishments > 0 && (
-                <p className="text-sm text-green-600 mt-1">+{newEstablishments} this month</p>
-              )}
             </div>
             <div className="w-12 h-12 rounded-lg bg-teal-100 flex items-center justify-center">
               <Building2 className="w-6 h-6 text-teal-600" />
@@ -359,7 +343,7 @@ export default function OfficerDashboard() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">No visitor data available yet</div>
+            <div className="text-center py-12 text-gray-500">No visitor data available</div>
           )}
         </div>
 
@@ -375,7 +359,7 @@ export default function OfficerDashboard() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">No demographic data available yet</div>
+            <div className="text-center py-12 text-gray-500">No demographic data available</div>
           )}
         </div>
       </div>
@@ -394,7 +378,7 @@ export default function OfficerDashboard() {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="text-center py-12 text-gray-500">No establishment data available yet</div>
+          <div className="text-center py-12 text-gray-500">No establishment data available</div>
         )}
       </div>
 
@@ -442,7 +426,7 @@ export default function OfficerDashboard() {
                   }`} />
                   <div className="flex-1">
                     <div className="flex justify-between mb-1">
-                      <p className="font-medium text-gray-900">{anomaly.type}</p>
+                      <p className="font-medium text-gray-900">{anomaly.anomaly_type}</p>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                         anomaly.severity === "high" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
                       }`}>{anomaly.severity}</span>

@@ -37,13 +37,11 @@ interface Submission {
   details: any;
 }
 
-// Hardcoded user ID for now (replace with your actual user ID)
-const CURRENT_USER_ID = "a71b14e7-c790-427a-b14b-0c34d4c796f9";
-
 export default function Reports() {
-  const [filterPeriod, setFilterPeriod] = useState("monthly");
-  const [specificDate, setSpecificDate] = useState("");
-  const [specificMonth, setSpecificMonth] = useState("");
+  const [filterType, setFilterType] = useState<"year" | "month" | "date">("month");
+  const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -52,7 +50,6 @@ export default function Reports() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [loading, setLoading] = useState(true);
   
-  // Real chart data from database
   const [chartData, setChartData] = useState<any[]>([]);
   const [visitorStats, setVisitorStats] = useState({
     currentTotal: 0,
@@ -62,139 +59,128 @@ export default function Reports() {
     isIncrease: true,
   });
 
-const fetchSubmissions = async () => {
-  setLoading(true);
-  
-  // Fetch visitor reports with establishment names
-  const { data: visitorData, error: visitorError } = await supabase
-    .from("visitor_reports")
-    .select(`
-      *,
-      establishments!visitor_reports_establishment_id_fkey (
-        name
-      )
-    `)
-    .order("created_at", { ascending: false });
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
 
-  if (visitorError) {
-    console.error("Visitor reports error:", visitorError);
-  }
+  const fetchSubmissions = async () => {
+    setLoading(true);
+    
+    const { data: visitorData, error: visitorError } = await supabase
+      .from("visitor_reports")
+      .select(`
+        *,
+        establishments!visitor_reports_establishment_id_fkey (
+          name
+        )
+      `)
+      .order("created_at", { ascending: false });
 
-  // Fetch accommodation reports with establishment names
-  const { data: accommodationData, error: accError } = await supabase
-    .from("accommodation_reports")
-    .select(`
-      *,
-      establishments!accommodation_reports_establishment_id_fkey (
-        name
-      )
-    `)
-    .order("created_at", { ascending: false });
+    if (visitorError) console.error("Visitor reports error:", visitorError);
 
-  if (accError) {
-    console.error("Accommodation reports error:", accError);
-  }
+    const { data: accommodationData, error: accError } = await supabase
+      .from("accommodation_reports")
+      .select(`
+        *,
+        establishments!accommodation_reports_establishment_id_fkey (
+          name
+        )
+      `)
+      .order("created_at", { ascending: false });
 
-  console.log("Visitor data:", visitorData);
-  console.log("Accommodation data:", accommodationData);
+    if (accError) console.error("Accommodation reports error:", accError);
 
-  // Helper function to get establishment name
-  const getEstablishmentName = (item: any) => {
-    if (item.establishments) {
-      if (Array.isArray(item.establishments) && item.establishments.length > 0) {
-        return item.establishments[0].name;
-      } else if (item.establishments.name) {
-        return item.establishments.name;
+    const getEstablishmentName = (item: any) => {
+      if (item.establishments) {
+        if (Array.isArray(item.establishments) && item.establishments.length > 0) {
+          return item.establishments[0].name;
+        } else if (item.establishments.name) {
+          return item.establishments.name;
+        }
       }
-    }
-    return "Unknown";
+      return "Unknown";
+    };
+
+    const visitorSubmissions: Submission[] = (visitorData || []).map((item: any) => ({
+      id: item.id,
+      establishment: getEstablishmentName(item),
+      type: "Visitor Report",
+      reportDate: item.report_date,
+      visitors: item.total_guests || 0,
+      submitted: new Date(item.created_at).toISOString().slice(0, 10),
+      status: item.status,
+      reviewedBy: item.reviewed_by ? "Municipal Tourism Officer" : undefined,
+      reviewedDate: item.reviewed_at ? new Date(item.reviewed_at).toISOString().slice(0, 10) : undefined,
+      notes: item.notes,
+      details: item,
+    }));
+
+    const accommodationSubmissions: Submission[] = (accommodationData || []).map((item: any) => ({
+      id: item.id,
+      establishment: getEstablishmentName(item),
+      type: "Accommodation Report",
+      reportDate: item.report_date,
+      visitors: item.total_check_ins || 0,
+      submitted: new Date(item.created_at).toISOString().slice(0, 10),
+      status: item.status,
+      reviewedBy: item.reviewed_by ? "Municipal Tourism Officer" : undefined,
+      reviewedDate: item.reviewed_at ? new Date(item.reviewed_at).toISOString().slice(0, 10) : undefined,
+      notes: item.notes,
+      details: item,
+    }));
+
+    const combined = [...visitorSubmissions, ...accommodationSubmissions].sort(
+      (a, b) => new Date(b.submitted).getTime() - new Date(a.submitted).getTime()
+    );
+    setSubmissions(combined);
+    setLoading(false);
   };
 
-  // Format visitor reports
-  const visitorSubmissions: Submission[] = (visitorData || []).map((item: any) => ({
-    id: item.id,
-    establishment: getEstablishmentName(item),
-    type: "Visitor Report",
-    reportDate: item.report_date,
-    visitors: item.total_guests || 0,
-    submitted: new Date(item.created_at).toISOString().slice(0, 10),
-    status: item.status,
-    reviewedBy: item.reviewed_by ? "Municipal Tourism Officer" : undefined,
-    reviewedDate: item.reviewed_at ? new Date(item.reviewed_at).toISOString().slice(0, 10) : undefined,
-    notes: item.notes,
-    details: item,
-  }));
-
-  // Format accommodation reports
-  const accommodationSubmissions: Submission[] = (accommodationData || []).map((item: any) => ({
-    id: item.id,
-    establishment: getEstablishmentName(item),
-    type: "Accommodation Report",
-    reportDate: item.report_date,
-    visitors: item.total_check_ins || 0,
-    submitted: new Date(item.created_at).toISOString().slice(0, 10),
-    status: item.status,
-    reviewedBy: item.reviewed_by ? "Municipal Tourism Officer" : undefined,
-    reviewedDate: item.reviewed_at ? new Date(item.reviewed_at).toISOString().slice(0, 10) : undefined,
-    notes: item.notes,
-    details: item,
-  }));
-
-  const combined = [...visitorSubmissions, ...accommodationSubmissions].sort(
-    (a, b) => new Date(b.submitted).getTime() - new Date(a.submitted).getTime()
-  );
-  setSubmissions(combined);
-  setLoading(false);
-};
-
-  // Fetch real chart data based on selected period
   const fetchChartData = async () => {
     let startDate = "";
     let endDate = "";
-    const today = new Date();
     
-    switch (filterPeriod) {
-      case "weekly":
-        startDate = new Date(today.setDate(today.getDate() - 28)).toISOString().slice(0, 10);
-        endDate = new Date().toISOString().slice(0, 10);
-        break;
-      case "monthly":
-        startDate = new Date(today.getFullYear(), today.getMonth() - 5, 1).toISOString().slice(0, 10);
-        endDate = new Date().toISOString().slice(0, 10);
-        break;
-      case "quarterly":
-        startDate = new Date(today.getFullYear() - 1, 0, 1).toISOString().slice(0, 10);
-        endDate = new Date().toISOString().slice(0, 10);
-        break;
-      case "yearly":
-        startDate = new Date(today.getFullYear() - 4, 0, 1).toISOString().slice(0, 10);
-        endDate = new Date().toISOString().slice(0, 10);
-        break;
+    // Build date range based on selected filter type
+    if (filterType === "date" && selectedDate) {
+      startDate = selectedDate;
+      endDate = selectedDate;
+    } else if (filterType === "month" && selectedYear && selectedMonth) {
+      const monthNum = months.indexOf(selectedMonth) + 1;
+      const monthStr = String(monthNum).padStart(2, '0');
+      const lastDay = new Date(parseInt(selectedYear), monthNum, 0).getDate();
+      startDate = `${selectedYear}-${monthStr}-01`;
+      endDate = `${selectedYear}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+    } else if (filterType === "year" && selectedYear) {
+      startDate = `${selectedYear}-01-01`;
+      endDate = `${selectedYear}-12-31`;
+    } else {
+      // Default: show all 2025 data
+      startDate = "2025-01-01";
+      endDate = "2025-12-31";
     }
 
     const { data } = await supabase
       .from("visitor_reports")
       .select("report_date, total_guests")
-      .eq("status", "approved")
+      .in("status", ["pending", "approved"])
       .gte("report_date", startDate)
       .lte("report_date", endDate)
       .order("report_date", { ascending: true });
 
     if (data && data.length) {
-      // Group by period
       const grouped: Record<string, number> = {};
       data.forEach((item: any) => {
-        let key = "";
         const date = new Date(item.report_date);
-        if (filterPeriod === "weekly") {
+        let key = "";
+        
+        if (filterType === "date") {
+          key = item.report_date;
+        } else if (filterType === "month") {
           const week = Math.ceil(date.getDate() / 7);
           key = `Week ${week}`;
-        } else if (filterPeriod === "monthly") {
-          key = date.toLocaleString('default', { month: 'short' });
-        } else if (filterPeriod === "quarterly") {
-          key = `Q${Math.ceil((date.getMonth() + 1) / 3)}`;
         } else {
-          key = date.getFullYear().toString();
+          key = date.toLocaleString('default', { month: 'short' });
         }
         grouped[key] = (grouped[key] || 0) + (item.total_guests || 0);
       });
@@ -205,7 +191,6 @@ const fetchSubmissions = async () => {
       }));
       setChartData(chartDataArray);
       
-      // Calculate stats (compare last period with previous)
       const currentTotal = chartDataArray[chartDataArray.length - 1]?.visitors || 0;
       const previousTotal = chartDataArray[chartDataArray.length - 2]?.visitors || 0;
       const difference = currentTotal - previousTotal;
@@ -217,6 +202,15 @@ const fetchSubmissions = async () => {
         percentageChange,
         isIncrease: difference > 0,
       });
+    } else {
+      setChartData([]);
+      setVisitorStats({
+        currentTotal: 0,
+        previousTotal: 0,
+        difference: 0,
+        percentageChange: "0",
+        isIncrease: true,
+      });
     }
   };
 
@@ -226,7 +220,7 @@ const fetchSubmissions = async () => {
 
   useEffect(() => {
     fetchChartData();
-  }, [filterPeriod]);
+  }, [filterType, selectedYear, selectedMonth, selectedDate]);
 
   const handleExport = () => {
     toast.success("Exporting report data...");
@@ -239,12 +233,19 @@ const fetchSubmissions = async () => {
   };
 
   const handleApprove = async (id: string, type: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("You must be logged in to approve reports");
+      return;
+    }
+
     const table = type === "Visitor Report" ? "visitor_reports" : "accommodation_reports";
     const { error } = await supabase
       .from(table)
       .update({
         status: "approved",
-        reviewed_by: CURRENT_USER_ID,
+        reviewed_by: user.id,
         reviewed_at: new Date().toISOString(),
         notes: reviewNotes || null,
       })
@@ -265,12 +266,20 @@ const fetchSubmissions = async () => {
       toast.error("Please provide a reason for rejection");
       return;
     }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("You must be logged in to reject reports");
+      return;
+    }
+
     const table = type === "Visitor Report" ? "visitor_reports" : "accommodation_reports";
     const { error } = await supabase
       .from(table)
       .update({
         status: "rejected",
-        reviewed_by: CURRENT_USER_ID,
+        reviewed_by: user.id,
         reviewed_at: new Date().toISOString(),
         notes: reviewNotes,
       })
@@ -286,10 +295,33 @@ const fetchSubmissions = async () => {
     }
   };
 
+  // Get filter label for display
+  const getFilterLabel = () => {
+    if (filterType === "date" && selectedDate) return `Date: ${selectedDate}`;
+    if (filterType === "month" && selectedYear && selectedMonth) {
+      return `${selectedMonth} ${selectedYear}`;
+    }
+    if (filterType === "year" && selectedYear) return `Year: ${selectedYear}`;
+    return "All Data";
+  };
+
+  // Filter submissions for table
   const filteredReports = submissions.filter((report) => {
     const matchesSearch = report.establishment.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === "all" || report.status.toLowerCase() === filterStatus.toLowerCase();
-    return matchesSearch && matchesStatus;
+    
+    let matchesDate = true;
+    if (filterType === "date" && selectedDate) {
+      matchesDate = report.reportDate === selectedDate;
+    } else if (filterType === "month" && selectedYear && selectedMonth) {
+      const monthNum = months.indexOf(selectedMonth) + 1;
+      const monthStr = String(monthNum).padStart(2, '0');
+      matchesDate = report.reportDate.startsWith(`${selectedYear}-${monthStr}`);
+    } else if (filterType === "year" && selectedYear) {
+      matchesDate = report.reportDate.startsWith(selectedYear);
+    }
+    
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const totalSubmissions = submissions.length;
@@ -304,86 +336,104 @@ const fetchSubmissions = async () => {
         <p className="text-gray-600 mt-1">Generate and export tourism data reports</p>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Report Period</label>
-              <select
-                value={filterPeriod}
-                onChange={(e) => setFilterPeriod(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Specific Date</label>
-              <input
-                type="date"
-                value={specificDate}
-                onChange={(e) => {
-                  setSpecificDate(e.target.value);
-                  setSpecificMonth("");
+      {/* Simplified Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Filter Type Toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            {["year", "month", "date"].map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setFilterType(type as any);
+                  if (type === "year") setSelectedMonth("");
+                  if (type === "date") { setSelectedYear(""); setSelectedMonth(""); }
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Specific Month</label>
-              <input
-                type="month"
-                value={specificMonth}
-                onChange={(e) => {
-                  setSpecificMonth(e.target.value);
-                  setSpecificDate("");
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
+                className={`px-3 py-1.5 text-sm rounded-lg transition ${
+                  filterType === type
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 hover:bg-gray-200"
+                }`}
               >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search Establishment</label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search..."
-                className="px-4 py-2 border border-gray-300 rounded-lg"
-              />
-            </div>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
           </div>
-          <div>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+
+          {/* Year Dropdown */}
+          {filterType !== "date" && (
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
             >
-              <FileSpreadsheet className="w-4 h-4" /> Export to Excel
-            </button>
-          </div>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          )}
+
+          {/* Month Dropdown */}
+          {filterType === "month" && (
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">All Months</option>
+              {months.map((month) => (
+                <option key={month} value={month}>{month}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Date Picker */}
+          {filterType === "date" && (
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+            />
+          )}
+
+          <span className="text-gray-300">|</span>
+
+          {/* Status Filter */}
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+
+          {/* Search */}
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search establishment..."
+            className="flex-1 min-w-[150px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+          />
+
+          {/* Export Button */}
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Export
+          </button>
         </div>
       </div>
 
-      {/* Report Chart - Real data from database */}
+      {/* Report Chart */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Visitor Trends ({filterPeriod})
+          Visitor Trends ({getFilterLabel()})
         </h3>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
@@ -406,14 +456,14 @@ const fetchSubmissions = async () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-2">
             <Users className="w-5 h-5 text-blue-600" />
-            <p className="text-sm text-gray-600">Current Period Visitors</p>
+            <p className="text-sm text-gray-600">Current Period</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">{visitorStats.currentTotal.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-2">
             <Users className="w-5 h-5 text-purple-600" />
-            <p className="text-sm text-gray-600">Previous Period Visitors</p>
+            <p className="text-sm text-gray-600">Previous Period</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">{visitorStats.previousTotal.toLocaleString()}</p>
         </div>
@@ -434,70 +484,56 @@ const fetchSubmissions = async () => {
         </div>
       </div>
 
-      {/* Report Summary Cards */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <FileSpreadsheet className="w-5 h-5 text-blue-600" />
-            <p className="text-sm text-gray-600">Total Submissions</p>
-          </div>
+          <p className="text-sm text-gray-600 mb-1">Total Submissions</p>
           <p className="text-3xl font-bold text-gray-900">{totalSubmissions}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Eye className="w-5 h-5 text-yellow-600" />
-            <p className="text-sm text-gray-600">Pending Review</p>
-          </div>
+          <p className="text-sm text-gray-600 mb-1">Pending Review</p>
           <p className="text-3xl font-bold text-yellow-600">{pendingCount}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <p className="text-sm text-gray-600">Approved</p>
-          </div>
+          <p className="text-sm text-gray-600 mb-1">Approved</p>
           <p className="text-3xl font-bold text-green-600">{approvedCount}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <XCircle className="w-5 h-5 text-red-600" />
-            <p className="text-sm text-gray-600">Rejected</p>
-          </div>
+          <p className="text-sm text-gray-600 mb-1">Rejected</p>
           <p className="text-3xl font-bold text-red-600">{rejectedCount}</p>
         </div>
       </div>
 
       {/* Submissions Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Establishment Submissions - Review & Verification</h3>
-          <p className="text-sm text-gray-600 mt-1">Click "Review" to verify and approve/reject submissions</p>
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Submissions</h3>
+          <p className="text-sm text-gray-600">Click "Review" to approve or reject</p>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-8 text-center">Loading submissions...</div>
+            <div className="p-8 text-center">Loading...</div>
           ) : (
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Establishment</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Report Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Report Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Visitors</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Submitted</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Establishment</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Visitors</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredReports.map((report) => (
+                {filteredReports.slice(0, 50).map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">{report.establishment}</td>
-                    <td className="px-6 py-4 text-gray-600">{report.type}</td>
-                    <td className="px-6 py-4 text-gray-900">{report.reportDate}</td>
-                    <td className="px-6 py-4 text-gray-900">{report.visitors}</td>
-                    <td className="px-6 py-4 text-gray-600">{report.submitted}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{report.establishment}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{report.type}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{report.reportDate}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{report.visitors}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         report.status === "approved" ? "bg-green-100 text-green-700" :
                         report.status === "rejected" ? "bg-red-100 text-red-700" :
                         "bg-yellow-100 text-yellow-700"
@@ -505,16 +541,16 @@ const fetchSubmissions = async () => {
                         {report.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <button onClick={() => handleViewDetails(report)} className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium">
-                        <Eye className="w-4 h-4" /> Review
+                    <td className="px-4 py-3">
+                      <button onClick={() => handleViewDetails(report)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        Review
                       </button>
                     </td>
                   </tr>
                 ))}
                 {filteredReports.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                       No submissions found.
                     </td>
                   </tr>
@@ -525,29 +561,26 @@ const fetchSubmissions = async () => {
         </div>
       </div>
 
-      {/* Review Detail Modal */}
+      {/* Review Modal */}
       {showDetailModal && selectedSubmission && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Review Submission</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  {selectedSubmission.establishment} - {selectedSubmission.type}
-                </p>
+                <h2 className="text-xl font-bold text-gray-900">Review Submission</h2>
+                <p className="text-sm text-gray-600">{selectedSubmission.establishment} - {selectedSubmission.type}</p>
               </div>
-              <button onClick={() => { setShowDetailModal(false); setReviewNotes(""); }} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={() => { setShowDetailModal(false); setReviewNotes(""); }} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Establishment</label><p className="text-gray-900">{selectedSubmission.establishment}</p></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label><p className="text-gray-900">{selectedSubmission.type}</p></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Report Date</label><p className="text-gray-900">{selectedSubmission.reportDate}</p></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Submitted On</label><p className="text-gray-900">{selectedSubmission.submitted}</p></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Current Status</label>
-                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                <div><label className="text-sm font-medium text-gray-700">Report Date</label><p className="text-gray-900">{selectedSubmission.reportDate}</p></div>
+                <div><label className="text-sm font-medium text-gray-700">Visitors</label><p className="text-gray-900">{selectedSubmission.visitors}</p></div>
+                <div><label className="text-sm font-medium text-gray-700">Submitted</label><p className="text-gray-900">{selectedSubmission.submitted}</p></div>
+                <div><label className="text-sm font-medium text-gray-700">Status</label>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                     selectedSubmission.status === "approved" ? "bg-green-100 text-green-700" :
                     selectedSubmission.status === "rejected" ? "bg-red-100 text-red-700" :
                     "bg-yellow-100 text-yellow-700"
@@ -556,33 +589,31 @@ const fetchSubmissions = async () => {
               </div>
               
               {selectedSubmission.status === "pending" && (
-                <div className="border-t border-gray-200 pt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Review Notes (required for rejection)
-                  </label>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Review Notes</label>
                   <textarea
                     value={reviewNotes}
                     onChange={(e) => setReviewNotes(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     rows={3}
-                    placeholder="Add notes about this submission..."
+                    placeholder="Add notes (required for rejection)..."
                   />
                 </div>
               )}
             </div>
             {selectedSubmission.status === "pending" && (
-              <div className="p-6 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-white">
-                <button onClick={() => handleReject(selectedSubmission.id, selectedSubmission.type)} className="flex items-center gap-2 px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50">
-                  <XCircle className="w-4 h-4" /> Reject
+              <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button onClick={() => handleReject(selectedSubmission.id, selectedSubmission.type)} className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 text-sm">
+                  Reject
                 </button>
-                <button onClick={() => handleApprove(selectedSubmission.id, selectedSubmission.type)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                  <CheckCircle className="w-4 h-4" /> Approve
+                <button onClick={() => handleApprove(selectedSubmission.id, selectedSubmission.type)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                  Approve
                 </button>
               </div>
             )}
             {selectedSubmission.status !== "pending" && (
               <div className="p-6 border-t border-gray-200 flex justify-end">
-                <button onClick={() => { setShowDetailModal(false); setReviewNotes(""); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <button onClick={() => { setShowDetailModal(false); setReviewNotes(""); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
                   Close
                 </button>
               </div>

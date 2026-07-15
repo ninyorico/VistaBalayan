@@ -3,7 +3,6 @@ import { Save, Send, Plus, Trash2, AlertTriangle} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 
-
 interface VisitorEntry {
   id: number;
   groupName: string;
@@ -30,84 +29,87 @@ export default function SubmitVisitorReport() {
     loadProfile();
   }, []);
 
-  const loadProfile = async () => {
-    setLoadingProfile(true);
-    setError(null);
+const loadProfile = async () => {
+  setLoadingProfile(true);
+  setError(null);
+  
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error('User error:', userError);
-        setError('Please log in again');
-        setLoadingProfile(false);
-        return;
-      }
-      
-      if (!user) {
-        setError('No user found. Please log in.');
-        setLoadingProfile(false);
-        return;
-      }
-      
-      console.log('Current user:', user.id);
-      
-      // Get user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        setError('Could not load your profile');
-        setLoadingProfile(false);
-        return;
-      }
-      
-      if (!profileData) {
-        setError('Profile not found');
-        setLoadingProfile(false);
-        return;
-      }
-      
-      console.log('Profile data:', profileData);
-      
-      if (!profileData.establishment_id) {
-        setError('No establishment associated with your account. Please contact the municipal tourism officer.');
-        setLoadingProfile(false);
-        return;
-      }
-      
-      setProfile(profileData);
-      
-      // Get establishment name
-      const { data: estData, error: estError } = await supabase
+    if (userError) {
+      console.error('User error:', userError);
+      setError('Please log in again');
+      setLoadingProfile(false);
+      return;
+    }
+    
+    if (!user) {
+      setError('No user found. Please log in.');
+      setLoadingProfile(false);
+      return;
+    }
+    
+    console.log('=== SUBMIT REPORT DEBUG ===');
+    console.log('Current user ID:', user.id);
+    console.log('Current user email:', user.email);
+    
+    // Get user profile
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id);
+    
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      setError('Could not load your profile');
+      setLoadingProfile(false);
+      return;
+    }
+    
+    if (!profileData || profileData.length === 0) {
+      setError('Profile not found');
+      setLoadingProfile(false);
+      return;
+    }
+    
+    const profile = profileData[0];
+    
+    console.log('Profile:', profile);
+    console.log('Establishment ID:', profile?.establishment_id);
+    
+    // Also check if establishment exists
+    if (profile?.establishment_id) {
+      const { data: establishment, error: estError } = await supabase
         .from('establishments')
-        .select('name')
-        .eq('id', profileData.establishment_id)
-        .maybeSingle();
+        .select('*')
+        .eq('id', profile.establishment_id);
       
       if (estError) {
-        console.error('Establishment error:', estError);
-      }
-      
-      if (estData) {
-        setEstablishmentName(estData.name);
-        console.log('Establishment name:', estData.name);
+        console.error('Establishment fetch error:', estError);
+      } else if (establishment && establishment.length > 0) {
+        console.log('Establishment:', establishment[0]);
+        setEstablishmentName(establishment[0]?.name || 'Your Establishment');
       } else {
-        setEstablishmentName('Your Establishment');
+        console.warn('⚠️ Establishment not found with ID:', profile.establishment_id);
+        setEstablishmentName('Establishment not found');
       }
-      
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      setError('Failed to load your information');
-    } finally {
+    } else {
+      console.warn("⚠️ No establishment_id found in profile!");
+      setError('No establishment associated with your account. Please contact the municipal tourism officer.');
       setLoadingProfile(false);
+      return;
     }
-  };
+    
+    setProfile(profile);
+    
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    setError('Failed to load your information');
+  } finally {
+    setLoadingProfile(false);
+  }
+};
 
   const updateEntry = (id: number, field: string, value: any) => {
     setEntries(entries.map(entry => {
@@ -317,12 +319,6 @@ export default function SubmitVisitorReport() {
             </tfoot>
           </table>
         </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Group name and place of residence are optional. Only visitor counts are required.
-        </p>
       </div>
 
       <div className="flex gap-4">

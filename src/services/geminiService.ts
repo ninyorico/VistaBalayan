@@ -104,62 +104,63 @@ export const geminiService = {
   },
 
   // Generate insights for a specific establishment (for staff)
-  async generateAndSaveInsightsForEstablishment(establishmentData: any) {
-    try {
-      const model = genAI.getGenerativeModel({ model: MODEL_NAME })
+async generateAndSaveInsightsForEstablishment(establishmentData: any) {
+  try {
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME })
+    
+    const prompt = `
+      You are a tourism data analyst for ${establishmentData.establishmentName}.
       
-      const prompt = `
-        You are a tourism data analyst for ${establishmentData.establishmentName}.
-        
-        Based on this tourism data for this specific establishment, provide INSIGHTS AND RECOMMENDATIONS:
-        
-        Total Visitors: ${establishmentData.totalVisitors || 0}
-        Average Occupancy: ${establishmentData.avgOccupancy || 0}%
-        Monthly Trends: ${JSON.stringify(establishmentData.monthlyTrends || {})}
-        
-        Return ONLY valid JSON in this exact format:
-        {
-          "insights": [
-            {
-              "title": "Insight title",
-              "description": "detailed insight specific to this establishment",
-              "impact": "high",
-              "category": "Operations/Marketing/Revenue"
-            }
-          ]
-        }
-        
-        Provide 3-4 actionable insights for this establishment's management.
-      `
-
-      const result = await model.generateContent(prompt)
-      const responseText = await result.response.text()
+      Based on this tourism data for this specific establishment, provide INSIGHTS AND RECOMMENDATIONS:
       
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        const insights = parsed.insights || []
-
-        // Save to ai_recommendations table
-        for (const insight of insights) {
-          await supabase.from('ai_recommendations').insert({
-            title: insight.title,
-            description: insight.description,
-            impact: insight.impact,
-            category: insight.category,
-            status: 'active',
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          })
-        }
-
-        return insights
+      Total Visitors: ${establishmentData.totalVisitors || 0}
+      Average Occupancy: ${establishmentData.avgOccupancy || 0}%
+      Monthly Trends: ${JSON.stringify(establishmentData.monthlyTrends || {})}
+      
+      Return ONLY valid JSON in this exact format:
+      {
+        "insights": [
+          {
+            "title": "Insight title",
+            "description": "detailed insight specific to this establishment",
+            "impact": "high",
+            "category": "Operations/Marketing/Revenue"
+          }
+        ]
       }
-      return []
-    } catch (error) {
-      console.error('Gemini API error:', error)
-      return []
+      
+      Provide 3-4 actionable insights for this establishment's management.
+    `
+
+    const result = await model.generateContent(prompt)
+    const responseText = await result.response.text()
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0])
+      const insights = parsed.insights || []
+
+      // Save to ai_recommendations table with establishment_id
+      for (const insight of insights) {
+        await supabase.from('ai_recommendations').insert({
+          title: insight.title,
+          description: insight.description,
+          impact: insight.impact,
+          category: insight.category,
+          establishment_id: establishmentData.establishmentId,  // ← ADD THIS
+          status: 'active',
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        })
+      }
+
+      return insights
     }
-  },
+    return []
+  } catch (error) {
+    console.error('Gemini API error:', error)
+    return []
+  }
+},
 
   // Generate and save anomalies (for officer - all establishments)
   async generateAndSaveAnomalies(visitorData: any[]) {

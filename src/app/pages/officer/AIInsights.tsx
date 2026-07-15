@@ -143,7 +143,7 @@ export default function AIInsights() {
           <div>
             <h2 className="text-2xl font-bold mb-1">AI Analysis Active</h2>
             <p className="text-purple-100">
-              Powered by Google Gemini AI • Cached results for instant loading
+              Powered by Google Gemini AI 
             </p>
           </div>
         </div>

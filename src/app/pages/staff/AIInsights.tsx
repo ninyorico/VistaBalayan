@@ -100,47 +100,48 @@ export default function StaffAIInsights() {
     }
   }
 
-  const loadCachedData = async (estId: string) => {
-    if (!estId) return
-    
-    console.log('Loading cached data for establishment:', estId)
-    
-    try {
-      // Load anomalies specific to this establishment
-      const { data: anomaliesData, error: anomaliesError } = await supabase
-        .from('ai_anomalies_cache')
-        .select('*')
-        .eq('establishment_id', estId)
-        .eq('status', 'active')
-        .eq('is_resolved', false)
-        .order('detected_at', { ascending: false })
+const loadCachedData = async (estId: string) => {
+  if (!estId) return
+  
+  console.log('Loading cached data for establishment:', estId)
+  
+  try {
+    // Load anomalies specific to this establishment
+    const { data: anomaliesData, error: anomaliesError } = await supabase
+      .from('ai_anomalies_cache')
+      .select('*')
+      .eq('establishment_id', estId)
+      .eq('status', 'active')
+      .eq('is_resolved', false)
+      .order('detected_at', { ascending: false })
 
-      if (anomaliesError) {
-        console.error('Anomalies error:', anomaliesError)
-      } else {
-        console.log('Anomalies found:', anomaliesData?.length || 0)
-        setAnomalies(anomaliesData || [])
-      }
-
-      // Load recommendations
-      const { data: insightsData, error: insightsError } = await supabase
-        .from('ai_recommendations')
-        .select('*')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (insightsError) {
-        console.error('Insights error:', insightsError)
-      } else {
-        console.log('Insights found:', insightsData?.length || 0)
-        setInsights(insightsData || [])
-      }
-
-    } catch (error) {
-      console.error('Error loading cached data:', error)
+    if (anomaliesError) {
+      console.error('Anomalies error:', anomaliesError)
+    } else {
+      console.log('Anomalies found:', anomaliesData?.length || 0)
+      setAnomalies(anomaliesData || [])
     }
+
+    // Load recommendations specific to this establishment ONLY
+    const { data: insightsData, error: insightsError } = await supabase
+      .from('ai_recommendations')
+      .select('*')
+      .eq('status', 'active')
+      .eq('establishment_id', estId)  // ← ADD THIS FILTER
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (insightsError) {
+      console.error('Insights error:', insightsError)
+    } else {
+      console.log('Insights found:', insightsData?.length || 0)
+      setInsights(insightsData || [])
+    }
+
+  } catch (error) {
+    console.error('Error loading cached data:', error)
   }
+}
 
   const refreshData = async () => {
     if (!establishmentId) {

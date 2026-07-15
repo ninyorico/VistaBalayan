@@ -19,15 +19,30 @@ import StaffAnalytics from "./pages/staff/Analytics";
 import StaffAIInsights from "./pages/staff/AIInsights";
 import Profile from "./pages/staff/Profile";
 import NotFound from "./pages/NotFound";
+import ManageListing from "./pages/staff/ManageListing";
+import TourismHome from "./pages/public/TourismHome";
 
 export const router = createBrowserRouter([
+  // Public Routes (No login required)
   {
     path: "/",
-    Component: Login,
+    Component: TourismHome,  // Public tourism website - home page
   },
   {
+    path: "/explore",
+    Component: TourismHome,  // Alias for the tourism page
+  },
+
+  // Admin Login
+  {
+    path: "/admin/login",
+    Component: Login,
+  },
+
+  // Officer Routes (Admin System)
+  {
     path: "/officer",
-    Component: OfficerLayout,  // <-- direct layout, no protection
+    Component: OfficerLayout,
     children: [
       { index: true, Component: OfficerDashboard },
       { path: "establishments", Component: Establishments },
@@ -39,9 +54,11 @@ export const router = createBrowserRouter([
       { path: "settings", Component: Settings },
     ],
   },
+
+  // Staff Routes (Admin System)
   {
     path: "/staff",
-    Component: StaffLayout,   // <-- direct layout, no protection
+    Component: StaffLayout,
     children: [
       { index: true, Component: StaffDashboard },
       { path: "submit-visitor-report", Component: SubmitVisitorReport },
@@ -50,8 +67,11 @@ export const router = createBrowserRouter([
       { path: "analytics", Component: StaffAnalytics },
       { path: "ai-insights", Component: StaffAIInsights },
       { path: "profile", Component: Profile },
+      { path: "manage-listing", Component: ManageListing },
     ],
   },
+
+  // 404 - Not Found
   {
     path: "*",
     Component: NotFound,

@@ -39,7 +39,7 @@ export default function OfficerLayout() {
   
 const handleLogout = async () => {
   await supabase.auth.signOut();
-  window.location.href = "/";
+  window.location.href = "/admin/login";
 };
 
   const closeSidebarOnMobile = () => {

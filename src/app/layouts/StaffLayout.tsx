@@ -13,6 +13,7 @@ import {
   Bell,
   Menu,
   Settings,
+  Building2,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -23,6 +24,7 @@ const menuItems = [
   { path: "/staff/submission-history", icon: History, label: "Submission History" },
   { path: "/staff/analytics", icon: BarChart3, label: "Analytics" },
   { path: "/staff/ai-insights", icon: Brain, label: "AI Insights" },
+{ path: "/staff/manage-listing", icon: Building2, label: "Manage Public Listing" },
 ];
 
 export default function StaffLayout() {
@@ -33,7 +35,7 @@ export default function StaffLayout() {
 
 const handleLogout = async () => {
   await supabase.auth.signOut();
-  window.location.href = "/";
+  window.location.href = "/admin/login";
 };
 
   const closeSidebarOnMobile = () => {
