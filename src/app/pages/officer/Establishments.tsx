@@ -195,7 +195,7 @@ export default function Establishments() {
     setUserForm({
       full_name: "",
       email: "",
-      role: "establishment_staff",
+      role: "staff",
       establishment_id: "",
       status: "active",
     });
@@ -518,7 +518,7 @@ export default function Establishments() {
                 >
                   <option value="all">All Roles</option>
                   <option value="municipal_officer">Municipal Tourism Officer</option>
-                  <option value="establishment_staff">Establishment Staff</option>
+                  <option value="staff">Establishment Staff</option>
                 </select>
               </div>
               <div>
@@ -564,7 +564,7 @@ export default function Establishments() {
                 <UserCog className="w-5 h-5 text-orange-600" />
                 <p className="text-sm text-gray-600">Staff</p>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{users.filter((u) => u.role === "establishment_staff").length}</p>
+              <p className="text-3xl font-bold text-gray-900">{users.filter((u) => u.role === "staff").length}</p>
             </div>
           </div>
 
