@@ -9,7 +9,6 @@ import {
   Settings,
   LogOut,
   Bell,
-  Search,
   Menu,
 } from "lucide-react";
 import { useState } from "react";
@@ -113,14 +112,6 @@ const handleLogout = async () => {
                 <Menu className="w-5 h-5 text-white" />
               </button>
 
-              <div className="relative hidden md:block">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
-                <input
-                  type="text"
-                  placeholder="Search analytics..."
-                  className="w-40 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-[#1293B8] focus:ring-4 focus:ring-cyan-100 lg:w-80"
-                />
-              </div>
             </div>
 
             <div className="flex items-center gap-3">

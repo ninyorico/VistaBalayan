@@ -26,6 +26,24 @@ import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 
 const getCurrentYear = () => new Date().getFullYear().toString();
 
+const getWeekRange = (year: string, week: string) => {
+  const yearNumber = parseInt(year, 10) || new Date().getFullYear();
+  const weekNumber = parseInt(week, 10) || 1;
+  const start = new Date(yearNumber, 0, 1 + (weekNumber - 1) * 7);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const yearEnd = new Date(yearNumber, 11, 31);
+  if (end > yearEnd) end.setTime(yearEnd.getTime());
+
+  const toDateString = (date: Date) => date.toISOString().slice(0, 10);
+
+  return {
+    startDate: toDateString(start),
+    endDate: toDateString(end),
+  };
+};
+
 const getReportTypeLabel = (type: Submission["type"]) =>
   type === "Visitor Report" ? "Resort" : "Hotels";
 
@@ -48,7 +66,7 @@ export default function Reports() {
   const [selectedYear, setSelectedYear] = useState(getCurrentYear());
   const [selectedQuarter, setSelectedQuarter] = useState("1");
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedWeek, setSelectedWeek] = useState("1");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -70,6 +88,15 @@ export default function Reports() {
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
+
+  const weekOptions = Array.from({ length: 53 }, (_, index) => {
+    const week = String(index + 1);
+    const { startDate, endDate } = getWeekRange(selectedYear, week);
+    return {
+      value: week,
+      label: `Week ${week} (${startDate} to ${endDate})`,
+    };
+  });
 
   const fetchSubmissions = async () => {
     setLoading(true);
@@ -145,16 +172,8 @@ export default function Reports() {
   };
 
   const getReportRange = () => {
-    if (filterType === "week" && selectedDate) {
-      const start = new Date(selectedDate);
-      const day = start.getDay();
-      start.setDate(start.getDate() - day);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      return {
-        startDate: start.toISOString().slice(0, 10),
-        endDate: end.toISOString().slice(0, 10),
-      };
+    if (filterType === "week" && selectedYear && selectedWeek) {
+      return getWeekRange(selectedYear, selectedWeek);
     }
 
     if (filterType === "month" && selectedYear && selectedMonth) {
@@ -245,7 +264,7 @@ export default function Reports() {
 
   useEffect(() => {
     fetchChartData();
-  }, [filterType, selectedYear, selectedQuarter, selectedMonth, selectedDate]);
+  }, [filterType, selectedYear, selectedQuarter, selectedMonth, selectedWeek]);
 
   const handleExport = () => {
     downloadCsv(
@@ -337,9 +356,9 @@ export default function Reports() {
 
   // Get filter label for display
   const getFilterLabel = () => {
-    if (filterType === "week" && selectedDate) {
+    if (filterType === "week" && selectedYear && selectedWeek) {
       const { startDate, endDate } = getReportRange();
-      return `Weekly Report: ${startDate} to ${endDate}`;
+      return `Weekly Report: Week ${selectedWeek}, ${selectedYear} (${startDate} to ${endDate})`;
     }
     if (filterType === "month" && selectedYear && selectedMonth) {
       return `Monthly Report: ${selectedMonth} ${selectedYear}`;
@@ -393,7 +412,7 @@ export default function Reports() {
                   setFilterType(type as any);
                   if (type === "year") { setSelectedMonth(""); setSelectedQuarter("1"); }
                   if (type === "quarter") setSelectedMonth("");
-                  if (type === "week") { setSelectedYear(getCurrentYear()); setSelectedMonth(""); }
+                  if (type === "week") { setSelectedYear(getCurrentYear()); setSelectedMonth(""); setSelectedWeek("1"); }
                 }}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   filterType === type
@@ -407,7 +426,7 @@ export default function Reports() {
           </div>
 
           {/* Year Dropdown */}
-          {filterType !== "week" && (
+          {filterType && (
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
@@ -447,15 +466,18 @@ export default function Reports() {
             </select>
           )}
 
-          {/* Week Picker */}
+          {/* Week Dropdown */}
           {filterType === "week" && (
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+            <select
+              value={selectedWeek}
+              onChange={(e) => setSelectedWeek(e.target.value)}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
-              title="Select any date within the week"
-            />
+              title="Choose report week"
+            >
+              {weekOptions.map((week) => (
+                <option key={week.value} value={week.value}>{week.label}</option>
+              ))}
+            </select>
           )}
 
           <span className="text-gray-300">|</span>
