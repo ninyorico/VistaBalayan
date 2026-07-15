@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 export default function Login() {
@@ -13,123 +13,171 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    
-    console.log("Attempting login with:", email);
-    
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      
+
       if (error) {
-        console.error("Supabase login error:", error);
         throw error;
       }
-      
-      console.log("Login SUCCESS! User:", data.user);
-      
-      // Force redirect - this is the key line
+
       if (email.includes("officer")) {
         window.location.href = "/officer";
       } else {
         window.location.href = "/staff";
       }
-      
     } catch (err: any) {
-      console.error("Caught error:", err);
-      setError(err.message || "Login failed");
+      setError(err.message || "Login failed. Please check your details and try again.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0F4C75] via-[#1293B8] to-[#1CA7C9] relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[#26B6D4] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#0B3C5D] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-[#1CA7C9] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
+    <main className="min-h-[100dvh] bg-[#f4f7f8] text-slate-950">
+      <div className="grid min-h-[100dvh] grid-cols-1 lg:grid-cols-[1.08fr_0.92fr]">
+        <section className="relative hidden overflow-hidden bg-slate-950 lg:block">
+          <img
+            src="https://picsum.photos/seed/balayan-heritage-coast/1400/1600"
+            alt="Coastal heritage scenery representing Balayan tourism"
+            className="absolute inset-0 h-full w-full object-cover opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-slate-900/40 to-cyan-950/70" />
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent" />
 
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at center, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.1) 50%, transparent 70%)' }}></div>
-
-      <div className="p-8 sm:p-10 lg:p-12 relative z-10">
-        <div className="flex items-start gap-1.5">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white drop-shadow-2xl tracking-tight">VistaBalayan</h1>
-          <span className="text-sm sm:text-base text-white/90 font-normal mt-1">©</span>
-        </div>
-        <p className="text-white/95 text-base sm:text-lg lg:text-xl mt-2 font-light tracking-wide">Tourism Analytics Platform</p>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-md relative z-10">
-          <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 sm:p-10 lg:p-12 border border-white/25">
-            <div className="mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Welcome Back</h2>
-              <p className="text-white/90 text-sm sm:text-base font-light">Sign in to access the tourism analytics platform</p>
+          <div className="relative z-10 flex min-h-[100dvh] flex-col justify-between p-10 xl:p-14">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/18 bg-white/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl">
+                <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
+              </div>
+              <div>
+                <p className="text-lg font-semibold tracking-tight text-white">VistaBalayan</p>
+                <p className="text-sm text-white/75">Tourism office portal</p>
+              </div>
             </div>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-white text-sm">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-white/95 mb-2">Email Address</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-white/50 focus:border-white/50 focus:bg-white/25 outline-none transition-all duration-200 text-base text-white placeholder:text-white/60"
-                  placeholder="officer@balayan.gov"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-white/95 mb-2">Password</label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-white/50 focus:border-white/50 focus:bg-white/25 outline-none transition-all duration-200 text-base text-white placeholder:text-white/60 pr-12"
-                    placeholder="Enter your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center cursor-pointer group">
-                  <input type="checkbox" className="w-4 h-4 text-[#1CA7C9] border-white/50 rounded focus:ring-white/60 cursor-pointer bg-white/30" />
-                  <span className="ml-2.5 text-sm text-white/95 group-hover:text-white transition-colors">Remember me</span>
-                </label>
-                <a href="#" className="text-sm font-medium text-white/95 hover:text-white transition-colors">Forgot Password?</a>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#1CA7C9] hover:bg-[#26B6D4] text-white py-4 rounded-xl font-semibold text-base hover:shadow-2xl hover:shadow-[#1CA7C9]/40 transition-all duration-300 transform hover:-translate-y-0.5 mt-8 disabled:opacity-50"
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
-            </form>
+            <div className="max-w-xl pb-4">
+              <p className="mb-4 w-fit rounded-full border border-white/20 bg-white/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-xl">
+                Secure access
+              </p>
+              <h1 className="text-5xl font-semibold leading-[0.96] tracking-[-0.045em] text-white xl:text-6xl">
+                Manage Balayan tourism with confidence.
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-7 text-white/85">
+                Sign in to review visitors, listings, accommodations, reports, and municipal insights in one protected workspace.
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
+
+        <section className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden px-5 py-8 sm:px-8 lg:px-12">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(28,167,201,0.14),transparent_32%),radial-gradient(circle_at_82%_80%,rgba(15,76,117,0.12),transparent_30%)]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-600/35 to-transparent" />
+
+          <div className="relative z-10 w-full max-w-[440px]">
+            <div className="mb-8 lg:hidden">
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0F4C75] text-white shadow-lg shadow-cyan-900/12">
+                <ShieldCheck className="h-5 w-5" strokeWidth={1.8} />
+              </div>
+              <p className="text-3xl font-semibold tracking-[-0.035em] text-slate-950">VistaBalayan</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Tourism analytics and establishment management.</p>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/80 bg-white/86 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-8">
+              <div className="mb-8">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-[#0F4C75] ring-1 ring-cyan-900/10">
+                  <LockKeyhole className="h-5 w-5" strokeWidth={1.8} />
+                </div>
+                <h2 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950">Welcome back</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Use your authorized officer or establishment staff account.
+                </p>
+              </div>
+
+              {error && (
+                <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700" role="alert">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-800">
+                    Email address
+                  </label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} />
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3.5 text-base text-slate-950 outline-none transition duration-200 placeholder:text-slate-400 focus:border-[#1293B8] focus:ring-4 focus:ring-cyan-100"
+                      placeholder="officer@balayan.gov.ph"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-slate-800">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} />
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3.5 pr-12 text-base text-slate-950 outline-none transition duration-200 placeholder:text-slate-400 focus:border-[#1293B8] focus:ring-4 focus:ring-cyan-100"
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 transition duration-200 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-cyan-100"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" strokeWidth={1.8} /> : <Eye className="h-5 w-5" strokeWidth={1.8} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 pt-1">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-600">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-[#0F4C75] focus:ring-[#1293B8]"
+                    />
+                    Remember me
+                  </label>
+                  <a href="#" className="text-sm font-medium text-[#0F4C75] transition duration-200 hover:text-[#1293B8]">
+                    Forgot password?
+                  </a>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-3 w-full rounded-2xl bg-[#0F4C75] px-5 py-4 text-base font-semibold text-white shadow-[0_18px_36px_rgba(15,76,117,0.22)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#0B3C5D] focus:outline-none focus:ring-4 focus:ring-cyan-100 active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                >
+                  {loading ? "Signing in..." : "Sign in"}
+                </button>
+              </form>
+            </div>
+
+            <p className="mt-6 text-center text-xs leading-5 text-slate-500">
+              Access is limited to authorized VistaBalayan municipal and establishment accounts.
+            </p>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
