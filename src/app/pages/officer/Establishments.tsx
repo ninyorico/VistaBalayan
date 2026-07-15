@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Building2, MapPin, Phone, UserCog, Mail, Shield, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
+import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 
 interface Establishment {
   id: string;
@@ -11,6 +12,7 @@ interface Establishment {
   contact_number: string;
   total_rooms: number;
   status: string;
+  staff_count?: number;
 }
 
 interface Profile {
@@ -91,6 +93,13 @@ export default function Establishments() {
       setUsers(data || []);
     }
   }
+
+  const staffCountByEstablishment = users.reduce<Record<string, number>>((counts, user) => {
+    if (user.role === "establishment_staff" && user.status !== "inactive" && user.establishment_id) {
+      counts[user.establishment_id] = (counts[user.establishment_id] || 0) + 1;
+    }
+    return counts;
+  }, {});
 
   const filteredEstablishments = establishments.filter((est) => {
     const matchesSearch = est.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -195,7 +204,7 @@ export default function Establishments() {
     setUserForm({
       full_name: "",
       email: "",
-      role: "staff",
+      role: "establishment_staff",
       establishment_id: "",
       status: "active",
     });
@@ -283,6 +292,42 @@ export default function Establishments() {
     setDeleteTarget(null);
   };
 
+  const handleExportEstablishments = () => {
+    downloadCsv(
+      datestampedFilename("establishments"),
+      ["Name", "Type", "Address", "Contact", "Rooms", "Staff", "Status"],
+      filteredEstablishments.map((establishment) => [
+        establishment.name,
+        establishment.type,
+        establishment.address,
+        establishment.contact_number,
+        establishment.total_rooms || 0,
+        staffCountByEstablishment[establishment.id] || 0,
+        establishment.status,
+      ])
+    );
+    toast.success(`Exported ${filteredEstablishments.length} establishment(s)`);
+  };
+
+  const handleExportUsers = () => {
+    downloadCsv(
+      datestampedFilename("users"),
+      ["Full Name", "Email", "Role", "Establishment", "Status", "Created At"],
+      filteredUsers.map((user) => {
+        const establishment = establishments.find((e) => e.id === user.establishment_id);
+        return [
+          user.full_name || "Unknown",
+          user.email,
+          user.role === "municipal_officer" ? "Municipal Tourism Officer" : "Establishment Staff",
+          establishment?.name || "N/A",
+          user.status,
+          user.created_at,
+        ];
+      })
+    );
+    toast.success(`Exported ${filteredUsers.length} user(s)`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -300,14 +345,22 @@ export default function Establishments() {
             Manage tourism establishments and system users
           </p>
         </div>
-        <button
-          onClick={activeTab === "establishments" ? handleAddEstablishment : handleAddUser}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="hidden sm:inline">{activeTab === "establishments" ? "Add Establishment" : "Add User"}</span>
-          <span className="sm:hidden">Add</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={activeTab === "establishments" ? handleExportEstablishments : handleExportUsers}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
+          >
+            Export {activeTab === "establishments" ? "Establishments" : "Users"}
+          </button>
+          <button
+            onClick={activeTab === "establishments" ? handleAddEstablishment : handleAddUser}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">{activeTab === "establishments" ? "Add Establishment" : "Add User"}</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -430,6 +483,7 @@ export default function Establishments() {
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Address</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Rooms</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Staff</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -460,6 +514,7 @@ export default function Establishments() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-gray-900">{establishment.total_rooms || "N/A"}</td>
+                        <td className="px-6 py-4 text-gray-900">{staffCountByEstablishment[establishment.id] || 0}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
                             establishment.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
@@ -481,7 +536,7 @@ export default function Establishments() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                         No establishments found. Click "Add Establishment" to get started.
                       </td>
                     </tr>
@@ -518,7 +573,7 @@ export default function Establishments() {
                 >
                   <option value="all">All Roles</option>
                   <option value="municipal_officer">Municipal Tourism Officer</option>
-                  <option value="staff">Establishment Staff</option>
+                  <option value="establishment_staff">Establishment Staff</option>
                 </select>
               </div>
               <div>
@@ -564,7 +619,7 @@ export default function Establishments() {
                 <UserCog className="w-5 h-5 text-orange-600" />
                 <p className="text-sm text-gray-600">Staff</p>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{users.filter((u) => u.role === "staff").length}</p>
+              <p className="text-3xl font-bold text-gray-900">{users.filter((u) => u.role === "establishment_staff").length}</p>
             </div>
           </div>
 

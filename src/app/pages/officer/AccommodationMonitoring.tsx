@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Search, Download, Eye, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
+import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 
 interface AccommodationRecord {
   id: string;
@@ -218,7 +219,22 @@ export default function AccommodationMonitoring() {
   };
 
   const handleExport = () => {
-    toast.success("Exporting accommodation data...");
+    downloadCsv(
+      datestampedFilename("accommodation-records"),
+      ["Date", "Month", "Establishment", "Total Rooms", "Occupied Rooms", "Average Occupancy %", "Total Guests", "Guest Nights", "Days In Month"],
+      filteredRecords.map((record) => [
+        record.date,
+        record.month,
+        record.establishment,
+        record.totalRooms,
+        record.occupiedRooms,
+        record.avgOccupancy.toFixed(2),
+        record.totalGuests,
+        record.guestNights,
+        record.daysInMonth,
+      ])
+    );
+    toast.success(`Exported ${filteredRecords.length} accommodation record(s)`);
   };
 
   if (loading) {

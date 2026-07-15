@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Search, Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
+import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 
 interface VisitorRecord {
   id: string;
@@ -92,10 +93,21 @@ export default function VisitorMonitoring() {
   const totalFemale = filteredRecords.reduce((sum, r) => sum + r.female, 0);
 
   const handleExport = () => {
-    let exportMsg = "Exporting data...";
-    if (specificDate) exportMsg = `Exporting data for ${specificDate}...`;
-    else if (specificMonth) exportMsg = `Exporting data for ${specificMonth}...`;
-    toast.success(exportMsg);
+    downloadCsv(
+      datestampedFilename("visitor-records"),
+      ["Date", "Establishment", "Guest/Group", "Male", "Female", "Total", "Residence Type", "Location"],
+      filteredRecords.map((record) => [
+        record.date,
+        record.establishment,
+        record.guestName,
+        record.male,
+        record.female,
+        record.total,
+        record.residenceType,
+        record.location,
+      ])
+    );
+    toast.success(`Exported ${filteredRecords.length} visitor record(s)`);
   };
 
   if (loading) {

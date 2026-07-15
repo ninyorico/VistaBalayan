@@ -22,6 +22,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
+import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 
 interface Submission {
   id: string;
@@ -223,7 +224,22 @@ export default function Reports() {
   }, [filterType, selectedYear, selectedMonth, selectedDate]);
 
   const handleExport = () => {
-    toast.success("Exporting report data...");
+    downloadCsv(
+      datestampedFilename("tourism-reports"),
+      ["Establishment", "Type", "Report Date", "Visitors/Check-ins", "Submitted", "Status", "Reviewed By", "Reviewed Date", "Notes"],
+      filteredReports.map((report) => [
+        report.establishment,
+        report.type,
+        report.reportDate,
+        report.visitors,
+        report.submitted,
+        report.status,
+        report.reviewedBy || "",
+        report.reviewedDate || "",
+        report.notes || "",
+      ])
+    );
+    toast.success(`Exported ${filteredReports.length} report(s)`);
   };
 
   const handleViewDetails = (submission: Submission) => {
