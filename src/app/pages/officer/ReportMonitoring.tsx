@@ -13,14 +13,14 @@ const tabs: Array<{
 }> = [
   {
     id: "visitor",
-    label: "Visitor reports",
-    description: "Daily arrivals, origin, and demographic records",
+    label: "Resort reports",
+    description: "Resort arrivals, origin, and demographic records",
     icon: Users,
   },
   {
     id: "accommodation",
-    label: "Accommodation reports",
-    description: "Room occupancy, guest nights, and check-in records",
+    label: "Hotel reports",
+    description: "Hotel room occupancy, guest nights, and check-in records",
     icon: Bed,
   },
 ];
@@ -46,7 +46,7 @@ export default function ReportMonitoring() {
                 Report Monitoring
               </h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-                Review submitted tourism records in one workspace. Use the tabs to switch between visitor and accommodation monitoring without leaving the workflow.
+                Review submitted tourism records in one workspace. Use the tabs to switch between resort and hotel monitoring without leaving the workflow.
               </p>
             </div>
           </div>

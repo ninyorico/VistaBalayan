@@ -211,7 +211,7 @@ setOccupancyRate(occupancyRate);
         ...(visitorRecent || []).map((v: any) => ({
           id: v.id,
           establishment_name: v.establishments?.name || "Unknown",
-          type: "Visitor Report",
+          type: "Resort Report",
           status: v.status,
           date: v.report_date,
           created_at: v.created_at,
@@ -219,7 +219,7 @@ setOccupancyRate(occupancyRate);
         ...(accommodationRecent || []).map((a: any) => ({
           id: a.id,
           establishment_name: a.establishments?.name || "Unknown",
-          type: "Accommodation Report",
+          type: "Hotel Report",
           status: a.status,
           date: a.report_date,
           created_at: a.created_at,

@@ -357,8 +357,7 @@ export default function Establishments() {
             className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline">{activeTab === "establishments" ? "Add Establishment" : "Add User"}</span>
-            <span className="sm:hidden">Add</span>
+            <span>Add Record</span>
           </button>
         </div>
       </div>
@@ -419,10 +418,6 @@ export default function Establishments() {
                   <option value="all">All Types</option>
                   <option value="Resort">Resort</option>
                   <option value="Hotel">Hotel</option>
-                  <option value="Inn">Inn</option>
-                  <option value="Restaurant">Restaurant</option>
-                  <option value="Tourist Attraction">Tourist Attraction</option>
-                  <option value="Food & Beverage Establishment">Food & Beverage</option>
                 </select>
               </div>
               <div>
@@ -537,7 +532,7 @@ export default function Establishments() {
                   ) : (
                     <tr>
                       <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                        No establishments found. Click "Add Establishment" to get started.
+                        No establishments found. Click "Add Record" to get started.
                       </td>
                     </tr>
                   )}
@@ -718,17 +713,10 @@ export default function Establishments() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Type *</label>
                 <select value={establishmentForm.type} onChange={(e) => {
                   const newType = e.target.value;
-                  const isAccommodation = newType === "Hotel" || newType === "Resort";
-                  setEstablishmentForm({ ...establishmentForm, type: newType, total_rooms: isAccommodation ? establishmentForm.total_rooms : 0 });
+                  setEstablishmentForm({ ...establishmentForm, type: newType });
                 }} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all">
-                  <optgroup label="Accommodation Establishments (with rooms)">
-                    <option value="Hotel">Hotel</option>
-                    <option value="Resort">Resort</option>
-                  </optgroup>
-                  <optgroup label="Non-Accommodation Establishments">
-                    <option value="Food & Beverage Establishment">Food & Beverage Establishment</option>
-                    <option value="Tourist Attraction">Tourist Attraction</option>
-                  </optgroup>
+                  <option value="Resort">Resort</option>
+                  <option value="Hotel">Hotel</option>
                 </select>
               </div>
               <div>
@@ -739,12 +727,10 @@ export default function Establishments() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
                 <input type="text" value={establishmentForm.contact_number} onChange={(e) => setEstablishmentForm({ ...establishmentForm, contact_number: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="+63 917 123 4567" />
               </div>
-              {(establishmentForm.type === "Hotel" || establishmentForm.type === "Resort") && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Rooms *</label>
-                  <input type="number" value={establishmentForm.total_rooms} onChange={(e) => setEstablishmentForm({ ...establishmentForm, total_rooms: parseInt(e.target.value) || 0 })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" min="0" />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Rooms *</label>
+                <input type="number" value={establishmentForm.total_rooms} onChange={(e) => setEstablishmentForm({ ...establishmentForm, total_rooms: parseInt(e.target.value) || 0 })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" min="0" />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                 <select value={establishmentForm.status} onChange={(e) => setEstablishmentForm({ ...establishmentForm, status: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all">

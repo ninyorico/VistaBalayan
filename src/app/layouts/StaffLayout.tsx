@@ -19,8 +19,8 @@ import { useState } from "react";
 
 const menuItems = [
   { path: "/staff", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/staff/submit-visitor-report", icon: FileUp, label: "Submit Visitor Report" },
-  { path: "/staff/submit-accommodation-report", icon: Bed, label: "Submit Accommodation Report" },
+  { path: "/staff/submit-visitor-report", icon: FileUp, label: "Resort" },
+  { path: "/staff/submit-accommodation-report", icon: Bed, label: "Hotels" },
   { path: "/staff/submission-history", icon: History, label: "Submission History" },
   { path: "/staff/analytics", icon: BarChart3, label: "Analytics" },
   { path: "/staff/ai-insights", icon: Brain, label: "AI Insights" },

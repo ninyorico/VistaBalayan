@@ -266,7 +266,7 @@ export default function SubmitAccommodationReport() {
     if (detailsError) {
       toast.error("Failed to save room details: " + detailsError.message);
     } else {
-      toast.success("Accommodation report submitted successfully");
+      toast.success("Hotel report submitted successfully");
       // Reset form
       setRoomData(roomData.map(room => ({
         ...room,
@@ -294,10 +294,10 @@ export default function SubmitAccommodationReport() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Submit Accommodation Report
+            Submit Hotels Report
           </h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">
-            For establishments with accommodation rooms
+            For hotel establishments with accommodation rooms
           </p>
         </div>
         <button
@@ -485,7 +485,7 @@ export default function SubmitAccommodationReport() {
           <Save className="w-5 h-5" /> Save Draft
         </button>
         <button onClick={handleSubmit} disabled={submitting} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Send className="w-5 h-5" /> {submitting ? "Submitting..." : "Submit Report"}
+          <Send className="w-5 h-5" /> {submitting ? "Submitting..." : "Submit Hotel Report"}
         </button>
       </div>
     </div>

@@ -23,6 +23,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
   const [accommodationRecords, setAccommodationRecords] = useState<AccommodationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilterType, setDateFilterType] = useState<"month" | "date">("month");
   const [specificDate, setSpecificDate] = useState("");
   const [specificMonth, setSpecificMonth] = useState("");
 
@@ -196,9 +197,9 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
     const matchesSearch = record.establishment.toLowerCase().includes(searchTerm.toLowerCase());
     let matchesDate = true;
     
-    if (specificDate) {
+    if (dateFilterType === "date" && specificDate) {
       matchesDate = record.date === specificDate;
-    } else if (specificMonth) {
+    } else if (dateFilterType === "month" && specificMonth) {
       matchesDate = record.date.startsWith(specificMonth);
     }
 
@@ -309,28 +310,43 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
               />
             </div>
           </div>
-          <div>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            {["month", "date"].map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => {
+                  setDateFilterType(type as "month" | "date");
+                  setSpecificDate("");
+                  setSpecificMonth("");
+                }}
+                className={`px-3 py-1.5 text-sm rounded-lg transition ${
+                  dateFilterType === type
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+          {dateFilterType === "date" ? (
             <input
               type="date"
               value={specificDate}
-              onChange={(e) => {
-                setSpecificDate(e.target.value);
-                setSpecificMonth("");
-              }}
+              onChange={(e) => setSpecificDate(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              title="Select report date"
             />
-          </div>
-          <div>
+          ) : (
             <input
               type="month"
               value={specificMonth}
-              onChange={(e) => {
-                setSpecificMonth(e.target.value);
-                setSpecificDate("");
-              }}
+              onChange={(e) => setSpecificMonth(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              title="Select report month"
             />
-          </div>
+          )}
           <button 
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             onClick={handleExport}

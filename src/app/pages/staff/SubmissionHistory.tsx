@@ -9,6 +9,9 @@ const statusStyles = {
   rejected: "bg-rose-50 text-rose-700 ring-rose-200",
 };
 
+const getReportTypeLabel = (type: string) =>
+  type === "Visitor Report" ? "Resort" : type === "Accommodation Report" ? "Hotels" : type;
+
 export default function SubmissionHistory() {
   const [submissions, setSubmissions] = useState<StaffSubmissionSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +83,7 @@ export default function SubmissionHistory() {
       <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-3xl font-bold tracking-[-0.035em] text-slate-950">Submission history</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Visitor entries from the same report date are grouped into one submission so the totals match what staff actually submitted.
+          Resort entries from the same report date are grouped into one submission so the totals match what staff actually submitted.
         </p>
       </div>
 
@@ -116,8 +119,8 @@ export default function SubmissionHistory() {
           </div>
           <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
             <option value="all">All types</option>
-            <option value="Visitor Report">Visitor Report</option>
-            <option value="Accommodation Report">Accommodation Report</option>
+            <option value="Visitor Report">Resort</option>
+            <option value="Accommodation Report">Hotels</option>
           </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
             <option value="all">All status</option>
@@ -145,7 +148,7 @@ export default function SubmissionHistory() {
               {filteredSubmissions.length > 0 ? (
                 filteredSubmissions.map((submission) => (
                   <tr key={submission.id} className="transition hover:bg-slate-50/80">
-                    <td className="px-6 py-4 font-semibold text-slate-950">{submission.type}</td>
+                    <td className="px-6 py-4 font-semibold text-slate-950">{getReportTypeLabel(submission.type)}</td>
                     <td className="px-6 py-4 text-slate-600">{formatMonthYear(submission.reportDate)}</td>
                     <td className="px-6 py-4 text-slate-900">{submission.dataSummary}</td>
                     <td className="px-6 py-4 text-slate-600">{submission.submittedDate}</td>

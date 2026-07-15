@@ -138,8 +138,8 @@ export default function StaffDashboard() {
                 <FileUp className="h-7 w-7" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-950">Submit visitor report</h3>
-                <p className="mt-1 text-sm leading-5 text-slate-600">Record daily arrivals by origin and visitor count.</p>
+                <h3 className="text-lg font-bold text-slate-950">Resort</h3>
+                <p className="mt-1 text-sm leading-5 text-slate-600">Submit resort visitor arrivals by origin and count.</p>
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
@@ -156,8 +156,8 @@ export default function StaffDashboard() {
                 <Bed className="h-7 w-7" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-950">Submit accommodation report</h3>
-                <p className="mt-1 text-sm leading-5 text-slate-600">Report occupied rooms, check-ins, and guest nights.</p>
+                <h3 className="text-lg font-bold text-slate-950">Hotels</h3>
+                <p className="mt-1 text-sm leading-5 text-slate-600">Submit hotel room occupancy, check-ins, and guest nights.</p>
               </div>
             </div>
             <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
@@ -208,7 +208,7 @@ export default function StaffDashboard() {
               ))
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-                No submissions yet. Start by submitting a visitor or accommodation report.
+                No submissions yet. Start by submitting a resort or hotel report.
               </div>
             )}
           </div>
@@ -222,7 +222,7 @@ export default function StaffDashboard() {
               <div>
                 <p className="font-semibold text-slate-950">Daily reports keep analytics reliable</p>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
-                  Submit visitor and accommodation data after business close. The tourism office uses approved records for reports, analytics, and AI insights.
+                  Submit resort and hotel data after business close. The tourism office uses approved records for reports, analytics, and AI insights.
                 </p>
               </div>
             </div>
