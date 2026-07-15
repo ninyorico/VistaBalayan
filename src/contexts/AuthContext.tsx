@@ -26,42 +26,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+
+    const fetchProfile = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (!mounted) return
+      if (error) {
+        console.error('Profile fetch error:', error)
+        setProfile(null)
+        return
+      }
+      setProfile(data as Profile || null)
+    }
+
     // Check current session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
+      if (!mounted) return
+
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle()
-        setProfile(data as Profile || null)
+        await fetchProfile(session.user.id)
+      } else {
+        setProfile(null)
       }
-      setLoading(false)
+      if (mounted) setLoading(false)
     }
     
     checkSession()
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Listen for auth changes. Defer Supabase queries outside the auth callback
+    // to avoid leaving the app stuck on the loading screen after sign-in.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
+      setLoading(true)
       
       if (session?.user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle()
-        setProfile(data as Profile || null)
+        setTimeout(async () => {
+          await fetchProfile(session.user.id)
+          if (mounted) setLoading(false)
+        }, 0)
       } else {
         setProfile(null)
+        setLoading(false)
       }
-      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
