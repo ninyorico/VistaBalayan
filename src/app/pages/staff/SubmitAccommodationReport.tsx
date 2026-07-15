@@ -11,7 +11,6 @@ interface RoomOccupancy {
   occupied: number;
   checkIns: number;
   guestNights: number;
-  isRent: boolean;
 }
 
 const roomTypes = [
@@ -22,6 +21,15 @@ const roomTypes = [
   { type: "Blue", code: "B" },
   { type: "Ocean View", code: "OV" },
 ];
+
+const parseNonNegativeInteger = (value: string) => {
+  if (value.trim() === "") return 0;
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const numericInputValue = (value: number) => (value === 0 ? "" : String(value));
 
 export default function SubmitAccommodationReport() {
   const [profile, setProfile] = useState<any>(null);
@@ -86,7 +94,6 @@ export default function SubmitAccommodationReport() {
       occupied: 0,
       checkIns: 0,
       guestNights: 0,
-      isRent: false,
     }));
   });
 
@@ -130,39 +137,7 @@ export default function SubmitAccommodationReport() {
             return room;
           }
 
-          if (typeof numericValue === "number") {
-            const checkIns = field === "checkIns" ? numericValue : updatedRoom.checkIns;
-            const guestNights = field === "guestNights" ? numericValue : updatedRoom.guestNights;
-
-            if (updatedRoom.isRent) {
-              if (guestNights > checkIns && checkIns > 0) {
-                toast.error("Guest nights cannot be higher than guest check-ins");
-                return room;
-              }
-            } else {
-              if (guestNights >= checkIns && checkIns > 0 && guestNights > 0) {
-                toast.error("Guest nights cannot be equal to or higher than check-ins. Enable rent mode if they should be equal.");
-                return room;
-              }
-            }
-          }
-
           return updatedRoom;
-        }
-        return room;
-      })
-    );
-  };
-
-  const toggleRentMode = (index: number) => {
-    setRoomData(
-      roomData.map((room, i) => {
-        if (i === index) {
-          const newIsRent = !room.isRent;
-          if (!newIsRent && room.checkIns === room.guestNights && room.checkIns !== 0) {
-            toast.info("Rent mode disabled. Guest nights must now be less than check-ins.");
-          }
-          return { ...room, isRent: newIsRent };
         }
         return room;
       })
@@ -256,7 +231,7 @@ export default function SubmitAccommodationReport() {
       occupied_rooms: room.occupied,
       check_ins: room.checkIns,
       guest_nights: room.guestNights,
-      is_rent_mode: room.isRent,
+      is_rent_mode: false,
     }));
 
     const { error: detailsError } = await supabase
@@ -273,7 +248,6 @@ export default function SubmitAccommodationReport() {
         occupied: 0,
         checkIns: 0,
         guestNights: 0,
-        isRent: false,
       })));
       setReportDate(getTodayDate());
     }
@@ -337,16 +311,17 @@ export default function SubmitAccommodationReport() {
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-gray-700">Number of Rooms:</label>
                       <input
-                        type="number"
-                        value={tempRoomCounts[room.code] || 0}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={numericInputValue(tempRoomCounts[room.code] || 0)}
                         onChange={(e) =>
                           setTempRoomCounts({
                             ...tempRoomCounts,
-                            [room.code]: Number(e.target.value),
+                            [room.code]: parseNonNegativeInteger(e.target.value),
                           })
                         }
                         className="w-24 px-3 py-2 border border-gray-300 rounded-lg"
-                        min="0"
                         placeholder="0"
                       />
                     </div>
@@ -413,33 +388,25 @@ export default function SubmitAccommodationReport() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Room Code</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Number of Rooms</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Occupied Rooms</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Rent Mode</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Guest Check-ins</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Guest Nights</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {roomData.map((room, index) => {
-                const hasValidationError = (room.isRent && room.guestNights > room.checkIns && room.checkIns > 0) ||
-                                          (!room.isRent && room.guestNights >= room.checkIns && room.checkIns > 0 && room.guestNights > 0);
                 return (
-                  <tr key={index} className={`hover:bg-gray-50 ${room.isRent ? 'bg-orange-50' : ''} ${hasValidationError ? 'bg-red-50' : ''}`}>
+                  <tr key={index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 font-medium text-gray-900">{room.roomType}</td>
                     <td className="px-6 py-4"><span className="px-3 py-1 bg-gray-100 rounded font-mono text-sm">{room.roomCode}</span></td>
                     <td className="px-6 py-4"><div className="w-24 px-3 py-2 bg-gray-50 border rounded-lg text-sm font-semibold">{room.numberOfRooms}</div></td>
                     <td className="px-6 py-4">
-                      <input type="number" value={room.occupied} onChange={(e) => updateRoomData(index, "occupied", Number(e.target.value))} className="w-24 px-3 py-2 border rounded-lg" min="0" max={room.numberOfRooms} />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="w-24 px-3 py-2 border rounded-lg" placeholder="0" />
                     </td>
                     <td className="px-6 py-4">
-                      <button onClick={() => toggleRentMode(index)} className={`px-4 py-2 rounded-lg font-medium text-sm transition ${room.isRent ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
-                        {room.isRent ? 'Rent ON' : 'Rent OFF'}
-                      </button>
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="w-24 px-3 py-2 border border-gray-300 rounded-lg" placeholder="0" />
                     </td>
                     <td className="px-6 py-4">
-                      <input type="number" value={room.checkIns} onChange={(e) => updateRoomData(index, "checkIns", Number(e.target.value))} className={`w-24 px-3 py-2 border rounded-lg ${hasValidationError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} min="0" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <input type="number" value={room.guestNights} onChange={(e) => updateRoomData(index, "guestNights", Number(e.target.value))} className={`w-24 px-3 py-2 border rounded-lg ${hasValidationError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} min="0" />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="w-24 px-3 py-2 border border-gray-300 rounded-lg" placeholder="0" />
                     </td>
                   </tr>
                 );
@@ -448,7 +415,6 @@ export default function SubmitAccommodationReport() {
                 <td className="px-6 py-4" colSpan={2}>Total</td>
                 <td className="px-6 py-4 text-blue-600">{totalRooms}</td>
                 <td className="px-6 py-4 text-blue-600">{totalOccupiedRooms}</td>
-                <td className="px-6 py-4"></td>
                 <td className="px-6 py-4 text-blue-600">{totalCheckIns}</td>
                 <td className="px-6 py-4 text-blue-600">{totalGuestNights}</td>
               </tr>

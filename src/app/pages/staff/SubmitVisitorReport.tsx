@@ -13,6 +13,15 @@ interface VisitorEntry {
   placeOfResidence: string;
 }
 
+const parseNonNegativeInteger = (value: string) => {
+  if (value.trim() === "") return 0;
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const numericInputValue = (value: number) => (value === 0 ? "" : String(value));
+
 export default function SubmitVisitorReport() {
   const [profile, setProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -286,10 +295,10 @@ const loadProfile = async () => {
                     <input type="text" value={entry.groupName} onChange={(e) => updateEntry(entry.id, "groupName", e.target.value)} placeholder="Optional" className="w-40 px-2 py-1 border rounded text-sm" />
                   </td>
                   <td className="px-3 py-2">
-                    <input type="number" value={entry.male} onChange={(e) => updateEntry(entry.id, "male", parseInt(e.target.value) || 0)} className="w-20 px-2 py-1 border rounded text-sm" min="0" />
+                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.male)} onChange={(e) => updateEntry(entry.id, "male", parseNonNegativeInteger(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm" placeholder="0" />
                   </td>
                   <td className="px-3 py-2">
-                    <input type="number" value={entry.female} onChange={(e) => updateEntry(entry.id, "female", parseInt(e.target.value) || 0)} className="w-20 px-2 py-1 border rounded text-sm" min="0" />
+                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.female)} onChange={(e) => updateEntry(entry.id, "female", parseNonNegativeInteger(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm" placeholder="0" />
                   </td>
                   <td className="px-3 py-2 font-medium text-center">{entry.total}</td>
                   <td className="px-3 py-2">
