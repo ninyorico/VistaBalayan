@@ -2,12 +2,10 @@ import { Outlet, NavLink, useNavigate } from "react-router";
 import {
   LayoutDashboard,
   Building2,
-  Users,
-  Bed,
+  ClipboardCheck,
   FileText,
   BarChart3,
   Brain,
-  UserCog,
   Settings,
   LogOut,
   Bell,
@@ -20,9 +18,8 @@ import { supabase } from "../../lib/supabase";
 
 const menuItems = [
   { path: "/officer", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/officer/establishments", icon: Building2, label: "Establishments & Users" },
-  { path: "/officer/visitor-monitoring", icon: Users, label: "Visitor Monitoring" },
-  { path: "/officer/accommodation-monitoring", icon: Bed, label: "Accommodation Monitoring" },
+  { path: "/officer/establishments", icon: Building2, label: "Establishments" },
+  { path: "/officer/report-monitoring", icon: ClipboardCheck, label: "Report Monitoring" },
   { path: "/officer/reports", icon: FileText, label: "Reports" },
   { path: "/officer/analytics", icon: BarChart3, label: "Analytics" },
   { path: "/officer/ai-insights", icon: Brain, label: "AI Insights" },

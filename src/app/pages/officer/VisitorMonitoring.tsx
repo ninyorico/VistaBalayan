@@ -16,7 +16,7 @@ interface VisitorRecord {
   location: string;
 }
 
-export default function VisitorMonitoring() {
+export default function VisitorMonitoring({ embedded = false }: { embedded?: boolean }) {
   const [visitorRecords, setVisitorRecords] = useState<VisitorRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,12 +121,14 @@ export default function VisitorMonitoring() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Visitor Monitoring</h1>
-        <p className="text-gray-600 mt-1">
-          Monitor and review visitor data from all establishments
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Visitor Monitoring</h1>
+          <p className="text-gray-600 mt-1">
+            Monitor and review visitor data from all establishments
+          </p>
+        </div>
+      )}
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

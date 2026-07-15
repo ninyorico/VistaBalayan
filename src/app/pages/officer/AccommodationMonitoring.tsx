@@ -18,7 +18,7 @@ interface AccommodationRecord {
   daysInMonth: number;
 }
 
-export default function AccommodationMonitoring() {
+export default function AccommodationMonitoring({ embedded = false }: { embedded?: boolean }) {
   const [accommodationRecords, setAccommodationRecords] = useState<AccommodationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -248,10 +248,12 @@ export default function AccommodationMonitoring() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Accommodation Monitoring</h1>
-        <p className="text-gray-600 mt-1">Monitor room occupancy and guest accommodation data</p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Accommodation Monitoring</h1>
+          <p className="text-gray-600 mt-1">Monitor room occupancy and guest accommodation data</p>
+        </div>
+      )}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

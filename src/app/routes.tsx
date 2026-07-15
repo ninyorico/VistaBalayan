@@ -1,12 +1,11 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import Login from "./pages/Login";
 import OfficerLayout from "./layouts/OfficerLayout";
 import StaffLayout from "./layouts/StaffLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import OfficerDashboard from "./pages/officer/Dashboard";
 import Establishments from "./pages/officer/Establishments";
-import VisitorMonitoring from "./pages/officer/VisitorMonitoring";
-import AccommodationMonitoring from "./pages/officer/AccommodationMonitoring";
+import ReportMonitoring from "./pages/officer/ReportMonitoring";
 import Reports from "./pages/officer/Reports";
 import Analytics from "./pages/officer/Analytics";
 import AIInsights from "./pages/officer/AIInsights";
@@ -50,8 +49,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: OfficerDashboard },
       { path: "establishments", Component: Establishments },
-      { path: "visitor-monitoring", Component: VisitorMonitoring },
-      { path: "accommodation-monitoring", Component: AccommodationMonitoring },
+      { path: "report-monitoring", Component: ReportMonitoring },
+      { path: "visitor-monitoring", element: <Navigate to="/officer/report-monitoring" replace /> },
+      { path: "accommodation-monitoring", element: <Navigate to="/officer/report-monitoring" replace /> },
       { path: "reports", Component: Reports },
       { path: "analytics", Component: Analytics },
       { path: "ai-insights", Component: AIInsights },
