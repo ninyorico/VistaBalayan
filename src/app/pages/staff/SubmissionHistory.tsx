@@ -1,18 +1,16 @@
 import { useState, useEffect } from "react";
 import { Search, Eye, Download, CheckCircle, Clock, XCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { formatMonthYear, groupStaffSubmissions, StaffSubmissionSummary } from "../../../lib/reportMetrics";
 
-interface Submission {
-  id: string;
-  type: "Visitor Report" | "Accommodation Report";
-  month: string;
-  dataSummary: string;
-  submittedDate: string;
-  status: string;
-}
+const statusStyles = {
+  approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  pending: "bg-amber-50 text-amber-700 ring-amber-200",
+  rejected: "bg-rose-50 text-rose-700 ring-rose-200",
+};
 
 export default function SubmissionHistory() {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [submissions, setSubmissions] = useState<StaffSubmissionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -24,54 +22,31 @@ export default function SubmissionHistory() {
 
   const fetchSubmissions = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       setLoading(false);
       return;
     }
-    
-    // Fetch visitor reports
+
     const { data: visitorData } = await supabase
       .from("visitor_reports")
-      .select("*")
+      .select("id, report_date, created_at, status, total_guests")
       .eq("submitted_by", user.id)
       .order("created_at", { ascending: false });
 
-    // Fetch accommodation reports
     const { data: accommodationData } = await supabase
       .from("accommodation_reports")
-      .select("*")
+      .select("id, report_date, created_at, status, total_rooms, total_occupied_rooms, total_check_ins, total_guest_nights")
       .eq("submitted_by", user.id)
       .order("created_at", { ascending: false });
 
-    const visitorSubmissions: Submission[] = (visitorData || []).map((item: any) => ({
-      id: item.id,
-      type: "Visitor Report",
-      month: new Date(item.report_date).toLocaleString('default', { month: 'long', year: 'numeric' }),
-      dataSummary: `${item.total_guests || 0} visitors`,
-      submittedDate: new Date(item.created_at).toISOString().slice(0, 10),
-      status: item.status,
-    }));
-
-    const accommodationSubmissions: Submission[] = (accommodationData || []).map((item: any) => ({
-      id: item.id,
-      type: "Accommodation Report",
-      month: new Date(item.report_date).toLocaleString('default', { month: 'long', year: 'numeric' }),
-      dataSummary: `${((item.total_occupied_rooms || 0) / (item.total_rooms || 1) * 100).toFixed(0)}% occupancy`,
-      submittedDate: new Date(item.created_at).toISOString().slice(0, 10),
-      status: item.status,
-    }));
-
-    const combined = [...visitorSubmissions, ...accommodationSubmissions].sort(
-      (a, b) => new Date(b.submittedDate).getTime() - new Date(a.submittedDate).getTime()
-    );
-    
-    setSubmissions(combined);
+    setSubmissions(groupStaffSubmissions(visitorData || [], accommodationData || []));
     setLoading(false);
   };
 
   const filteredSubmissions = submissions.filter((sub) => {
-    const matchesSearch = sub.month.toLowerCase().includes(searchTerm.toLowerCase());
+    const month = formatMonthYear(sub.reportDate).toLowerCase();
+    const matchesSearch = month.includes(searchTerm.toLowerCase()) || sub.dataSummary.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || sub.type === filterType;
     const matchesStatus = filterStatus === "all" || sub.status.toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesType && matchesStatus;
@@ -84,122 +59,111 @@ export default function SubmissionHistory() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1CA7C9] mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading your submissions...</p>
+      <div className="grid min-h-[60vh] place-items-center">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-b-[#0F4C75]"></div>
+          <p className="mt-4 text-sm font-medium text-slate-600">Loading your submissions</p>
+        </div>
       </div>
     );
   }
 
+  const summaryCards = [
+    { label: "Total submissions", value: totalSubmissions, icon: CheckCircle, tone: "text-sky-700 bg-sky-50 ring-sky-100" },
+    { label: "Approved", value: approvedCount, icon: CheckCircle, tone: "text-emerald-700 bg-emerald-50 ring-emerald-100" },
+    { label: "Pending", value: pendingCount, icon: Clock, tone: "text-amber-700 bg-amber-50 ring-amber-100" },
+    { label: "Rejected", value: rejectedCount, icon: XCircle, tone: "text-rose-700 bg-rose-50 ring-rose-100" },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Submission History</h1>
-        <p className="text-gray-600 mt-1">View and manage your report submission history</p>
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <h1 className="text-3xl font-bold tracking-[-0.035em] text-slate-950">Submission history</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          Visitor entries from the same report date are grouped into one submission so the totals match what staff actually submitted.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle className="w-5 h-5 text-blue-600" />
-            <p className="text-sm text-gray-600">Total Submissions</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        {summaryCards.map((card) => (
+          <div key={card.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-500">{card.label}</p>
+                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-950">{card.value}</p>
+              </div>
+              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${card.tone}`}>
+                <card.icon className="h-5 w-5" />
+              </div>
+            </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{totalSubmissions}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <p className="text-sm text-gray-600">Approved</p>
-          </div>
-          <p className="text-3xl font-bold text-green-600">{approvedCount}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-5 h-5 text-yellow-600" />
-            <p className="text-sm text-gray-600">Pending</p>
-          </div>
-          <p className="text-3xl font-bold text-yellow-600">{pendingCount}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <XCircle className="w-5 h-5 text-red-600" />
-            <p className="text-sm text-gray-600">Rejected</p>
-          </div>
-          <p className="text-3xl font-bold text-red-600">{rejectedCount}</p>
-        </div>
+        ))}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="md:col-span-2">
             <div className="relative">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by month..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="Search by month or summary"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100"
               />
             </div>
           </div>
-          <div>
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
-              <option value="all">All Types</option>
-              <option value="Visitor Report">Visitor Report</option>
-              <option value="Accommodation Report">Accommodation Report</option>
-            </select>
-          </div>
-          <div>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
-              <option value="all">All Status</option>
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
+            <option value="all">All types</option>
+            <option value="Visitor Report">Visitor Report</option>
+            <option value="Accommodation Report">Accommodation Report</option>
+          </select>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
+            <option value="all">All status</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+          </select>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Report Type</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Month</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Data Summary</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Submitted Date</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Report type</th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Month</th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Data summary</th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Submitted date</th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-100">
               {filteredSubmissions.length > 0 ? (
                 filteredSubmissions.map((submission) => (
-                  <tr key={submission.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">{submission.type}</td>
-                    <td className="px-6 py-4 text-gray-600">{submission.month}</td>
-                    <td className="px-6 py-4 text-gray-900">{submission.dataSummary}</td>
-                    <td className="px-6 py-4 text-gray-600">{submission.submittedDate}</td>
+                  <tr key={submission.id} className="transition hover:bg-slate-50/80">
+                    <td className="px-6 py-4 font-semibold text-slate-950">{submission.type}</td>
+                    <td className="px-6 py-4 text-slate-600">{formatMonthYear(submission.reportDate)}</td>
+                    <td className="px-6 py-4 text-slate-900">{submission.dataSummary}</td>
+                    <td className="px-6 py-4 text-slate-600">{submission.submittedDate}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                        submission.status === "approved" ? "bg-green-100 text-green-700" :
-                        submission.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
-                      }`}>
-                        {submission.status === "approved" && <CheckCircle className="w-3 h-3" />}
-                        {submission.status === "pending" && <Clock className="w-3 h-3" />}
-                        {submission.status === "rejected" && <XCircle className="w-3 h-3" />}
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ${statusStyles[submission.status as keyof typeof statusStyles] || statusStyles.pending}`}>
+                        {submission.status === "approved" && <CheckCircle className="h-3 w-3" />}
+                        {submission.status === "pending" && <Clock className="h-3 w-3" />}
+                        {submission.status === "rejected" && <XCircle className="h-3 w-3" />}
                         {submission.status}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                          <Eye className="w-4 h-4" />
+                        <button className="rounded-xl p-2 text-[#0F4C75] transition hover:bg-cyan-50" aria-label="View submission">
+                          <Eye className="h-4 w-4" />
                         </button>
-                        <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
-                          <Download className="w-4 h-4" />
+                        <button className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100" aria-label="Download submission">
+                          <Download className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -207,7 +171,7 @@ export default function SubmissionHistory() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500">
                     No submissions found.
                   </td>
                 </tr>

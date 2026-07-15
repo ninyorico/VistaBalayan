@@ -24,6 +24,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { supabase } from "../../../lib/supabase";
+import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
 
 interface RecentSubmission {
   id: string;
@@ -124,17 +125,20 @@ const { data: accommodationData } = await supabase
   .select('total_rooms, total_occupied_rooms, report_date')
   .in('status', ['pending', 'approved']);
 
-let totalRoomDays = 0;
-let totalGuestNights = 0;
+let weightedOccupancySum = 0;
+let occupancyReportCount = 0;
 
 accommodationData?.forEach((report) => {
-  const date = new Date(report.report_date);
-  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  totalRoomDays += report.total_rooms * daysInMonth;
-  totalGuestNights += report.total_occupied_rooms;
+  const reportOccupancy = calculateAccommodationOccupancy(
+    report.total_occupied_rooms,
+    report.total_rooms,
+    report.report_date
+  );
+  weightedOccupancySum += reportOccupancy;
+  occupancyReportCount += 1;
 });
 
-const occupancyRate = totalRoomDays > 0 ? (totalGuestNights / totalRoomDays) * 100 : 0;
+const occupancyRate = occupancyReportCount > 0 ? weightedOccupancySum / occupancyReportCount : 0;
 setOccupancyRate(occupancyRate);
 
       // 3. Fetch establishments count
@@ -271,85 +275,82 @@ setOccupancyRate(occupancyRate);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome to VistaBalayan Tourism Management System</p>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-sm">
+        <div className="relative p-6 sm:p-8 lg:p-10">
+          <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-44 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Total Visitors</p>
-              <p className="text-3xl font-bold text-gray-900">{totalVisitors.toLocaleString()}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-200">Officer command center</p>
+              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.035em] text-white sm:text-4xl">
+                Tourism activity, submissions, and AI alerts in one workspace.
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+                Monitor approved and pending tourism records, inspect establishment performance, and act on anomalies before report generation.
+              </p>
             </div>
-            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
+            <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Current occupancy</p>
+              <p className="mt-2 text-3xl font-bold text-white">{occupancyRate.toFixed(1)}%</p>
             </div>
           </div>
         </div>
+      </section>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Monthly Arrivals</p>
-              <p className="text-3xl font-bold text-gray-900">{monthlyArrivals.toLocaleString()}</p>
-            </div>
-            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Total visitors", value: totalVisitors.toLocaleString(), icon: Users, tone: "bg-sky-50 text-sky-700 ring-sky-100" },
+          { label: "Monthly arrivals", value: monthlyArrivals.toLocaleString(), icon: TrendingUp, tone: "bg-cyan-50 text-cyan-700 ring-cyan-100" },
+          { label: "Occupancy rate", value: `${occupancyRate.toFixed(1)}%`, icon: Bed, tone: "bg-amber-50 text-amber-700 ring-amber-100" },
+          { label: "Establishments", value: totalEstablishments.toString(), icon: Building2, tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-950">{stat.value}</p>
+              </div>
+              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
+                <stat.icon className="h-5 w-5" />
+              </div>
             </div>
           </div>
-        </div>
+        ))}
+      </section>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Occupancy Rate</p>
-              <p className="text-3xl font-bold text-gray-900">{occupancyRate.toFixed(1)}%</p>
-            </div>
-            <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
-              <Bed className="w-6 h-6 text-orange-600" />
-            </div>
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h3 className="text-lg font-bold text-slate-950">Monthly visitor trends</h3>
+            <p className="mt-1 text-sm text-slate-500">Aggregated visitor counts by report month.</p>
           </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Total Establishments</p>
-              <p className="text-3xl font-bold text-gray-900">{totalEstablishments}</p>
-            </div>
-            <div className="w-12 h-12 rounded-lg bg-teal-100 flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-teal-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Visitor Trends</h3>
           {visitorTrends.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={visitorTrends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <defs>
+                  <linearGradient id="visitorFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0F4C75" stopOpacity={0.32} />
+                    <stop offset="95%" stopColor="#0F4C75" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="month" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
                 <Tooltip />
-                <Legend />
-                <Area type="monotone" dataKey="visitors" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} name="Visitors" />
+                <Area type="monotone" dataKey="visitors" stroke="#0F4C75" fill="url(#visitorFill)" strokeWidth={3} name="Visitors" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">No visitor data available</div>
+            <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No visitor data available</div>
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Visitor Demographics</h3>
-          {demographics.length > 0 && demographics.some(d => d.value > 0) ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h3 className="text-lg font-bold text-slate-950">Visitor demographics</h3>
+            <p className="mt-1 text-sm text-slate-500">Share of visitors by residence category.</p>
+          </div>
+          {demographics.length > 0 && demographics.some((d) => d.value > 0) ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={demographics} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ${value}%`} outerRadius={100} dataKey="value">
@@ -359,88 +360,89 @@ setOccupancyRate(occupancyRate);
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">No demographic data available</div>
+            <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No demographic data available</div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* Top Performing Establishments */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Establishments (by visitors)</h3>
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-5">
+          <h3 className="text-lg font-bold text-slate-950">Top performing establishments</h3>
+          <p className="mt-1 text-sm text-slate-500">Ranked by submitted visitor volume.</p>
+        </div>
         {topEstablishments.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={topEstablishments}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" angle={-35} textAnchor="end" height={90} stroke="#64748b" />
+              <YAxis stroke="#64748b" />
               <Tooltip />
-              <Bar dataKey="visitors" fill="#3b82f6" name="Visitors" />
+              <Bar dataKey="visitors" fill="#0F4C75" radius={[10, 10, 0, 0]} name="Visitors" />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="text-center py-12 text-gray-500">No establishment data available</div>
+          <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No establishment data available</div>
         )}
-      </div>
+      </section>
 
-      {/* Recent Submissions & Anomalies */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Submissions</h3>
-          <div className="space-y-3">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-950">Recent submissions</h3>
+          <div className="mt-5 space-y-3">
             {recentSubmissions.length > 0 ? (
               recentSubmissions.map((sub) => (
-                <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={sub.id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
                   <div>
-                    <p className="font-medium text-gray-900">{sub.establishment_name}</p>
-                    <p className="text-sm text-gray-600">{sub.type}</p>
+                    <p className="font-semibold text-slate-950">{sub.establishment_name}</p>
+                    <p className="mt-1 text-sm text-slate-600">{sub.type}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                      sub.status === "approved" ? "bg-green-100 text-green-700" :
-                      sub.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ${
+                      sub.status === "approved" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
+                      sub.status === "pending" ? "bg-amber-50 text-amber-700 ring-amber-200" : "bg-rose-50 text-rose-700 ring-rose-200"
                     }`}>
-                      {sub.status === "approved" && <CheckCircle className="w-3 h-3" />}
-                      {sub.status === "pending" && <Clock className="w-3 h-3" />}
+                      {sub.status === "approved" && <CheckCircle className="h-3 w-3" />}
+                      {sub.status === "pending" && <Clock className="h-3 w-3" />}
                       {sub.status}
                     </span>
-                    <p className="text-xs text-gray-500 mt-1">{sub.date}</p>
+                    <p className="mt-1 text-xs text-slate-500">{sub.date}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500">No submissions yet</div>
+              <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">No submissions yet</div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Anomaly Detections</h3>
-          <div className="space-y-3">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-950">Recent anomaly detections</h3>
+          <div className="mt-5 space-y-3">
             {anomalies.length > 0 ? (
               anomalies.map((anomaly) => (
-                <div key={anomaly.id} className={`flex items-start gap-3 p-3 rounded-lg border ${
-                  anomaly.severity === "high" ? "bg-red-50 border-red-200" : "bg-yellow-50 border-yellow-200"
+                <div key={anomaly.id} className={`flex items-start gap-3 rounded-2xl border p-4 ${
+                  anomaly.severity === "high" ? "border-rose-200 bg-rose-50" : "border-amber-200 bg-amber-50"
                 }`}>
-                  <AlertTriangle className={`w-5 h-5 mt-0.5 ${
-                    anomaly.severity === "high" ? "text-red-600" : "text-yellow-600"
+                  <AlertTriangle className={`mt-0.5 h-5 w-5 ${
+                    anomaly.severity === "high" ? "text-rose-700" : "text-amber-700"
                   }`} />
                   <div className="flex-1">
-                    <div className="flex justify-between mb-1">
-                      <p className="font-medium text-gray-900">{anomaly.anomaly_type}</p>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        anomaly.severity === "high" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
+                    <div className="flex justify-between gap-3">
+                      <p className="font-semibold text-slate-950">{anomaly.anomaly_type}</p>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
+                        anomaly.severity === "high" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
                       }`}>{anomaly.severity}</span>
                     </div>
-                    <p className="text-sm text-gray-700 mt-1">{anomaly.description}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-700">{anomaly.description}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500">No anomalies detected</div>
+              <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">No anomalies detected</div>
             )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

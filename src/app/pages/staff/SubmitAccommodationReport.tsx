@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Save, Send, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
+import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
 
 interface RoomOccupancy {
   roomType: string;
@@ -121,11 +122,17 @@ export default function SubmitAccommodationReport() {
     setRoomData(
       roomData.map((room, i) => {
         if (i === index) {
-          const updatedRoom = { ...room, [field]: value };
+          const numericValue = typeof value === "number" ? Math.max(0, value) : value;
+          const updatedRoom = { ...room, [field]: numericValue };
 
-          if (typeof value === "number") {
-            const checkIns = field === "checkIns" ? value : updatedRoom.checkIns;
-            const guestNights = field === "guestNights" ? value : updatedRoom.guestNights;
+          if (field === "occupied" && Number(numericValue) > Number(room.numberOfRooms || 0)) {
+            toast.error("Occupied rooms cannot exceed configured rooms for this room type");
+            return room;
+          }
+
+          if (typeof numericValue === "number") {
+            const checkIns = field === "checkIns" ? numericValue : updatedRoom.checkIns;
+            const guestNights = field === "guestNights" ? numericValue : updatedRoom.guestNights;
 
             if (updatedRoom.isRent) {
               if (guestNights > checkIns && checkIns > 0) {
@@ -134,7 +141,7 @@ export default function SubmitAccommodationReport() {
               }
             } else {
               if (guestNights >= checkIns && checkIns > 0 && guestNights > 0) {
-                toast.error("Guest nights cannot be equal to or higher than guest check-ins. Enable Rent Mode if they should be equal.");
+                toast.error("Guest nights cannot be equal to or higher than check-ins. Enable rent mode if they should be equal.");
                 return room;
               }
             }
@@ -177,10 +184,11 @@ export default function SubmitAccommodationReport() {
 
   const avgGuestNight =
     totalCheckIns > 0 ? (totalGuestNights / totalCheckIns).toFixed(2) : "0.00";
-  const avgOccupancyRate =
-    totalRooms > 0
-      ? ((totalOccupiedRooms / totalRooms) * 100).toFixed(2)
-      : "0.00";
+  const avgOccupancyRate = calculateAccommodationOccupancy(
+    totalOccupiedRooms,
+    totalRooms,
+    reportDate
+  ).toFixed(2);
   const avgGuestPerRoom =
     totalOccupiedRooms > 0
       ? (totalGuestNights / totalOccupiedRooms).toFixed(2)
@@ -198,6 +206,20 @@ export default function SubmitAccommodationReport() {
 
     if (totalRooms === 0) {
       toast.error("Please configure rooms first");
+      return;
+    }
+
+    const invalidOccupiedRoom = roomData.find(
+      (room) => Number(room.occupied || 0) > Number(room.numberOfRooms || 0)
+    );
+
+    if (invalidOccupiedRoom) {
+      toast.error(`${invalidOccupiedRoom.roomType} occupied rooms cannot exceed configured rooms`);
+      return;
+    }
+
+    if (totalOccupiedRooms > totalRooms) {
+      toast.error("Total occupied rooms cannot exceed total configured rooms");
       return;
     }
 

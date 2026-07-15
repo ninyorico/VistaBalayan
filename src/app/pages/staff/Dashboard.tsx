@@ -8,8 +8,17 @@ import {
   AlertCircle,
   Calendar,
   TrendingUp,
+  ArrowRight,
+  History,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { groupStaffSubmissions } from "../../../lib/reportMetrics";
+
+const statusStyles = {
+  approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  pending: "bg-amber-50 text-amber-700 ring-amber-200",
+  rejected: "bg-rose-50 text-rose-700 ring-rose-200",
+};
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
@@ -29,229 +38,205 @@ export default function StaffDashboard() {
 
   const loadUserAndData = async () => {
     setLoading(true);
-    
-    // Get current user
+
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
-      console.log("No user found, redirecting to login");
       window.location.href = "/";
       return;
     }
-    
-    // Get profile
+
     const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
       .maybeSingle();
-    
+
     setProfile(profileData);
-    
+
     if (profileData) {
-      // Fetch visitor reports for this user
       const { data: visitorData } = await supabase
         .from("visitor_reports")
-        .select("*")
+        .select("id, report_date, created_at, status, total_guests")
         .eq("submitted_by", profileData.id);
 
-      // Fetch accommodation reports for this user
       const { data: accommodationData } = await supabase
         .from("accommodation_reports")
-        .select("*")
+        .select("id, report_date, created_at, status, total_rooms, total_occupied_rooms, total_check_ins, total_guest_nights")
         .eq("submitted_by", profileData.id);
 
-      const allReports = [...(visitorData || []), ...(accommodationData || [])];
-      
-      // Calculate stats
-      const total = allReports.length;
-      const pending = allReports.filter(r => r.status === "pending").length;
-      const approved = allReports.filter(r => r.status === "approved").length;
-      const rejected = allReports.filter(r => r.status === "rejected").length;
-      
-      setStats({ total, pending, approved, rejected });
-      
-      // Get recent submissions
-      const recent = allReports
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5)
-        .map(r => ({
-          id: r.id,
-          type: r.total_rooms !== undefined ? "Accommodation Report" : "Visitor Report",
-          date: new Date(r.created_at).toISOString().slice(0, 10),
-          status: r.status,
-          data: r.total_guests ? `${r.total_guests} visitors` : 
-                r.total_occupied_rooms ? `${Math.round((r.total_occupied_rooms / r.total_rooms) * 100)}% occupancy` : "",
-        }));
-      
-      setRecentSubmissions(recent);
-    }
-    
-    setLoading(false);
-  };
+      const submissions = groupStaffSubmissions(visitorData || [], accommodationData || []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/";
+      setStats({
+        total: submissions.length,
+        pending: submissions.filter((r) => r.status === "pending").length,
+        approved: submissions.filter((r) => r.status === "approved").length,
+        rejected: submissions.filter((r) => r.status === "rejected").length,
+      });
+
+      setRecentSubmissions(submissions.slice(0, 5));
+    }
+
+    setLoading(false);
   };
 
   const approvalRate = stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0;
 
   const submissionStats = [
-    { title: "Total Submissions", value: stats.total.toString(), icon: CheckCircle, color: "blue" },
-    { title: "Pending Review", value: stats.pending.toString(), icon: Clock, color: "yellow" },
-    { title: "Rejected", value: stats.rejected.toString(), icon: AlertCircle, color: "red" },
-    { title: "Approval Rate", value: `${approvalRate}%`, icon: TrendingUp, color: "green" },
+    { title: "Total submissions", value: stats.total.toString(), icon: CheckCircle, tone: "bg-sky-50 text-sky-700 ring-sky-100" },
+    { title: "Pending review", value: stats.pending.toString(), icon: Clock, tone: "bg-amber-50 text-amber-700 ring-amber-100" },
+    { title: "Rejected", value: stats.rejected.toString(), icon: AlertCircle, tone: "bg-rose-50 text-rose-700 ring-rose-100" },
+    { title: "Approval rate", value: `${approvalRate}%`, icon: TrendingUp, tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
   ];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1CA7C9] mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading dashboard...</p>
+      <div className="grid min-h-[60vh] place-items-center">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-b-[#0F4C75]"></div>
+          <p className="mt-4 text-sm font-medium text-slate-600">Loading establishment dashboard</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg shadow-sm p-8">
-        <h1 className="text-3xl font-bold mb-2">
-          Welcome to VistaBalayan Portal
-        </h1>
-        <p className="text-white/90">
-          Submit your visitor and accommodation reports to help monitor tourism in Balayan, Batangas
-        </p>
-      </div>
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-sm">
+        <div className="relative p-6 sm:p-8 lg:p-10">
+          <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="absolute bottom-0 left-1/2 h-40 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-200">Establishment portal</p>
+              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.035em] text-white sm:text-4xl">
+                Submit accurate tourism records for Balayan monitoring.
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+                Visitor rows are grouped into report submissions, so your dashboard now reflects actual submitted forms instead of raw database entries.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/staff/submission-history")}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 active:scale-[0.98]"
+            >
+              View history
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </section>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <button
           onClick={() => navigate("/staff/submit-visitor-report")}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition text-left"
+          className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileUp className="w-7 h-7 text-blue-600" />
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F4C75] text-white shadow-lg shadow-cyan-950/15">
+                <FileUp className="h-7 w-7" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-950">Submit visitor report</h3>
+                <p className="mt-1 text-sm leading-5 text-slate-600">Record daily arrivals by origin and visitor count.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Submit Visitor Report</h3>
-              <p className="text-sm text-gray-600 mt-1">Report daily visitor data for your establishment</p>
-            </div>
+            <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
           </div>
         </button>
 
         <button
           onClick={() => navigate("/staff/submit-accommodation-report")}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition text-left"
+          className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Bed className="w-7 h-7 text-purple-600" />
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-950/15">
+                <Bed className="h-7 w-7" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-950">Submit accommodation report</h3>
+                <p className="mt-1 text-sm leading-5 text-slate-600">Report occupied rooms, check-ins, and guest nights.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Submit Accommodation Report</h3>
-              <p className="text-sm text-gray-600 mt-1">Report room occupancy and guest information</p>
-            </div>
+            <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
           </div>
         </button>
-      </div>
+      </section>
 
-      {/* Submission Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {submissionStats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {submissionStats.map((stat) => (
+          <div key={stat.title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium text-slate-500">{stat.title}</p>
+                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-950">{stat.value}</p>
               </div>
-              <div className={`w-12 h-12 rounded-lg bg-${stat.color}-100 flex items-center justify-center`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
+                <stat.icon className="h-5 w-5" />
               </div>
             </div>
           </div>
         ))}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Submissions */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Submissions</h3>
-          <div className="space-y-3">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-950">Recent submissions</h3>
+              <p className="mt-1 text-sm text-slate-500">Grouped by actual submitted report.</p>
+            </div>
+            <History className="h-5 w-5 text-slate-400" />
+          </div>
+          <div className="mt-5 space-y-3">
             {recentSubmissions.length > 0 ? (
               recentSubmissions.map((submission) => (
-                <div key={submission.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={submission.id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
                   <div>
-                    <p className="font-medium text-gray-900">{submission.type}</p>
-                    <p className="text-sm text-gray-600">{submission.data}</p>
+                    <p className="font-semibold text-slate-950">{submission.type}</p>
+                    <p className="mt-1 text-sm text-slate-600">{submission.dataSummary}</p>
                   </div>
                   <div className="text-right">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                        submission.status === "approved"
-                          ? "bg-green-100 text-green-700"
-                          : submission.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {submission.status === "approved" && <CheckCircle className="w-3 h-3" />}
-                      {submission.status === "pending" && <Clock className="w-3 h-3" />}
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ${statusStyles[submission.status as keyof typeof statusStyles] || statusStyles.pending}`}>
                       {submission.status}
                     </span>
-                    <p className="text-xs text-gray-500 mt-1">{submission.date}</p>
+                    <p className="mt-1 text-xs text-slate-500">{submission.submittedDate}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-center py-4">No submissions yet. Start by submitting a report.</p>
+              <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+                No submissions yet. Start by submitting a visitor or accommodation report.
+              </div>
             )}
           </div>
         </div>
 
-        {/* Upcoming Deadlines */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Deadlines</h3>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">Daily Report Deadline</p>
-                <p className="text-sm text-gray-600 mt-1">Submit daily reports before end of day</p>
-                <p className="text-sm text-blue-600 font-medium mt-1">Submit now to avoid delays</p>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-950">Reporting reminder</h3>
+          <div className="mt-5 rounded-2xl bg-cyan-50 p-4 ring-1 ring-cyan-100">
+            <div className="flex items-start gap-3">
+              <Calendar className="mt-0.5 h-5 w-5 text-[#0F4C75]" />
+              <div>
+                <p className="font-semibold text-slate-950">Daily reports keep analytics reliable</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Submit visitor and accommodation data after business close. The tourism office uses approved records for reports, analytics, and AI insights.
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Notifications */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Notifications & Reminders</h3>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-            <div>
-              <p className="font-medium text-gray-900">Daily Report Reminder</p>
-              <p className="text-sm text-gray-600 mt-1">
-                Don't forget to submit your daily visitor and accommodation reports.
+          <div className="mt-4 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 text-amber-700" />
+              <p className="text-sm leading-6 text-slate-700">
+                Occupied rooms cannot be higher than your configured room inventory. The form now validates this before submission.
               </p>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Logout Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-        >
-          Logout
-        </button>
-      </div>
+      </section>
     </div>
   );
 }

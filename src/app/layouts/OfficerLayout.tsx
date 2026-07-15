@@ -53,7 +53,7 @@ const handleLogout = async () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#f5f8f9] text-slate-950">
+    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,rgba(15,76,117,0.10),transparent_32%),linear-gradient(180deg,#f8fbfc_0%,#eef4f7_100%)] text-slate-950">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -68,9 +68,14 @@ const handleLogout = async () => {
           sidebarOpen ? "w-64 z-50" : "w-0 lg:w-64 z-40"
         } overflow-hidden`}
       >
-        <div className="border-b border-slate-200 bg-slate-950 p-6">
-          <h1 className="text-xl font-semibold tracking-[-0.025em] text-white">VistaBalayan</h1>
-          <p className="mt-1 text-sm text-white/68">Tourism Officer Portal</p>
+        <div className="border-b border-slate-800 bg-slate-950 p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400 text-sm font-black text-slate-950">VB</div>
+            <div>
+              <h1 className="text-xl font-semibold tracking-[-0.025em] text-white">VistaBalayan</h1>
+              <p className="mt-0.5 text-sm text-white/68">Tourism Officer Portal</p>
+            </div>
+          </div>
         </div>
 
         <nav className="p-4 space-y-1.5 overflow-y-auto h-[calc(100vh-130px)] lg:h-auto">
