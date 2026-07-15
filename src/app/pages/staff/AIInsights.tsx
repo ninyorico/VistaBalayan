@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, Info, CheckCircle, Brain, Loader2, RefreshCw } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { geminiService } from '../../../services/geminiService'
+import { calculateAverageAccommodationOccupancy } from '../../../lib/reportMetrics'
 
 interface Anomaly {
   id: string
@@ -180,12 +181,7 @@ const loadCachedData = async (estId: string) => {
       // Calculate analytics for this establishment
       const totalVisitors = visitorData?.reduce((sum, v) => sum + (v.total_guests || 0), 0) || 0
       
-      let avgOccupancy = 0
-      if (accommodationData && accommodationData.length > 0) {
-        const totalRooms = accommodationData.reduce((sum, a) => sum + (a.total_rooms || 0), 0)
-        const totalOccupied = accommodationData.reduce((sum, a) => sum + (a.total_occupied_rooms || 0), 0)
-        avgOccupancy = totalRooms > 0 ? (totalOccupied / totalRooms) * 100 : 0
-      }
+      const avgOccupancy = calculateAverageAccommodationOccupancy(accommodationData || [])
 
       // Monthly trends for this establishment
       const monthlyTrends: Record<string, number> = {}

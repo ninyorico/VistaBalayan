@@ -3,6 +3,7 @@ import { Search, Download, Eye, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
+import { calculateAccommodationOccupancy, calculateAverageAccommodationOccupancy } from "../../../lib/reportMetrics";
 
 interface AccommodationRecord {
   id: string;
@@ -105,13 +106,11 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
           0
         ).getDate();
         
-        // Calculate: Average Room Occupancy Rate = (Occupied Rooms / Available Rooms) × 100
-        // Available Rooms = total_rooms × days_in_month
-        const availableRoomDays = item.total_rooms * daysInMonth;
-        const occupiedRoomDays = item.total_occupied_rooms || 0;
-        const avgOccupancy = availableRoomDays > 0 
-          ? (occupiedRoomDays / availableRoomDays) * 100 
-          : 0;
+        const avgOccupancy = calculateAccommodationOccupancy(
+          item.total_occupied_rooms,
+          item.total_rooms,
+          item.report_date
+        );
 
         return {
           id: item.id,
@@ -168,10 +167,14 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
     // 1) Average Guest-Night = Total Guest Nights / Total Check-ins
     const avgGuestNight = totalGuests > 0 ? totalGuestNights / totalGuests : 0;
 
-    // 2) Average Room Occupancy Rate = (Total Occupied Rooms / Total Available Rooms) × 100
-    const avgOccupancyRate = totalAvailableRoomDays > 0 
-      ? (totalOccupiedRooms / totalAvailableRoomDays) * 100 
-      : 0;
+    const avgOccupancyRate = calculateAverageAccommodationOccupancy(
+      records.map((record) => ({
+        id: record.id,
+        report_date: record.date,
+        total_rooms: record.totalRooms,
+        total_occupied_rooms: record.occupiedRooms,
+      }))
+    );
 
     // 3) Average Guests per Room = Total Guest Nights / Total Occupied Rooms
     const avgGuestsPerRoom = totalOccupiedRooms > 0 ? totalGuestNights / totalOccupiedRooms : 0;
@@ -210,9 +213,14 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
     avgGuestNight: filteredRecords.reduce((sum, r) => sum + r.totalGuests, 0) > 0 
       ? filteredRecords.reduce((sum, r) => sum + r.guestNights, 0) / filteredRecords.reduce((sum, r) => sum + r.totalGuests, 0)
       : 0,
-    avgOccupancyRate: filteredRecords.reduce((sum, r) => sum + (r.totalRooms * r.daysInMonth), 0) > 0
-      ? (filteredRecords.reduce((sum, r) => sum + r.occupiedRooms, 0) / filteredRecords.reduce((sum, r) => sum + (r.totalRooms * r.daysInMonth), 0)) * 100
-      : 0,
+    avgOccupancyRate: calculateAverageAccommodationOccupancy(
+      filteredRecords.map((record) => ({
+        id: record.id,
+        report_date: record.date,
+        total_rooms: record.totalRooms,
+        total_occupied_rooms: record.occupiedRooms,
+      }))
+    ),
     avgGuestsPerRoom: filteredRecords.reduce((sum, r) => sum + r.occupiedRooms, 0) > 0
       ? filteredRecords.reduce((sum, r) => sum + r.guestNights, 0) / filteredRecords.reduce((sum, r) => sum + r.occupiedRooms, 0)
       : 0,

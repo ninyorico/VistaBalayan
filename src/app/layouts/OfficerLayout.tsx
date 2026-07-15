@@ -68,12 +68,12 @@ const handleLogout = async () => {
           sidebarOpen ? "w-64 z-50" : "w-0 lg:w-64 z-40"
         } overflow-hidden`}
       >
-        <div className="border-b border-slate-800 bg-slate-950 p-6">
+        <div className="border-b border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400 text-sm font-black text-slate-950">VB</div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0F4C75] text-sm font-black text-white shadow-lg shadow-cyan-950/15">VB</div>
             <div>
-              <h1 className="text-xl font-semibold tracking-[-0.025em] text-white">VistaBalayan</h1>
-              <p className="mt-0.5 text-sm text-white/68">Tourism Officer Portal</p>
+              <h1 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">VistaBalayan</h1>
+              <p className="mt-0.5 text-sm font-medium text-[#0F4C75]">Tourism Officer Portal</p>
             </div>
           </div>
         </div>

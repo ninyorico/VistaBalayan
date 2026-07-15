@@ -51,11 +51,28 @@ export const calculateAccommodationOccupancy = (
   const rooms = Number(totalRooms || 0);
   if (rooms <= 0 || occupied <= 0) return 0;
 
-  // Normal daily reports use occupied rooms divided by configured rooms.
-  // If historical data contains room-night totals higher than room inventory,
-  // fall back to monthly room-days so the displayed rate remains meaningful.
+  // Normal reports in this app are daily: occupied rooms / configured rooms.
+  // Some historical rows contain impossible occupied counts. When occupied
+  // exceeds inventory, treat it as room-nights for that month, then cap at 100%
+  // so the UI never shows impossible values like 2530%.
   const denominator = occupied > rooms ? rooms * getDaysInMonth(reportDate) : rooms;
   return denominator > 0 ? Math.min((occupied / denominator) * 100, 100) : 0;
+};
+
+export const calculateAverageAccommodationOccupancy = (
+  reports: RawReportRecord[] = []
+) => {
+  if (reports.length === 0) return 0;
+
+  const rates = reports.map((report) =>
+    calculateAccommodationOccupancy(
+      report.total_occupied_rooms,
+      report.total_rooms,
+      report.report_date
+    )
+  );
+
+  return rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
 };
 
 export const groupStaffSubmissions = (

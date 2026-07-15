@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Users, MapPin } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
 
 interface AnalyticsData {
   seasonalData: { month: string; visitors: number; guestNights: number }[];
@@ -48,11 +49,6 @@ const monthLabel = (date: string) =>
   new Date(date).toLocaleString("default", { month: "short", year: "numeric" });
 
 const monthKey = (date: string) => date.slice(0, 7);
-
-const daysInReportMonth = (date: string) => {
-  const [year, month] = date.split("-").map(Number);
-  return new Date(year, month, 0).getDate();
-};
 
 const percentChange = (current: number, previous: number) =>
   previous > 0 ? ((current - previous) / previous) * 100 : current > 0 ? 100 : 0;
@@ -142,23 +138,27 @@ export default function Analytics() {
         (visitorsByEstablishment[name].monthly[key] || 0) + (item.total_guests || 0);
     });
 
-    const occupancyByEstablishment: Record<string, { occupiedRoomNights: number; availableRoomNights: number }> = {};
+    const occupancyByEstablishment: Record<string, { rates: number[] }> = {};
     accommodations.forEach((item) => {
       const name = item.establishments?.name || "Unknown";
       if (!occupancyByEstablishment[name]) {
-        occupancyByEstablishment[name] = { occupiedRoomNights: 0, availableRoomNights: 0 };
+        occupancyByEstablishment[name] = { rates: [] };
       }
-      occupancyByEstablishment[name].occupiedRoomNights += item.total_occupied_rooms || 0;
-      occupancyByEstablishment[name].availableRoomNights +=
-        (item.total_rooms || 0) * daysInReportMonth(item.report_date);
+      occupancyByEstablishment[name].rates.push(
+        calculateAccommodationOccupancy(
+          item.total_occupied_rooms,
+          item.total_rooms,
+          item.report_date
+        )
+      );
     });
 
     const maxVisitors = Math.max(1, ...Object.values(visitorsByEstablishment).map((est) => est.visitors));
     const performanceData = Object.values(visitorsByEstablishment)
       .map((est) => {
         const occ = occupancyByEstablishment[est.name];
-        const occupancyRate = occ?.availableRoomNights
-          ? (occ.occupiedRoomNights / occ.availableRoomNights) * 100
+        const occupancyRate = occ?.rates.length
+          ? occ.rates.reduce((sum, rate) => sum + rate, 0) / occ.rates.length
           : 0;
         const visitorScore = (est.visitors / maxVisitors) * 70;
         const occupancyScore = Math.min(occupancyRate, 100) * 0.3;
@@ -199,8 +199,8 @@ export default function Analytics() {
     const lowPerformers = Object.values(visitorsByEstablishment)
       .map((est) => {
         const occ = occupancyByEstablishment[est.name];
-        const occupancyRate = occ?.availableRoomNights
-          ? (occ.occupiedRoomNights / occ.availableRoomNights) * 100
+        const occupancyRate = occ?.rates.length
+          ? occ.rates.reduce((sum, rate) => sum + rate, 0) / occ.rates.length
           : 0;
         const current = est.monthly[latestMonth] || 0;
         const previous = est.monthly[previousMonth] || 0;

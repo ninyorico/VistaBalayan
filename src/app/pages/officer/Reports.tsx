@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 
+const getCurrentYear = () => new Date().getFullYear().toString();
+
 interface Submission {
   id: string;
   establishment: string;
@@ -40,7 +42,7 @@ interface Submission {
 
 export default function Reports() {
   const [filterType, setFilterType] = useState<"year" | "quarter" | "month" | "week" | "date">("month");
-  const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedYear, setSelectedYear] = useState(getCurrentYear());
   const [selectedQuarter, setSelectedQuarter] = useState("1");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
@@ -178,8 +180,8 @@ export default function Reports() {
     }
 
     return {
-      startDate: `${selectedYear || "2025"}-01-01`,
-      endDate: `${selectedYear || "2025"}-12-31`,
+      startDate: `${selectedYear || getCurrentYear()}-01-01`,
+      endDate: `${selectedYear || getCurrentYear()}-12-31`,
     };
   };
 
@@ -394,7 +396,7 @@ export default function Reports() {
                   setFilterType(type as any);
                   if (type === "year") { setSelectedMonth(""); setSelectedQuarter("1"); }
                   if (type === "quarter") setSelectedMonth("");
-                  if (type === "week" || type === "date") { setSelectedYear("2025"); setSelectedMonth(""); }
+                  if (type === "week" || type === "date") { setSelectedYear(getCurrentYear()); setSelectedMonth(""); }
                 }}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   filterType === type

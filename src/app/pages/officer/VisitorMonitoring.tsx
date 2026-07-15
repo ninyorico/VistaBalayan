@@ -44,7 +44,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
         place_of_residence,
         establishments (name)
       `)
-      .eq("status", "approved")
+      .in("status", ["pending", "approved"])
       .order("report_date", { ascending: false });
 
     if (error) {
