@@ -112,9 +112,6 @@ export default function StaffDashboard() {
               <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.035em] text-white sm:text-4xl">
                 Submit accurate tourism records for Balayan monitoring.
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                Visitor rows are grouped into report submissions, so your dashboard now reflects actual submitted forms instead of raw database entries.
-              </p>
             </div>
             <button
               onClick={() => navigate("/staff/submission-history")}

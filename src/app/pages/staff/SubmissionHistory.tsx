@@ -82,9 +82,6 @@ export default function SubmissionHistory() {
     <div className="space-y-6">
       <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 className="text-3xl font-bold tracking-[-0.035em] text-slate-950">Submission history</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Resort entries from the same report date are grouped into one submission so the totals match what staff actually submitted.
-        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
