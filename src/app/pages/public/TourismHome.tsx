@@ -1,7 +1,24 @@
-import { useState, useEffect } from 'react'
-import { Search, MapPin, Star, Filter, Navigation, Hotel, Utensils, Building2, TreePine, Coffee, Sparkles, Loader2, Phone, Mail, Globe, Clock, ChevronRight } from 'lucide-react'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  Bed,
+  Building2,
+  ChevronRight,
+  Clock,
+  Compass,
+  Filter,
+  Globe,
+  Hotel,
+  Loader2,
+  Mail,
+  MapPin,
+  Navigation,
+  Phone,
+  Search,
+  Sparkles,
+  Star,
+} from 'lucide-react'
 import React from 'react'
+import { supabase } from '../../../lib/supabase'
 
 interface Establishment {
   id: string
@@ -14,6 +31,92 @@ interface Establishment {
   opening_hours: string
   website_url: string
   email: string
+  featured?: boolean
+  total_rooms?: number
+  latitude?: number
+  longitude?: number
+}
+
+interface UserLocation {
+  latitude: number
+  longitude: number
+}
+
+interface BehaviorProfile {
+  viewedIds: string[]
+  categoryClicks: Record<string, number>
+  searches: string[]
+}
+
+const BALAYAN_CENTER: UserLocation = { latitude: 13.9385, longitude: 120.7332 }
+const BEHAVIOR_KEY = 'vistabalayan_public_behavior_v1'
+
+const categories = [
+  { id: 'all', name: 'All stays', icon: Search },
+  { id: 'Resort', name: 'Resorts', icon: Hotel },
+  { id: 'Hotel', name: 'Hotels', icon: Building2 },
+]
+
+const emptyBehavior: BehaviorProfile = {
+  viewedIds: [],
+  categoryClicks: {},
+  searches: [],
+}
+
+const getPublicCategory = (type = '') => {
+  const normalized = type.toLowerCase()
+  if (normalized.includes('hotel') || normalized.includes('inn') || normalized.includes('lodge')) return 'Hotel'
+  if (normalized.includes('resort') || normalized.includes('pool') || normalized.includes('farm')) return 'Resort'
+  return null
+}
+
+const getCategoryIcon = (type: string) => {
+  return getPublicCategory(type) === 'Hotel' ? Building2 : Hotel
+}
+
+const readBehavior = (): BehaviorProfile => {
+  if (typeof window === 'undefined') return emptyBehavior
+  try {
+    const stored = window.localStorage.getItem(BEHAVIOR_KEY)
+    return stored ? { ...emptyBehavior, ...JSON.parse(stored) } : emptyBehavior
+  } catch {
+    return emptyBehavior
+  }
+}
+
+const saveBehavior = (behavior: BehaviorProfile) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(BEHAVIOR_KEY, JSON.stringify(behavior))
+}
+
+const getEstimatedCoordinates = (establishment: Establishment): UserLocation => {
+  if (typeof establishment.latitude === 'number' && typeof establishment.longitude === 'number') {
+    return { latitude: establishment.latitude, longitude: establishment.longitude }
+  }
+
+  let hash = 0
+  for (const char of establishment.id || establishment.name) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  }
+
+  const northSouth = ((hash % 900) - 450) / 100000
+  const eastWest = (((hash >> 8) % 900) - 450) / 100000
+  return {
+    latitude: BALAYAN_CENTER.latitude + northSouth,
+    longitude: BALAYAN_CENTER.longitude + eastWest,
+  }
+}
+
+const distanceInKm = (a: UserLocation, b: UserLocation) => {
+  const radius = 6371
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180
+  const lat1 = (a.latitude * Math.PI) / 180
+  const lat2 = (b.latitude * Math.PI) / 180
+  const h =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  return radius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
 }
 
 export default function TourismHome() {
@@ -23,17 +126,12 @@ export default function TourismHome() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null)
-
-  const categories = [
-    { id: 'all', name: 'All', icon: Search },
-    { id: 'Resort', name: 'Resorts', icon: Hotel },
-    { id: 'Hotel', name: 'Hotels', icon: Building2 },
-    { id: 'Inn', name: 'Inns', icon: Coffee },
-    { id: 'Food & Beverage Establishment', name: 'Restaurants', icon: Utensils },
-    { id: 'Tourist Attraction', name: 'Attractions', icon: TreePine },
-  ]
+  const [behavior, setBehavior] = useState<BehaviorProfile>(emptyBehavior)
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
 
   useEffect(() => {
+    setBehavior(readBehavior())
     fetchEstablishments()
   }, [])
 
@@ -46,8 +144,9 @@ export default function TourismHome() {
       .order('name')
 
     if (!error && data) {
-      setEstablishments(data)
-      setFiltered(data)
+      const publicStays = data.filter((est) => getPublicCategory(est.type))
+      setEstablishments(publicStays)
+      setFiltered(publicStays)
     }
     setLoading(false)
   }
@@ -55,185 +154,338 @@ export default function TourismHome() {
   useEffect(() => {
     let results = establishments
     if (searchTerm) {
-      results = results.filter(e => 
-        e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (e.description && e.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      const term = searchTerm.toLowerCase()
+      results = results.filter((e) =>
+        e.name.toLowerCase().includes(term) ||
+        e.address.toLowerCase().includes(term) ||
+        getPublicCategory(e.type)?.toLowerCase().includes(term) ||
+        (e.description && e.description.toLowerCase().includes(term))
       )
     }
     if (selectedType !== 'all') {
-      results = results.filter(e => e.type === selectedType)
+      results = results.filter((e) => getPublicCategory(e.type) === selectedType)
     }
     setFiltered(results)
   }, [searchTerm, selectedType, establishments])
 
-  const getCategoryIcon = (type: string) => {
-    const cat = categories.find(c => c.id === type)
-    return cat?.icon || Building2
+  useEffect(() => {
+    if (!searchTerm.trim()) return
+    const handle = window.setTimeout(() => {
+      const next = {
+        ...behavior,
+        searches: [searchTerm.trim(), ...behavior.searches.filter((s) => s !== searchTerm.trim())].slice(0, 8),
+      }
+      setBehavior(next)
+      saveBehavior(next)
+    }, 650)
+    return () => window.clearTimeout(handle)
+  }, [searchTerm])
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedType(category)
+    const next = {
+      ...behavior,
+      categoryClicks: {
+        ...behavior.categoryClicks,
+        [category]: (behavior.categoryClicks[category] || 0) + 1,
+      },
+    }
+    setBehavior(next)
+    saveBehavior(next)
   }
 
+  const openDetails = (establishment: Establishment) => {
+    setSelectedEstablishment(establishment)
+    const next = {
+      ...behavior,
+      viewedIds: [establishment.id, ...behavior.viewedIds.filter((id) => id !== establishment.id)].slice(0, 12),
+    }
+    setBehavior(next)
+    saveBehavior(next)
+  }
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('blocked')
+      return
+    }
+    setLocationStatus('loading')
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude })
+        setLocationStatus('ready')
+      },
+      () => setLocationStatus('blocked'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  const recommendations = useMemo(() => {
+    return establishments
+      .map((est) => {
+        const publicCategory = getPublicCategory(est.type) || 'Resort'
+        const coords = getEstimatedCoordinates(est)
+        const distance = userLocation ? distanceInKm(userLocation, coords) : distanceInKm(BALAYAN_CENTER, coords)
+        const categoryBoost = behavior.categoryClicks[publicCategory] || 0
+        const viewedBoost = behavior.viewedIds.includes(est.id) ? 12 : 0
+        const searchBoost = behavior.searches.some((term) =>
+          `${est.name} ${est.description || ''} ${est.type}`.toLowerCase().includes(term.toLowerCase())
+        )
+          ? 10
+          : 0
+        const featuredBoost = est.featured ? 8 : 0
+        const roomBoost = est.total_rooms ? Math.min(est.total_rooms / 8, 8) : 0
+        const score = 100 - distance * 18 + categoryBoost * 7 + viewedBoost + searchBoost + featuredBoost + roomBoost
+        const reason = userLocation
+          ? `${distance.toFixed(1)} km from your location, with a match to your browsing pattern.`
+          : `Recommended from your recent views, searches, and Balayan stay preferences.`
+        return { ...est, publicCategory, distance, score, reason }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+  }, [establishments, behavior, userLocation])
+
+  const nearestStays = useMemo(() => {
+    const base = userLocation || BALAYAN_CENTER
+    return establishments
+      .map((est) => ({ ...est, distance: distanceInKm(base, getEstimatedCoordinates(est)) }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 4)
+  }, [establishments, userLocation])
+
+  const featuredImage = establishments.find((est) => est.images?.length)?.images?.[0]
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-[#0F4C75] via-[#1293B8] to-[#1CA7C9] text-white py-20">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Discover Balayan, Batangas</h1>
-          <p className="text-xl md:text-2xl mb-8">Explore the best tourist establishments in our municipality</p>
-          
-          <div className="max-w-2xl mx-auto">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name, location, or description..."
-                className="w-full pl-12 pr-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-white"
-              />
+    <main className="min-h-[100dvh] bg-[#f5f8f9] text-slate-950">
+      <section className="relative overflow-hidden bg-slate-950 text-white">
+        {featuredImage && (
+          <img
+            src={featuredImage}
+            alt="Balayan resort and hotel destination"
+            className="absolute inset-0 h-full w-full object-cover opacity-50"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950/78 to-cyan-950/70" />
+        <div className="relative mx-auto grid min-h-[78dvh] max-w-7xl grid-cols-1 items-center gap-10 px-5 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
+          <div className="max-w-2xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-4 py-2 text-sm text-white/82 backdrop-blur-xl">
+              <Sparkles className="h-4 w-4" strokeWidth={1.8} />
+              AI stay guide for Balayan
+            </div>
+            <h1 className="text-4xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-5xl lg:text-6xl">
+              Find the right resort or hotel in Balayan.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-white/78 sm:text-lg">
+              Search active stays, compare details, and get recommendations based on location and browsing behavior.
+            </p>
+            <div className="mt-8 max-w-xl rounded-[1.5rem] border border-white/16 bg-white/12 p-2 shadow-2xl shadow-slate-950/30 backdrop-blur-xl">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search resort, hotel, address, or amenity"
+                  className="w-full rounded-[1.1rem] border border-white/16 bg-white px-12 py-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:ring-4 focus:ring-cyan-300/30"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Categories */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-wrap gap-3 justify-center">
-          {categories.map((cat) => {
-            const Icon = cat.icon
-            return (
+          <aside className="rounded-[2rem] border border-white/16 bg-white/12 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-white/66">AI recommendations</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-[-0.025em]">Best next stays</h2>
+              </div>
               <button
-                key={cat.id}
-                onClick={() => setSelectedType(cat.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full transition ${
-                  selectedType === cat.id
-                    ? 'bg-[#1CA7C9] text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                }`}
+                onClick={requestLocation}
+                className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 active:translate-y-[1px]"
               >
-                <Icon className="w-4 h-4" />
-                {cat.name}
+                {locationStatus === 'loading' ? 'Locating' : locationStatus === 'ready' ? 'Location on' : 'Use location'}
               </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Results */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="flex justify-between items-center mb-6">
-          <p className="text-gray-600">Found {filtered.length} establishment(s)</p>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#1CA7C9]" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl">
-            <p className="text-gray-500">No establishments found. Try a different search.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((est) => {
-              const Icon = getCategoryIcon(est.type)
-              const displayImage = est.images && est.images.length > 0 ? est.images[0] : null
-              return (
-                <div
+            </div>
+            <div className="space-y-3">
+              {recommendations.map((est) => (
+                <button
                   key={est.id}
-                  onClick={() => setSelectedEstablishment(est)}
-                  className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition transform hover:-translate-y-1"
+                  onClick={() => openDetails(est)}
+                  className="w-full rounded-2xl border border-white/12 bg-white/10 p-4 text-left transition hover:bg-white/16 active:translate-y-[1px]"
                 >
-                  {displayImage ? (
-                    <img src={displayImage} alt={est.name} className="w-full h-48 object-cover" />
-                  ) : (
-                    <div className="h-48 bg-gradient-to-r from-[#0F4C75] to-[#1CA7C9] flex items-center justify-center">
-                      <Icon className="w-16 h-16 text-white opacity-50" />
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#0F4C75]">
+                      {React.createElement(getCategoryIcon(est.type), { className: 'h-5 w-5', strokeWidth: 1.8 })}
                     </div>
-                  )}
-                  <div className="p-5">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-xl font-bold text-gray-900">{est.name}</h3>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">{est.type}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-white">{est.name}</p>
+                      <p className="mt-1 text-sm leading-5 text-white/68">{est.reason}</p>
                     </div>
-                    <div className="flex items-center gap-1 mt-2 text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      <span className="text-sm">{est.address}</span>
-                    </div>
-                    {est.description && (
-                      <p className="text-gray-600 mt-3 text-sm line-clamp-2">{est.description}</p>
-                    )}
-                    <button className="mt-4 text-[#1CA7C9] font-medium flex items-center gap-1 hover:gap-2 transition-all">
-                      View Details <ChevronRight className="w-4 h-4" />
-                    </button>
                   </div>
-                </div>
+                </button>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-5 rounded-[2rem] border border-slate-200 bg-white/86 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {categories.map((cat) => {
+              const Icon = cat.icon
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryChange(cat.id)}
+                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition active:translate-y-[1px] ${
+                    selectedType === cat.id
+                      ? 'bg-[#0F4C75] text-white shadow-lg shadow-cyan-950/15'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.8} />
+                  {cat.name}
+                </button>
               )
             })}
           </div>
-        )}
-      </div>
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <Filter className="h-4 w-4" strokeWidth={1.8} />
+            Showing {filtered.length} resorts and hotels
+          </div>
+        </div>
+      </section>
 
-      {/* Modal */}
+      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-5 pb-16 sm:px-6 lg:grid-cols-[1fr_360px] lg:px-8">
+        <div>
+          {loading ? (
+            <div className="flex justify-center rounded-[2rem] bg-white py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-[#0F4C75]" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center">
+              <p className="text-slate-500">No resorts or hotels found. Try a different search.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {filtered.map((est) => {
+                const Icon = getCategoryIcon(est.type)
+                const displayImage = est.images && est.images.length > 0 ? est.images[0] : null
+                const publicCategory = getPublicCategory(est.type)
+                return (
+                  <button
+                    key={est.id}
+                    onClick={() => openDetails(est)}
+                    className="group overflow-hidden rounded-[1.7rem] border border-slate-200 bg-white text-left shadow-[0_16px_45px_rgba(15,23,42,0.08)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_22px_70px_rgba(15,23,42,0.13)] active:translate-y-[1px]"
+                  >
+                    {displayImage ? (
+                      <img src={displayImage} alt={est.name} className="h-56 w-full object-cover transition duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="flex h-56 items-center justify-center bg-gradient-to-br from-[#0F4C75] to-[#1CA7C9]">
+                        <Icon className="h-14 w-14 text-white/70" strokeWidth={1.8} />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <h3 className="text-lg font-semibold leading-6 tracking-[-0.02em] text-slate-950">{est.name}</h3>
+                        <span className="shrink-0 rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-[#0F4C75]">
+                          {publicCategory}
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2 text-sm leading-5 text-slate-600">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.8} />
+                        <span>{est.address}</span>
+                      </div>
+                      {est.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{est.description}</p>}
+                      <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#0F4C75]">
+                        View details <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" strokeWidth={1.8} />
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <aside className="h-fit rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)] lg:sticky lg:top-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Nearest picks</p>
+              <h2 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">Close to you</h2>
+            </div>
+            <Navigation className="h-5 w-5 text-[#0F4C75]" strokeWidth={1.8} />
+          </div>
+          <div className="space-y-3">
+            {nearestStays.map((est) => (
+              <button key={est.id} onClick={() => openDetails(est)} className="w-full rounded-2xl bg-slate-50 p-4 text-left transition hover:bg-cyan-50">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold leading-5 text-slate-950">{est.name}</p>
+                    <p className="mt-1 text-sm text-slate-500">{getPublicCategory(est.type)}</p>
+                  </div>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                    {est.distance.toFixed(1)} km
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          {locationStatus !== 'ready' && (
+            <button onClick={requestLocation} className="mt-5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              Improve with my location
+            </button>
+          )}
+        </aside>
+      </section>
+
       {selectedEstablishment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedEstablishment(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" onClick={() => setSelectedEstablishment(null)}>
+          <div className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {selectedEstablishment.images && selectedEstablishment.images.length > 0 ? (
-              <img src={selectedEstablishment.images[0]} alt="" className="w-full h-64 object-cover" />
+              <img src={selectedEstablishment.images[0]} alt={selectedEstablishment.name} className="h-72 w-full object-cover" />
             ) : (
-              <div className="h-48 bg-gradient-to-r from-[#0F4C75] to-[#1CA7C9] flex items-center justify-center">
-                {React.createElement(getCategoryIcon(selectedEstablishment.type), { className: "w-16 h-16 text-white opacity-50" })}
+              <div className="flex h-56 items-center justify-center bg-gradient-to-br from-[#0F4C75] to-[#1CA7C9]">
+                {React.createElement(getCategoryIcon(selectedEstablishment.type), { className: 'h-14 w-14 text-white/70', strokeWidth: 1.8 })}
               </div>
             )}
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900">{selectedEstablishment.name}</h2>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">{selectedEstablishment.type}</span>
-              </div>
-              
-              <div className="mt-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <span className="text-gray-700">{selectedEstablishment.address}</span>
+            <div className="p-6 sm:p-8">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <span className="mb-3 inline-flex rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-[#0F4C75]">
+                    {getPublicCategory(selectedEstablishment.type)}
+                  </span>
+                  <h2 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950">{selectedEstablishment.name}</h2>
                 </div>
-                {selectedEstablishment.contact_number && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-5 h-5 text-gray-500" />
-                    <span className="text-gray-700">{selectedEstablishment.contact_number}</span>
-                  </div>
-                )}
-                {selectedEstablishment.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-gray-500" />
-                    <span className="text-gray-700">{selectedEstablishment.email}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1 rounded-full bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">
+                  <Star className="h-4 w-4 fill-[#0F4C75] text-[#0F4C75]" strokeWidth={1.8} />
+                  AI matched
+                </div>
+              </div>
+
+              <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+                <InfoRow icon={MapPin} text={selectedEstablishment.address} />
+                {selectedEstablishment.contact_number && <InfoRow icon={Phone} text={selectedEstablishment.contact_number} />}
+                {selectedEstablishment.email && <InfoRow icon={Mail} text={selectedEstablishment.email} />}
+                {selectedEstablishment.opening_hours && <InfoRow icon={Clock} text={selectedEstablishment.opening_hours} />}
                 {selectedEstablishment.website_url && (
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-gray-500" />
-                    <a href={selectedEstablishment.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                      Visit Website
-                    </a>
-                  </div>
-                )}
-                {selectedEstablishment.opening_hours && (
-                  <div className="flex items-start gap-2">
-                    <Clock className="w-5 h-5 text-gray-500 mt-0.5" />
-                    <span className="text-gray-700">{selectedEstablishment.opening_hours}</span>
-                  </div>
+                  <a href={selectedEstablishment.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl bg-slate-50 p-3 font-medium text-[#0F4C75] hover:bg-cyan-50">
+                    <Globe className="h-4 w-4" strokeWidth={1.8} />
+                    Visit website
+                  </a>
                 )}
               </div>
-              
+
               {selectedEstablishment.description && (
-                <div className="mt-4 pt-4 border-t">
-                  <h3 className="font-semibold text-gray-900 mb-2">About</h3>
-                  <p className="text-gray-600">{selectedEstablishment.description}</p>
+                <div className="mt-6 rounded-2xl bg-slate-50 p-5">
+                  <h3 className="font-semibold text-slate-950">About this stay</h3>
+                  <p className="mt-2 leading-7 text-slate-600">{selectedEstablishment.description}</p>
                 </div>
               )}
-              
+
               <button
                 onClick={() => setSelectedEstablishment(null)}
-                className="mt-6 w-full bg-[#1CA7C9] text-white py-3 rounded-lg hover:bg-[#0F4C75] transition font-semibold"
+                className="mt-6 w-full rounded-2xl bg-[#0F4C75] py-3.5 font-semibold text-white transition hover:bg-[#0B3C5D] active:translate-y-[1px]"
               >
                 Close
               </button>
@@ -241,6 +493,15 @@ export default function TourismHome() {
           </div>
         </div>
       )}
+    </main>
+  )
+}
+
+function InfoRow({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-2xl bg-slate-50 p-3">
+      <Icon className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={1.8} />
+      <span>{text}</span>
     </div>
   )
 }
