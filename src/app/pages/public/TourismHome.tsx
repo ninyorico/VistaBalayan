@@ -478,7 +478,7 @@ export default function TourismHome() {
 
               {selectedEstablishment.description && (
                 <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-                  <h3 className="font-semibold text-slate-950">About this stay</h3>
+                  <h3 className="font-semibold text-slate-950">Establishment overview</h3>
                   <p className="mt-2 leading-7 text-slate-600">{selectedEstablishment.description}</p>
                 </div>
               )}
