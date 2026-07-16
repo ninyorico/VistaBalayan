@@ -92,7 +92,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
   const handleExport = () => {
     downloadCsv(
       datestampedFilename("visitor-records"),
-      ["Date", "Establishment", "Guest/Group", "Male", "Female", "Total", "Residence Type", "Location"],
+      ["Date", "Establishment", "Guest/Group", "Male", "Female", "Total", "Place of Residence", "Location"],
       filteredRecords.map((record) => [
         record.date,
         record.establishment,
@@ -168,7 +168,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
               onChange={(e) => setFilterResidence(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             >
-              <option value="all">All Residence Types</option>
+              <option value="all">All Places of Residence</option>
               <option value="Batangas Resident">Batangas Resident</option>
               <option value="Outside Batangas">Outside Batangas</option>
               <option value="Foreign">Foreign</option>
@@ -212,8 +212,8 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Male</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Female</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Residence Type</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Place of Residence</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Location<br/><span className="normal-case tracking-normal text-slate-400">If outside Batangas, state municipality</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">

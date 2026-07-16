@@ -283,8 +283,8 @@ const loadProfile = async () => {
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Male</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Female</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Total</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Residence Type</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Place of Residence <span className="text-gray-400">(Optional)</span></th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Place of Residence</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Location <span className="text-gray-400">(if outside Batangas, state municipality)</span></th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -302,14 +302,14 @@ const loadProfile = async () => {
                   </td>
                   <td className="px-3 py-2 font-medium text-center">{entry.total}</td>
                   <td className="px-3 py-2">
-                    <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="w-36 px-2 py-1 border rounded text-sm">
+                    <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="w-44 px-2 py-1 border rounded text-sm">
                       <option>Batangas Resident</option>
                       <option>Outside Batangas</option>
                       <option>Foreign</option>
                     </select>
                   </td>
                   <td className="px-3 py-2">
-                    <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Optional" className="w-32 px-2 py-1 border rounded text-sm" />
+                    <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Municipality / province" className="w-44 px-2 py-1 border rounded text-sm" />
                   </td>
                   <td className="px-3 py-2">
                     <button onClick={() => removeEntry(entry.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
