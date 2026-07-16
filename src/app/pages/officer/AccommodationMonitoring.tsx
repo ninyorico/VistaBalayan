@@ -26,6 +26,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [specificMonth, setSpecificMonth] = useState("");
+  const [establishmentTotalRooms, setEstablishmentTotalRooms] = useState(0);
 
   // Summary statistics
   const [summaryStats, setSummaryStats] = useState({
@@ -47,6 +48,25 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
     setLoading(true);
     
     try {
+      // Match the Establishments page total rooms exactly: sum establishments.total_rooms from the canonical establishments table.
+      // Report rows repeat room inventory, so the summary card must not depend on report rows being present.
+      const { data: establishments, error: establishmentsError } = await supabase
+        .from("establishments")
+        .select("total_rooms");
+
+      if (establishmentsError) {
+        console.error("Error fetching establishment room totals:", establishmentsError);
+        toast.error("Failed to load establishment room totals: " + establishmentsError.message);
+        setLoading(false);
+        return;
+      }
+
+      const canonicalTotalRooms = (establishments || []).reduce(
+        (sum: number, establishment: any) => sum + Number(establishment.total_rooms || 0),
+        0
+      );
+      setEstablishmentTotalRooms(canonicalTotalRooms);
+
       // Fetch all accommodation reports with establishment names
       const { data: reports, error: reportsError } = await supabase
         .from("accommodation_reports")
@@ -219,15 +239,17 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
 
   // Recalculate stats for filtered records
   const filteredStats = {
-    totalRooms: Array.from(
-      filteredRecords.reduce((roomsByEstablishment, record) => {
-        roomsByEstablishment.set(
-          record.establishmentId,
-          Math.max(roomsByEstablishment.get(record.establishmentId) || 0, record.totalRooms)
-        );
-        return roomsByEstablishment;
-      }, new Map<string, number>()).values()
-    ).reduce((sum, rooms) => sum + rooms, 0),
+    totalRooms: searchTerm || specificMonth
+      ? Array.from(
+          filteredRecords.reduce((roomsByEstablishment, record) => {
+            roomsByEstablishment.set(
+              record.establishmentId,
+              Math.max(roomsByEstablishment.get(record.establishmentId) || 0, record.totalRooms)
+            );
+            return roomsByEstablishment;
+          }, new Map<string, number>()).values()
+        ).reduce((sum, rooms) => sum + rooms, 0)
+      : establishmentTotalRooms,
     totalGuests: filteredRecords.reduce((sum, r) => sum + r.totalGuests, 0),
     totalGuestNights: filteredRecords.reduce((sum, r) => sum + r.guestNights, 0),
     avgGuestNight: filteredRecords.reduce((sum, r) => sum + r.totalGuests, 0) > 0 
