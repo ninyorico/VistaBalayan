@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Download, Eye, TrendingUp } from "lucide-react";
+import { Search, Download, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
@@ -7,10 +7,12 @@ import { calculateAccommodationOccupancy, calculateAverageAccommodationOccupancy
 
 interface AccommodationRecord {
   id: string;
+  establishmentId: string;
   establishment: string;
   month: string;
   date: string;
   totalRooms: number;
+  reportedRooms: number;
   avgOccupancy: number;
   totalGuests: number;
   guestNights: number;
@@ -58,7 +60,8 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
           status,
           establishment_id,
           establishments!accommodation_reports_establishment_id_fkey (
-            name
+            name,
+            total_rooms
           )
         `)
         .in("status", ["pending", "approved"])
@@ -81,16 +84,19 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
         return;
       }
 
-      // Helper to get establishment name
-      const getEstablishmentName = (item: any) => {
-        if (item.establishments) {
-          if (Array.isArray(item.establishments) && item.establishments.length > 0) {
-            return item.establishments[0].name;
-          } else if (item.establishments.name) {
-            return item.establishments.name;
-          }
+      // Helpers to read establishment metadata from Supabase joins.
+      const getEstablishment = (item: any) => {
+        if (Array.isArray(item.establishments)) {
+          return item.establishments[0] || null;
         }
-        return "Unknown";
+        return item.establishments || null;
+      };
+
+      const getEstablishmentName = (item: any) => getEstablishment(item)?.name || "Unknown";
+
+      const getConfiguredRoomCount = (item: any) => {
+        const configuredRooms = Number(getEstablishment(item)?.total_rooms || 0);
+        return configuredRooms > 0 ? configuredRooms : Number(item.total_rooms || 0);
       };
 
       // Format records with proper calculations
@@ -105,18 +111,22 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
           0
         ).getDate();
         
+        const configuredRooms = getConfiguredRoomCount(item);
+        const reportedRooms = Number(item.total_rooms || 0);
         const avgOccupancy = calculateAccommodationOccupancy(
           item.total_occupied_rooms,
-          item.total_rooms,
+          configuredRooms,
           item.report_date
         );
 
         return {
           id: item.id,
+          establishmentId: item.establishment_id,
           establishment: getEstablishmentName(item),
           month: monthName,
           date: item.report_date,
-          totalRooms: item.total_rooms || 0,
+          totalRooms: configuredRooms,
+          reportedRooms: reportedRooms,
           avgOccupancy: avgOccupancy,
           totalGuests: item.total_check_ins || 0,
           guestNights: item.total_guest_nights || 0,
@@ -154,8 +164,13 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
       return;
     }
 
-    // Sum all values
-    const totalRooms = records.reduce((sum, r) => sum + r.totalRooms, 0);
+    // Total rooms are configured establishment capacity, counted once per establishment.
+    // Do not sum every report's total_rooms because daily/monthly reports repeat the same room inventory.
+    const totalRoomsByEstablishment = new Map<string, number>();
+    records.forEach((record) => {
+      totalRoomsByEstablishment.set(record.establishmentId, Math.max(totalRoomsByEstablishment.get(record.establishmentId) || 0, record.totalRooms));
+    });
+    const totalRooms = Array.from(totalRoomsByEstablishment.values()).reduce((sum, rooms) => sum + rooms, 0);
     const totalGuests = records.reduce((sum, r) => sum + r.totalGuests, 0);
     const totalGuestNights = records.reduce((sum, r) => sum + r.guestNights, 0);
     const totalOccupiedRooms = records.reduce((sum, r) => sum + r.occupiedRooms, 0);
@@ -204,7 +219,15 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
 
   // Recalculate stats for filtered records
   const filteredStats = {
-    totalRooms: filteredRecords.reduce((sum, r) => sum + r.totalRooms, 0),
+    totalRooms: Array.from(
+      filteredRecords.reduce((roomsByEstablishment, record) => {
+        roomsByEstablishment.set(
+          record.establishmentId,
+          Math.max(roomsByEstablishment.get(record.establishmentId) || 0, record.totalRooms)
+        );
+        return roomsByEstablishment;
+      }, new Map<string, number>()).values()
+    ).reduce((sum, rooms) => sum + rooms, 0),
     totalGuests: filteredRecords.reduce((sum, r) => sum + r.totalGuests, 0),
     totalGuestNights: filteredRecords.reduce((sum, r) => sum + r.guestNights, 0),
     avgGuestNight: filteredRecords.reduce((sum, r) => sum + r.totalGuests, 0) > 0 
@@ -226,12 +249,13 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
   const handleExport = () => {
     downloadCsv(
       datestampedFilename("accommodation-records"),
-      ["Date", "Month", "Establishment", "Total Rooms", "Occupied Rooms", "Average Occupancy %", "Total Guests", "Guest Nights", "Days In Month"],
+      ["Date", "Month", "Establishment", "Configured Rooms", "Reported Rooms", "Occupied Rooms", "Average Occupancy %", "Total Guests", "Guest Nights", "Days In Month"],
       filteredRecords.map((record) => [
         record.date,
         record.month,
         record.establishment,
         record.totalRooms,
+        record.reportedRooms,
         record.occupiedRooms,
         record.avgOccupancy.toFixed(2),
         record.totalGuests,
@@ -263,7 +287,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Rooms</p>
+          <p className="text-sm text-gray-600 mb-1">Configured Rooms</p>
           <p className="text-3xl font-bold text-gray-900">{filteredStats.totalRooms}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -339,13 +363,12 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Establishment</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Month</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Rooms</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Configured Rooms</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Avg Occupancy</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Guests</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Guest Nights</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Avg Guest/Room</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Performance</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -386,17 +409,12 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
                           {record.avgOccupancy >= 90 ? "Excellent" : record.avgOccupancy >= 70 ? "Good" : "Fair"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <button className="p-1 text-blue-600 hover:bg-blue-50 rounded transition">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     No accommodation records found.
                   </td>
                 </tr>

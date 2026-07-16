@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Download, Eye } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
@@ -214,7 +214,6 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Residence Type</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -239,16 +238,11 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-600">{record.location}</td>
-                    <td className="px-6 py-4">
-                      <button className="p-1 text-blue-600 hover:bg-blue-50 rounded transition">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     No visitor records found.
                   </td>
                 </tr>
