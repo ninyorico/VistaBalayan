@@ -249,7 +249,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
   const handleExport = () => {
     downloadCsv(
       datestampedFilename("accommodation-records"),
-      ["Date", "Month", "Establishment", "Configured Rooms", "Reported Rooms", "Occupied Rooms", "Average Occupancy %", "Total Guests", "Guest Nights", "Days In Month"],
+      ["Date", "Month", "Establishment", "Total Rooms", "Reported Rooms", "Occupied Rooms", "Average Occupancy %", "Total Guests", "Guest Nights", "Days In Month"],
       filteredRecords.map((record) => [
         record.date,
         record.month,
@@ -287,7 +287,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Configured Rooms</p>
+          <p className="text-sm text-gray-600 mb-1">Total Rooms</p>
           <p className="text-3xl font-bold text-gray-900">{filteredStats.totalRooms}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -363,7 +363,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Establishment</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Month</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Configured Rooms</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Rooms</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Avg Occupancy</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Guests</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Guest Nights</th>
