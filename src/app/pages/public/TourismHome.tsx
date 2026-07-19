@@ -52,6 +52,7 @@ interface RatingSummary {
   breakdown: RatingBreakdown
   commentCount: number
   visitorRating?: number
+  localOnly?: boolean
 }
 
 interface RatingReview {
@@ -188,6 +189,7 @@ const getLocalRatingSummaries = (establishmentIds: string[]) => {
         breakdown: { ...emptyBreakdown, [localReview.rating]: 1 },
         commentCount: localReview.comment?.trim() ? 1 : 0,
         visitorRating: localReview.rating,
+        localOnly: true,
       }
     }
     return acc
@@ -225,6 +227,7 @@ const applyLocalVisitorRatings = (summaries: Record<string, RatingSummary>, esta
           count: 1,
           breakdown: { ...emptyBreakdown, [localReview.rating]: 1 },
           commentCount: localReview.comment?.trim() ? 1 : 0,
+          localOnly: true,
         }),
         visitorRating: localReview.rating,
       }
@@ -369,9 +372,10 @@ export default function TourismHome() {
           breakdown: current[selectedEstablishment.id]?.breakdown || { ...emptyBreakdown, [selectedReviewRating]: 1 },
           commentCount: current[selectedEstablishment.id]?.commentCount || (comment ? 1 : 0),
           visitorRating: selectedReviewRating,
+          localOnly: true,
         },
       }))
-      setRatingMessage('Thanks — your rating and comment were saved on this device.')
+      setRatingMessage('Database setup is still pending, so this rating was saved on this device only and will not appear on other browsers yet.')
       await fetchRatingReviews(selectedEstablishment.id)
     } else {
       setRatingMessage('Thanks — your rating and comment were saved.')
@@ -793,6 +797,7 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
         <div>
           <h3 className="font-semibold text-slate-950">Reviews and rating count</h3>
           <p className="mt-1 text-sm text-slate-600">{summary.count} total review{summary.count === 1 ? '' : 's'} · {summary.commentCount} with comment{summary.commentCount === 1 ? '' : 's'}</p>
+          {summary.localOnly && <p className="mt-1 text-xs font-medium text-amber-700">Saved on this device only until database setup is completed.</p>}
         </div>
         <MessageSquare className="h-5 w-5 text-[#0F4C75]" strokeWidth={1.8} />
       </div>
@@ -842,7 +847,7 @@ function RatingDisplay({ summary, className = '' }: { summary?: RatingSummary; c
           <Star key={star} className={`h-4 w-4 ${star <= rounded ? 'fill-[#0F4C75]' : 'fill-slate-100'}`} strokeWidth={1.8} />
         ))}
       </div>
-      <span>{rating.count > 0 ? `${rating.average.toFixed(1)} (${rating.count})` : 'No ratings yet'}</span>
+      <span>{rating.localOnly ? 'Saved on this device only' : rating.count > 0 ? `${rating.average.toFixed(1)} (${rating.count})` : 'No ratings yet'}</span>
     </div>
   )
 }
