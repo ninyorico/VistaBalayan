@@ -11,6 +11,7 @@ import {
   Loader2,
   Mail,
   MapPin,
+  MessageSquare,
   Navigation,
   Phone,
   Search,
@@ -37,10 +38,33 @@ interface Establishment {
   longitude?: number
 }
 
+interface RatingBreakdown {
+  1: number
+  2: number
+  3: number
+  4: number
+  5: number
+}
+
 interface RatingSummary {
   average: number
   count: number
+  breakdown: RatingBreakdown
+  commentCount: number
   visitorRating?: number
+}
+
+interface RatingReview {
+  establishment_id: string
+  rating: number
+  comment: string | null
+  created_at: string
+}
+
+interface LocalRating {
+  rating: number
+  comment?: string
+  createdAt?: string
 }
 
 interface UserLocation {
@@ -58,8 +82,10 @@ const BALAYAN_CENTER: UserLocation = { latitude: 13.9385, longitude: 120.7332 }
 const BEHAVIOR_KEY = 'vistabalayan_public_behavior_v1'
 const RATING_VISITOR_KEY = 'vistabalayan_public_rating_visitor_v1'
 const LOCAL_RATINGS_KEY = 'vistabalayan_public_local_ratings_v1'
+const emptyBreakdown: RatingBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
 
-const emptyRatingSummary: RatingSummary = { average: 0, count: 0 }
+const createEmptyRatingSummary = (): RatingSummary => ({ average: 0, count: 0, breakdown: { ...emptyBreakdown }, commentCount: 0 })
+const emptyRatingSummary = createEmptyRatingSummary()
 
 const categories = [
   { id: 'all', name: 'All stays', icon: Search },
@@ -112,41 +138,77 @@ const getRatingVisitorToken = () => {
   return token
 }
 
-const readLocalRatings = (): Record<string, number> => {
+const normalizeLocalRating = (value: unknown): LocalRating | null => {
+  if (typeof value === 'number' && value >= 1 && value <= 5) {
+    return { rating: value }
+  }
+  if (value && typeof value === 'object') {
+    const review = value as Partial<LocalRating>
+    if (typeof review.rating === 'number' && review.rating >= 1 && review.rating <= 5) {
+      return {
+        rating: review.rating,
+        comment: typeof review.comment === 'string' ? review.comment : '',
+        createdAt: typeof review.createdAt === 'string' ? review.createdAt : undefined,
+      }
+    }
+  }
+  return null
+}
+
+const readLocalRatings = (): Record<string, LocalRating> => {
   if (typeof window === 'undefined') return {}
   try {
     const stored = window.localStorage.getItem(LOCAL_RATINGS_KEY)
-    return stored ? JSON.parse(stored) : {}
+    const parsed = stored ? JSON.parse(stored) : {}
+    return Object.entries(parsed).reduce<Record<string, LocalRating>>((acc, [id, value]) => {
+      const rating = normalizeLocalRating(value)
+      if (rating) acc[id] = rating
+      return acc
+    }, {})
   } catch {
     return {}
   }
 }
 
-const saveLocalRating = (establishmentId: string, rating: number) => {
+const saveLocalRating = (establishmentId: string, rating: number, comment: string) => {
   if (typeof window === 'undefined') return
   const ratings = readLocalRatings()
-  ratings[establishmentId] = rating
+  ratings[establishmentId] = { rating, comment: comment.trim(), createdAt: new Date().toISOString() }
   window.localStorage.setItem(LOCAL_RATINGS_KEY, JSON.stringify(ratings))
 }
 
 const getLocalRatingSummaries = (establishmentIds: string[]) => {
   const localRatings = readLocalRatings()
   return establishmentIds.reduce<Record<string, RatingSummary>>((acc, id) => {
-    const rating = localRatings[id]
-    if (rating) {
-      acc[id] = { average: rating, count: 1, visitorRating: rating }
+    const localReview = localRatings[id]
+    if (localReview) {
+      acc[id] = {
+        average: localReview.rating,
+        count: 1,
+        breakdown: { ...emptyBreakdown, [localReview.rating]: 1 },
+        commentCount: localReview.comment?.trim() ? 1 : 0,
+        visitorRating: localReview.rating,
+      }
     }
     return acc
   }, {})
 }
 
-const summarizeRatings = (ratings: Array<{ establishment_id: string; average_rating: number; rating_count: number }>) => {
+const summarizeRatings = (ratings: Array<{ establishment_id: string; average_rating: number; rating_count: number; one_star_count?: number; two_star_count?: number; three_star_count?: number; four_star_count?: number; five_star_count?: number; comment_count?: number }>) => {
   return ratings.reduce<Record<string, RatingSummary>>((acc, item) => {
     if (!item.establishment_id || typeof item.average_rating !== 'number') return acc
 
     acc[item.establishment_id] = {
       average: item.average_rating,
       count: item.rating_count || 0,
+      breakdown: {
+        1: item.one_star_count || 0,
+        2: item.two_star_count || 0,
+        3: item.three_star_count || 0,
+        4: item.four_star_count || 0,
+        5: item.five_star_count || 0,
+      },
+      commentCount: item.comment_count || 0,
     }
     return acc
   }, {})
@@ -155,11 +217,16 @@ const summarizeRatings = (ratings: Array<{ establishment_id: string; average_rat
 const applyLocalVisitorRatings = (summaries: Record<string, RatingSummary>, establishmentIds: string[]) => {
   const localRatings = readLocalRatings()
   return establishmentIds.reduce<Record<string, RatingSummary>>((acc, id) => {
-    const localRating = localRatings[id]
-    if (localRating) {
+    const localReview = localRatings[id]
+    if (localReview) {
       acc[id] = {
-        ...(acc[id] || { average: localRating, count: 1 }),
-        visitorRating: localRating,
+        ...(acc[id] || {
+          average: localReview.rating,
+          count: 1,
+          breakdown: { ...emptyBreakdown, [localReview.rating]: 1 },
+          commentCount: localReview.comment?.trim() ? 1 : 0,
+        }),
+        visitorRating: localReview.rating,
       }
     }
     return acc
@@ -208,6 +275,9 @@ export default function TourismHome() {
   const [ratingVisitorToken, setRatingVisitorToken] = useState('')
   const [submittingRating, setSubmittingRating] = useState(false)
   const [ratingMessage, setRatingMessage] = useState('')
+  const [selectedReviewRating, setSelectedReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [ratingReviews, setRatingReviews] = useState<Record<string, RatingReview[]>>({})
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
 
@@ -240,7 +310,7 @@ export default function TourismHome() {
 
     const { data, error } = await supabase
       .from('establishment_rating_summaries')
-      .select('establishment_id, average_rating, rating_count')
+      .select('establishment_id, average_rating, rating_count, one_star_count, two_star_count, three_star_count, four_star_count, five_star_count, comment_count')
       .in('establishment_id', establishmentIds)
 
     if (!error && data) {
@@ -250,8 +320,29 @@ export default function TourismHome() {
     }
   }
 
-  const submitRating = async (rating: number) => {
-    if (!selectedEstablishment || submittingRating) return
+  const fetchRatingReviews = async (establishmentId: string) => {
+    const { data, error } = await supabase
+      .from('establishment_rating_reviews')
+      .select('establishment_id, rating, comment, created_at')
+      .eq('establishment_id', establishmentId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (!error && data) {
+      setRatingReviews((current) => ({ ...current, [establishmentId]: data }))
+    } else {
+      const localReview = readLocalRatings()[establishmentId]
+      if (localReview) {
+        setRatingReviews((current) => ({
+          ...current,
+          [establishmentId]: [{ establishment_id: establishmentId, rating: localReview.rating, comment: localReview.comment || null, created_at: localReview.createdAt || new Date().toISOString() }],
+        }))
+      }
+    }
+  }
+
+  const submitRating = async () => {
+    if (!selectedEstablishment || submittingRating || selectedReviewRating < 1) return
 
     const visitorToken = ratingVisitorToken || getRatingVisitorToken()
     if (!ratingVisitorToken) setRatingVisitorToken(visitorToken)
@@ -259,27 +350,34 @@ export default function TourismHome() {
     setSubmittingRating(true)
     setRatingMessage('')
 
+    const comment = reviewComment.trim()
     const { error } = await supabase.rpc('submit_establishment_rating', {
       p_establishment_id: selectedEstablishment.id,
       p_visitor_token: visitorToken,
-      p_rating: rating,
+      p_rating: selectedReviewRating,
+      p_comment: comment || null,
     })
 
-    saveLocalRating(selectedEstablishment.id, rating)
+    saveLocalRating(selectedEstablishment.id, selectedReviewRating, comment)
 
     if (error) {
       setRatingSummaries((current) => ({
         ...current,
         [selectedEstablishment.id]: {
-          average: current[selectedEstablishment.id]?.average || rating,
+          average: current[selectedEstablishment.id]?.average || selectedReviewRating,
           count: current[selectedEstablishment.id]?.count || 1,
-          visitorRating: rating,
+          breakdown: current[selectedEstablishment.id]?.breakdown || { ...emptyBreakdown, [selectedReviewRating]: 1 },
+          commentCount: current[selectedEstablishment.id]?.commentCount || (comment ? 1 : 0),
+          visitorRating: selectedReviewRating,
         },
       }))
-      setRatingMessage('Thanks — your rating was saved on this device.')
+      setRatingMessage('Thanks — your rating and comment were saved on this device.')
+      await fetchRatingReviews(selectedEstablishment.id)
     } else {
-      setRatingMessage('Thanks — your rating was saved.')
+      setRatingMessage('Thanks — your rating and comment were saved.')
+      setReviewComment('')
       await fetchRatingSummaries(establishments.map((est) => est.id), visitorToken)
+      await fetchRatingReviews(selectedEstablishment.id)
     }
 
     setSubmittingRating(false)
@@ -331,6 +429,10 @@ export default function TourismHome() {
   const openDetails = (establishment: Establishment) => {
     setSelectedEstablishment(establishment)
     setRatingMessage('')
+    const localReview = readLocalRatings()[establishment.id]
+    setSelectedReviewRating(localReview?.rating || ratingSummaries[establishment.id]?.visitorRating || 0)
+    setReviewComment(localReview?.comment || '')
+    fetchRatingReviews(establishment.id)
     const next = {
       ...behavior,
       viewedIds: [establishment.id, ...behavior.viewedIds.filter((id) => id !== establishment.id)].slice(0, 12),
@@ -390,6 +492,7 @@ export default function TourismHome() {
 
   const featuredImage = establishments.find((est) => est.images?.length)?.images?.[0]
   const selectedRating = selectedEstablishment ? ratingSummaries[selectedEstablishment.id] || emptyRatingSummary : emptyRatingSummary
+  const selectedReviews = selectedEstablishment ? ratingReviews[selectedEstablishment.id] || [] : []
 
   return (
     <main className="min-h-[100dvh] bg-[#f5f8f9] text-slate-950">
@@ -616,28 +719,49 @@ export default function TourismHome() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-semibold text-slate-950">Rate this establishment</h3>
-                    <p className="mt-1 text-sm text-slate-600">Share your public rating to help other visitors choose where to stay.</p>
+                    <p className="mt-1 text-sm text-slate-600">No account needed. Add an optional comment so visitors can understand your rating.</p>
                   </div>
                   <div className="flex items-center gap-1" aria-label="Choose a rating from 1 to 5 stars">
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <button
                         key={rating}
                         type="button"
-                        onClick={() => submitRating(rating)}
+                        onClick={() => setSelectedReviewRating(rating)}
                         disabled={submittingRating}
                         className="rounded-full p-1.5 text-[#0F4C75] transition hover:scale-110 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                         aria-label={`Rate ${rating} star${rating === 1 ? '' : 's'}`}
                       >
                         <Star
-                          className={`h-7 w-7 ${rating <= (selectedRating.visitorRating || 0) ? 'fill-[#0F4C75]' : 'fill-white'}`}
+                          className={`h-7 w-7 ${rating <= (selectedReviewRating || selectedRating.visitorRating || 0) ? 'fill-[#0F4C75]' : 'fill-white'}`}
                           strokeWidth={1.8}
                         />
                       </button>
                     ))}
                   </div>
                 </div>
+                <div className="mt-4 space-y-3">
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
+                    placeholder="Optional: tell others why you chose this rating"
+                    className="min-h-24 w-full rounded-2xl border border-cyan-100 bg-white p-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-4 focus:ring-cyan-300/30"
+                  />
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-slate-500">{reviewComment.length}/500 characters</p>
+                    <button
+                      type="button"
+                      onClick={submitRating}
+                      disabled={submittingRating || selectedReviewRating < 1}
+                      className="rounded-2xl bg-[#0F4C75] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0B3C5D] disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      {submittingRating ? 'Saving...' : 'Submit rating'}
+                    </button>
+                  </div>
+                </div>
                 {ratingMessage && <p className="mt-3 text-sm font-medium text-[#0F4C75]">{ratingMessage}</p>}
               </div>
+
+              <ReviewSummary summary={selectedRating} reviews={selectedReviews} />
 
               {selectedEstablishment.description && (
                 <div className="mt-6 rounded-2xl bg-slate-50 p-5">
@@ -657,6 +781,53 @@ export default function TourismHome() {
         </div>
       )}
     </main>
+  )
+}
+
+function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: RatingReview[] }) {
+  const maxCount = Math.max(1, ...[1, 2, 3, 4, 5].map((star) => summary.breakdown[star as keyof RatingBreakdown] || 0))
+
+  return (
+    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-semibold text-slate-950">Reviews and rating count</h3>
+          <p className="mt-1 text-sm text-slate-600">{summary.count} total review{summary.count === 1 ? '' : 's'} · {summary.commentCount} with comment{summary.commentCount === 1 ? '' : 's'}</p>
+        </div>
+        <MessageSquare className="h-5 w-5 text-[#0F4C75]" strokeWidth={1.8} />
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {[5, 4, 3, 2, 1].map((star) => {
+          const count = summary.breakdown[star as keyof RatingBreakdown] || 0
+          return (
+            <div key={star} className="grid grid-cols-[4.5rem_1fr_3rem] items-center gap-3 text-sm text-slate-600">
+              <span>{star} star{star === 1 ? '' : 's'}</span>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-[#0F4C75]" style={{ width: `${(count / maxCount) * 100}%` }} />
+              </div>
+              <span className="text-right font-semibold text-slate-800">{count}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {reviews.length === 0 ? (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">No public review comments yet.</p>
+        ) : (
+          reviews.map((review, index) => (
+            <div key={`${review.establishment_id}-${review.created_at}-${index}`} className="rounded-2xl bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <RatingDisplay summary={{ average: review.rating, count: 1, breakdown: { ...emptyBreakdown, [review.rating]: 1 }, commentCount: review.comment?.trim() ? 1 : 0 }} />
+                <span className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString()}</span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{review.comment?.trim() || 'No comment provided.'}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -684,7 +855,3 @@ function InfoRow({ icon: Icon, text }: { icon: React.ElementType; text: string }
     </div>
   )
 }
-
-
-
-
