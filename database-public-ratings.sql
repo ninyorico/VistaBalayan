@@ -8,8 +8,6 @@
 -- Visitor tokens are hashed before storage.
 -- =====================================================
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE IF NOT EXISTS public.establishment_ratings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   establishment_id UUID NOT NULL REFERENCES public.establishments(id) ON DELETE CASCADE,
@@ -53,7 +51,7 @@ BEGIN
       AND table_name = 'establishment_ratings'
       AND column_name = 'visitor_token'
   ) THEN
-    EXECUTE 'UPDATE public.establishment_ratings SET visitor_token_hash = encode(digest(visitor_token, ''sha256''), ''hex'') WHERE visitor_token_hash IS NULL';
+    EXECUTE 'UPDATE public.establishment_ratings SET visitor_token_hash = md5(visitor_token) WHERE visitor_token_hash IS NULL';
   END IF;
 END;
 $$;
@@ -146,7 +144,7 @@ CREATE OR REPLACE FUNCTION public.submit_establishment_rating(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, extensions
+SET search_path = public
 AS $$
 DECLARE
   normalized_token TEXT := trim(p_visitor_token);
@@ -189,7 +187,7 @@ BEGIN
     RAISE EXCEPTION 'establishment is not publicly rateable';
   END IF;
 
-  token_hash := encode(digest(normalized_token, 'sha256'), 'hex');
+  token_hash := md5(normalized_token);
 
   INSERT INTO public.establishment_ratings (establishment_id, visitor_token_hash, rating, comment)
   VALUES (p_establishment_id, token_hash, p_rating, normalized_comment)
