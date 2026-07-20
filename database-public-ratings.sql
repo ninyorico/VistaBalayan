@@ -146,7 +146,7 @@ CREATE OR REPLACE FUNCTION public.submit_establishment_rating(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   normalized_token TEXT := trim(p_visitor_token);
