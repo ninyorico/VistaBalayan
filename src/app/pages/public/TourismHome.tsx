@@ -59,12 +59,14 @@ interface RatingReview {
   establishment_id: string
   rating: number
   comment: string | null
+  reviewer_name: string | null
   created_at: string
 }
 
 interface LocalRating {
   rating: number
   comment?: string
+  reviewerName?: string
   createdAt?: string
 }
 
@@ -149,6 +151,7 @@ const normalizeLocalRating = (value: unknown): LocalRating | null => {
       return {
         rating: review.rating,
         comment: typeof review.comment === 'string' ? review.comment : '',
+        reviewerName: typeof review.reviewerName === 'string' ? review.reviewerName : '',
         createdAt: typeof review.createdAt === 'string' ? review.createdAt : undefined,
       }
     }
@@ -171,10 +174,10 @@ const readLocalRatings = (): Record<string, LocalRating> => {
   }
 }
 
-const saveLocalRating = (establishmentId: string, rating: number, comment: string) => {
+const saveLocalRating = (establishmentId: string, rating: number, comment: string, reviewerName: string) => {
   if (typeof window === 'undefined') return
   const ratings = readLocalRatings()
-  ratings[establishmentId] = { rating, comment: comment.trim(), createdAt: new Date().toISOString() }
+  ratings[establishmentId] = { rating, comment: comment.trim(), reviewerName: reviewerName.trim(), createdAt: new Date().toISOString() }
   window.localStorage.setItem(LOCAL_RATINGS_KEY, JSON.stringify(ratings))
 }
 
@@ -279,6 +282,7 @@ export default function TourismHome() {
   const [submittingRating, setSubmittingRating] = useState(false)
   const [ratingMessage, setRatingMessage] = useState('')
   const [selectedReviewRating, setSelectedReviewRating] = useState(0)
+  const [reviewerName, setReviewerName] = useState('')
   const [reviewComment, setReviewComment] = useState('')
   const [ratingReviews, setRatingReviews] = useState<Record<string, RatingReview[]>>({})
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
@@ -326,7 +330,7 @@ export default function TourismHome() {
   const fetchRatingReviews = async (establishmentId: string) => {
     const { data, error } = await supabase
       .from('establishment_rating_reviews')
-      .select('establishment_id, rating, comment, created_at')
+      .select('establishment_id, rating, comment, reviewer_name, created_at')
       .eq('establishment_id', establishmentId)
       .order('created_at', { ascending: false })
       .limit(50)
@@ -338,7 +342,7 @@ export default function TourismHome() {
       if (localReview) {
         setRatingReviews((current) => ({
           ...current,
-          [establishmentId]: [{ establishment_id: establishmentId, rating: localReview.rating, comment: localReview.comment || null, created_at: localReview.createdAt || new Date().toISOString() }],
+          [establishmentId]: [{ establishment_id: establishmentId, rating: localReview.rating, comment: localReview.comment || null, reviewer_name: localReview.reviewerName || null, created_at: localReview.createdAt || new Date().toISOString() }],
         }))
       }
     }
@@ -353,15 +357,23 @@ export default function TourismHome() {
     setSubmittingRating(true)
     setRatingMessage('')
 
+    const name = reviewerName.trim()
+    if (!name) {
+      setRatingMessage('Please enter your name before submitting your review.')
+      setSubmittingRating(false)
+      return
+    }
+
     const comment = reviewComment.trim()
     const { error } = await supabase.rpc('submit_establishment_rating', {
       p_establishment_id: selectedEstablishment.id,
       p_visitor_token: visitorToken,
       p_rating: selectedReviewRating,
       p_comment: comment || null,
+      p_reviewer_name: name,
     })
 
-    saveLocalRating(selectedEstablishment.id, selectedReviewRating, comment)
+    saveLocalRating(selectedEstablishment.id, selectedReviewRating, comment, name)
 
     if (error) {
       setRatingSummaries((current) => ({
@@ -378,7 +390,8 @@ export default function TourismHome() {
       setRatingMessage('Database setup is still pending, so this rating was saved on this device only and will not appear on other browsers yet.')
       await fetchRatingReviews(selectedEstablishment.id)
     } else {
-      setRatingMessage('Thanks — your rating and comment were saved.')
+      setRatingMessage('Thanks — your review was saved with your name.')
+      setReviewerName('')
       setReviewComment('')
       await fetchRatingSummaries(establishments.map((est) => est.id), visitorToken)
       await fetchRatingReviews(selectedEstablishment.id)
@@ -435,6 +448,7 @@ export default function TourismHome() {
     setRatingMessage('')
     const localReview = readLocalRatings()[establishment.id]
     setSelectedReviewRating(localReview?.rating || ratingSummaries[establishment.id]?.visitorRating || 0)
+    setReviewerName(localReview?.reviewerName || '')
     setReviewComment(localReview?.comment || '')
     fetchRatingReviews(establishment.id)
     const next = {
@@ -723,7 +737,7 @@ export default function TourismHome() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-semibold text-slate-950">Rate this establishment</h3>
-                    <p className="mt-1 text-sm text-slate-600">No account needed. Add an optional comment so visitors can understand your rating.</p>
+                    <p className="mt-1 text-sm text-slate-600">No account needed. Enter your name so visitors can see who shared the review.</p>
                   </div>
                   <div className="flex items-center gap-1" aria-label="Choose a rating from 1 to 5 stars">
                     {[1, 2, 3, 4, 5].map((rating) => (
@@ -744,6 +758,15 @@ export default function TourismHome() {
                   </div>
                 </div>
                 <div className="mt-4 space-y-3">
+                  <input
+                    type="text"
+                    value={reviewerName}
+                    onChange={(e) => setReviewerName(e.target.value.slice(0, 80))}
+                    placeholder="Your name"
+                    aria-label="Your name"
+                    required
+                    className="w-full rounded-2xl border border-cyan-100 bg-white p-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-4 focus:ring-cyan-300/30"
+                  />
                   <textarea
                     value={reviewComment}
                     onChange={(e) => setReviewComment(e.target.value.slice(0, 500))}
@@ -751,11 +774,11 @@ export default function TourismHome() {
                     className="min-h-24 w-full rounded-2xl border border-cyan-100 bg-white p-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-4 focus:ring-cyan-300/30"
                   />
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-slate-500">{reviewComment.length}/500 characters</p>
+                    <p className="text-xs text-slate-500">Name required · {reviewComment.length}/500 comment characters</p>
                     <button
                       type="button"
                       onClick={submitRating}
-                      disabled={submittingRating || selectedReviewRating < 1}
+                      disabled={submittingRating || selectedReviewRating < 1 || !reviewerName.trim()}
                       className="rounded-2xl bg-[#0F4C75] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0B3C5D] disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       {submittingRating ? 'Saving...' : 'Submit rating'}
@@ -827,6 +850,7 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
                 <RatingDisplay summary={{ average: review.rating, count: 1, breakdown: { ...emptyBreakdown, [review.rating]: 1 }, commentCount: review.comment?.trim() ? 1 : 0 }} />
                 <span className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString()}</span>
               </div>
+              <p className="mt-2 text-sm font-semibold text-slate-800">{review.reviewer_name?.trim() || 'Anonymous visitor'}</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">{review.comment?.trim() || 'No comment provided.'}</p>
             </div>
           ))

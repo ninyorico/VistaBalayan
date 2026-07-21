@@ -2,7 +2,7 @@
 -- VISTABALAYAN PUBLIC ESTABLISHMENT RATINGS
 -- Run this in the Supabase SQL Editor with owner/admin privileges.
 --
--- Public users submit a 1-5 star rating plus an optional comment through a locked RPC.
+-- Public users submit a 1-5 star rating, required display name, and optional comment through a locked RPC.
 -- The raw rating table is not exposed to anon/authenticated clients.
 -- The public page reads aggregate summaries plus sanitized public review comments.
 -- Visitor tokens are hashed before storage.
@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.establishment_ratings (
   establishment_id UUID NOT NULL REFERENCES public.establishments(id) ON DELETE CASCADE,
   visitor_token_hash TEXT NOT NULL,
   rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  reviewer_name TEXT NOT NULL CHECK (char_length(trim(reviewer_name)) BETWEEN 1 AND 80),
   comment TEXT CHECK (comment IS NULL OR char_length(comment) <= 500),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -25,6 +26,16 @@ ALTER TABLE public.establishment_ratings
 ALTER TABLE public.establishment_ratings
   ADD COLUMN IF NOT EXISTS comment TEXT;
 
+ALTER TABLE public.establishment_ratings
+  ADD COLUMN IF NOT EXISTS reviewer_name TEXT;
+
+UPDATE public.establishment_ratings
+SET reviewer_name = 'Anonymous visitor'
+WHERE reviewer_name IS NULL OR trim(reviewer_name) = '';
+
+ALTER TABLE public.establishment_ratings
+  ALTER COLUMN reviewer_name SET NOT NULL;
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -36,6 +47,21 @@ BEGIN
   ) THEN
     ALTER TABLE public.establishment_ratings
       ADD CONSTRAINT establishment_ratings_comment_length_check CHECK (comment IS NULL OR char_length(comment) <= 500);
+  END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.constraint_column_usage
+    WHERE table_schema = 'public'
+      AND table_name = 'establishment_ratings'
+      AND constraint_name = 'establishment_ratings_reviewer_name_length_check'
+  ) THEN
+    ALTER TABLE public.establishment_ratings
+      ADD CONSTRAINT establishment_ratings_reviewer_name_length_check CHECK (char_length(trim(reviewer_name)) BETWEEN 1 AND 80);
   END IF;
 END;
 $$;
@@ -117,6 +143,7 @@ CREATE VIEW public.establishment_rating_reviews AS
 SELECT
   ratings.establishment_id,
   ratings.rating,
+  ratings.reviewer_name,
   NULLIF(trim(ratings.comment), '') AS comment,
   ratings.created_at
 FROM public.establishment_ratings ratings
@@ -135,11 +162,13 @@ WHERE establishments.status = 'active'
 GRANT SELECT ON public.establishment_rating_reviews TO anon, authenticated;
 
 DROP FUNCTION IF EXISTS public.submit_establishment_rating(UUID, TEXT, INTEGER);
+DROP FUNCTION IF EXISTS public.submit_establishment_rating(UUID, TEXT, INTEGER, TEXT);
 CREATE OR REPLACE FUNCTION public.submit_establishment_rating(
   p_establishment_id UUID,
   p_visitor_token TEXT,
   p_rating INTEGER,
-  p_comment TEXT DEFAULT NULL
+  p_comment TEXT DEFAULT NULL,
+  p_reviewer_name TEXT DEFAULT NULL
 )
 RETURNS VOID
 LANGUAGE plpgsql
@@ -151,6 +180,7 @@ DECLARE
   token_hash TEXT;
   public_establishment_exists BOOLEAN;
   normalized_comment TEXT := NULLIF(trim(p_comment), '');
+  normalized_reviewer_name TEXT := NULLIF(trim(p_reviewer_name), '');
 BEGIN
   IF p_establishment_id IS NULL THEN
     RAISE EXCEPTION 'establishment_id is required';
@@ -166,6 +196,14 @@ BEGIN
 
   IF normalized_comment IS NOT NULL AND char_length(normalized_comment) > 500 THEN
     RAISE EXCEPTION 'comment must be 500 characters or fewer';
+  END IF;
+
+  IF normalized_reviewer_name IS NULL THEN
+    RAISE EXCEPTION 'reviewer name is required';
+  END IF;
+
+  IF char_length(normalized_reviewer_name) > 80 THEN
+    RAISE EXCEPTION 'reviewer name must be 80 characters or fewer';
   END IF;
 
   SELECT EXISTS (
@@ -189,14 +227,15 @@ BEGIN
 
   token_hash := md5(normalized_token);
 
-  INSERT INTO public.establishment_ratings (establishment_id, visitor_token_hash, rating, comment)
-  VALUES (p_establishment_id, token_hash, p_rating, normalized_comment)
+  INSERT INTO public.establishment_ratings (establishment_id, visitor_token_hash, rating, reviewer_name, comment)
+  VALUES (p_establishment_id, token_hash, p_rating, normalized_reviewer_name, normalized_comment)
   ON CONFLICT (establishment_id, visitor_token_hash)
   DO UPDATE SET
     rating = EXCLUDED.rating,
+    reviewer_name = EXCLUDED.reviewer_name,
     comment = EXCLUDED.comment;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.submit_establishment_rating(UUID, TEXT, INTEGER, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.submit_establishment_rating(UUID, TEXT, INTEGER, TEXT) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.submit_establishment_rating(UUID, TEXT, INTEGER, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.submit_establishment_rating(UUID, TEXT, INTEGER, TEXT, TEXT) TO anon, authenticated;
