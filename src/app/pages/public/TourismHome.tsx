@@ -85,6 +85,7 @@ const BALAYAN_CENTER: UserLocation = { latitude: 13.9385, longitude: 120.7332 }
 const BEHAVIOR_KEY = 'vistabalayan_public_behavior_v1'
 const RATING_VISITOR_KEY = 'vistabalayan_public_rating_visitor_v1'
 const LOCAL_RATINGS_KEY = 'vistabalayan_public_local_ratings_v1'
+const LEGACY_REVIEW_PREFIX = 'Reviewed by '
 const emptyBreakdown: RatingBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
 
 const createEmptyRatingSummary = (): RatingSummary => ({ average: 0, count: 0, breakdown: { ...emptyBreakdown }, commentCount: 0 })
@@ -179,6 +180,36 @@ const saveLocalRating = (establishmentId: string, rating: number, comment: strin
   const ratings = readLocalRatings()
   ratings[establishmentId] = { rating, comment: comment.trim(), reviewerName: reviewerName.trim(), createdAt: new Date().toISOString() }
   window.localStorage.setItem(LOCAL_RATINGS_KEY, JSON.stringify(ratings))
+}
+
+const buildLegacyReviewComment = (reviewerName: string, comment: string) => {
+  const prefix = `${LEGACY_REVIEW_PREFIX}${reviewerName.trim()}`.slice(0, 120)
+  const trimmedComment = comment.trim()
+  if (!trimmedComment) return prefix.slice(0, 500)
+  return `${prefix}\n${trimmedComment}`.slice(0, 500)
+}
+
+const getReviewDisplay = (review: RatingReview) => {
+  const reviewerName = review.reviewer_name?.trim()
+  const comment = review.comment?.trim() || ''
+
+  if (reviewerName) {
+    return { reviewerName, comment }
+  }
+
+  if (comment.startsWith(LEGACY_REVIEW_PREFIX)) {
+    const withoutPrefix = comment.slice(LEGACY_REVIEW_PREFIX.length)
+    const [nameLine, ...commentLines] = withoutPrefix.split('\n')
+    const legacyReviewerName = nameLine.trim()
+    if (legacyReviewerName) {
+      return {
+        reviewerName: legacyReviewerName,
+        comment: commentLines.join('\n').trim(),
+      }
+    }
+  }
+
+  return { reviewerName: 'Anonymous visitor', comment }
 }
 
 const getLocalRatingSummaries = (establishmentIds: string[]) => {
@@ -328,12 +359,23 @@ export default function TourismHome() {
   }
 
   const fetchRatingReviews = async (establishmentId: string) => {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('establishment_rating_reviews')
       .select('establishment_id, rating, comment, reviewer_name, created_at')
       .eq('establishment_id', establishmentId)
       .order('created_at', { ascending: false })
       .limit(50)
+
+    if (error) {
+      const legacyResult = await supabase
+        .from('establishment_rating_reviews')
+        .select('establishment_id, rating, comment, created_at')
+        .eq('establishment_id', establishmentId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      data = legacyResult.data as RatingReview[] | null
+      error = legacyResult.error
+    }
 
     if (!error && data) {
       setRatingReviews((current) => ({ ...current, [establishmentId]: data }))
@@ -365,13 +407,23 @@ export default function TourismHome() {
     }
 
     const comment = reviewComment.trim()
-    const { error } = await supabase.rpc('submit_establishment_rating', {
+    let { error } = await supabase.rpc('submit_establishment_rating', {
       p_establishment_id: selectedEstablishment.id,
       p_visitor_token: visitorToken,
       p_rating: selectedReviewRating,
       p_comment: comment || null,
       p_reviewer_name: name,
     })
+
+    if (error) {
+      const legacyResult = await supabase.rpc('submit_establishment_rating', {
+        p_establishment_id: selectedEstablishment.id,
+        p_visitor_token: visitorToken,
+        p_rating: selectedReviewRating,
+        p_comment: buildLegacyReviewComment(name, comment),
+      })
+      error = legacyResult.error
+    }
 
     saveLocalRating(selectedEstablishment.id, selectedReviewRating, comment, name)
 
@@ -844,16 +896,19 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
         {reviews.length === 0 ? (
           <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">No public review comments yet.</p>
         ) : (
-          reviews.map((review, index) => (
-            <div key={`${review.establishment_id}-${review.created_at}-${index}`} className="rounded-2xl bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <RatingDisplay summary={{ average: review.rating, count: 1, breakdown: { ...emptyBreakdown, [review.rating]: 1 }, commentCount: review.comment?.trim() ? 1 : 0 }} />
-                <span className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString()}</span>
+          reviews.map((review, index) => {
+            const display = getReviewDisplay(review)
+            return (
+              <div key={`${review.establishment_id}-${review.created_at}-${index}`} className="rounded-2xl bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <RatingDisplay summary={{ average: review.rating, count: 1, breakdown: { ...emptyBreakdown, [review.rating]: 1 }, commentCount: display.comment ? 1 : 0 }} />
+                  <span className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString()}</span>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-slate-800">{display.reviewerName}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{display.comment || 'No comment provided.'}</p>
               </div>
-              <p className="mt-2 text-sm font-semibold text-slate-800">{review.reviewer_name?.trim() || 'Anonymous visitor'}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{review.comment?.trim() || 'No comment provided.'}</p>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </div>
