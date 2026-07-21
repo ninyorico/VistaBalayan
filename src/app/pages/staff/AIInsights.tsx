@@ -258,7 +258,7 @@ const loadCachedData = async (estId: string) => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">AI Insights</h1>
           <p className="text-gray-600 mt-1">
-            AI-powered recommendations and anomaly detection for {establishmentName || 'your establishment'}
+            AI-powered recommendations and service gap tracking for {establishmentName || 'your establishment'}
           </p>
         </div>
         <button
@@ -280,18 +280,18 @@ const loadCachedData = async (estId: string) => {
           <div>
             <h2 className="text-2xl font-bold mb-1">AI Analysis Active</h2>
             <p className="text-purple-100">
-              Monitoring {establishmentName} data for insights and anomalies
+              Monitoring {establishmentName} data for insights, service gaps, and operational challenges
             </p>
           </div>
         </div>
       </div>
 
-      {/* AI Anomaly Alerts */}
+      {/* Service Gaps / Operational Challenges */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Anomaly Alerts</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Service Gaps or Operational Challenges</h3>
           </div>
           <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
             {anomalies.filter((a) => a.severity === "medium" || a.severity === "high").length} Active
@@ -363,7 +363,7 @@ const loadCachedData = async (estId: string) => {
             <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <p className="text-sm text-green-800">
-                No anomalies detected. Your data quality is excellent!
+                No service gaps or operational challenges detected. Your data quality is excellent!
               </p>
             </div>
           )}

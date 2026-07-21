@@ -416,7 +416,7 @@ setOccupancyRate(occupancyRate);
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-950">Recent anomaly detections</h3>
+          <h3 className="text-lg font-bold text-slate-950">Service Gaps or Operational Challenges</h3>
           <div className="mt-5 space-y-3">
             {anomalies.length > 0 ? (
               anomalies.map((anomaly) => (
@@ -438,7 +438,7 @@ setOccupancyRate(occupancyRate);
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">No anomalies detected</div>
+              <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">No service gaps or operational challenges detected</div>
             )}
           </div>
         </div>

@@ -118,7 +118,7 @@ export default function AIInsights() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">AI Insights</h1>
           <p className="text-gray-600 mt-1">
-            AI-powered anomaly detection and intelligent recommendations
+            AI-powered service gap tracking and intelligent recommendations
           </p>
           {lastUpdated && (
             <p className="text-xs text-gray-400 mt-1">Last updated: {lastUpdated}</p>
@@ -149,12 +149,12 @@ export default function AIInsights() {
         </div>
       </div>
 
-      {/* Anomaly Alerts */}
+      {/* Service Gaps / Operational Challenges */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Anomaly Detections</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Service Gaps or Operational Challenges</h3>
           </div>
           <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
             {anomalies.filter(a => !a.is_resolved).length} Active
@@ -212,7 +212,7 @@ export default function AIInsights() {
           ) : (
             <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-600" />
-              <p className="text-sm text-green-800">No anomalies detected. Data quality is excellent!</p>
+              <p className="text-sm text-green-800">No service gaps or operational challenges detected. Data quality is excellent!</p>
             </div>
           )}
         </div>
