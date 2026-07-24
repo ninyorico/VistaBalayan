@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Download,
   FileSpreadsheet,
   CheckCircle,
   XCircle,
@@ -22,7 +21,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
-import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
+import { datestampedWorkbookFilename, downloadTourismReportsWorkbook } from "../../../lib/exportExcel";
 
 const getCurrentYear = () => new Date().getFullYear().toString();
 
@@ -266,23 +265,17 @@ export default function Reports() {
     fetchChartData();
   }, [filterType, selectedYear, selectedQuarter, selectedMonth, selectedWeek]);
 
-  const handleExport = () => {
-    downloadCsv(
-      datestampedFilename("tourism-reports"),
-      ["Establishment", "Type", "Report Date", "Visitors/Check-ins", "Submitted", "Status", "Reviewed By", "Reviewed Date", "Notes"],
-      filteredReports.map((report) => [
-        report.establishment,
-        getReportTypeLabel(report.type),
-        report.reportDate,
-        report.visitors,
-        report.submitted,
-        report.status,
-        report.reviewedBy || "",
-        report.reviewedDate || "",
-        report.notes || "",
-      ])
-    );
-    toast.success(`Exported ${filteredReports.length} report(s)`);
+  const handleExport = async () => {
+    try {
+      await downloadTourismReportsWorkbook(
+        datestampedWorkbookFilename("tourism-reports"),
+        filteredReports
+      );
+      toast.success(`Exported ${filteredReports.length} report(s) to Excel`);
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error("Failed to export Excel workbook");
+    }
   };
 
   const handleViewDetails = (submission: Submission) => {
