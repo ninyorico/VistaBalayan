@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { Save, Send, Plus, Trash2, AlertTriangle} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
+import { canSubmitVisitorReport } from "../../../lib/establishmentReportForms";
 
 interface VisitorEntry {
   id: number;
@@ -23,6 +25,7 @@ const parseNonNegativeInteger = (value: string) => {
 const numericInputValue = (value: number) => (value === 0 ? "" : String(value));
 
 export default function SubmitVisitorReport() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -99,6 +102,12 @@ const loadProfile = async () => {
       } else if (establishment && establishment.length > 0) {
         console.log('Establishment:', establishment[0]);
         setEstablishmentName(establishment[0]?.name || 'Your Establishment');
+
+        if (!canSubmitVisitorReport(establishment[0])) {
+          toast.error('This establishment is assigned to hotel/accommodation reports only.');
+          navigate('/staff', { replace: true });
+          return;
+        }
       } else {
         console.warn('⚠️ Establishment not found with ID:', profile.establishment_id);
         setEstablishmentName('Establishment not found');

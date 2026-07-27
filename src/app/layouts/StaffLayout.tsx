@@ -15,12 +15,13 @@ import {
   Settings,
   Building2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { canSubmitAccommodationReport, canSubmitVisitorReport } from "../../lib/establishmentReportForms";
 
 const menuItems = [
   { path: "/staff", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/staff/submit-visitor-report", icon: FileUp, label: "Resort" },
-  { path: "/staff/submit-accommodation-report", icon: Bed, label: "Hotels" },
+  { path: "/staff/submit-visitor-report", icon: FileUp, label: "Resort", form: "visitor" },
+  { path: "/staff/submit-accommodation-report", icon: Bed, label: "Hotels", form: "accommodation" },
   { path: "/staff/submission-history", icon: History, label: "Submission History" },
   { path: "/staff/analytics", icon: BarChart3, label: "Analytics" },
   { path: "/staff/ai-insights", icon: Brain, label: "AI Insights" },
@@ -32,6 +33,38 @@ export default function StaffLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [establishment, setEstablishment] = useState<any>(null);
+
+  useEffect(() => {
+    const loadEstablishment = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("establishment_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile?.establishment_id) return;
+
+      const { data: establishmentData } = await supabase
+        .from("establishments")
+        .select("type,total_rooms")
+        .eq("id", profile.establishment_id)
+        .maybeSingle();
+
+      setEstablishment(establishmentData);
+    };
+
+    loadEstablishment();
+  }, []);
+
+  const visibleMenuItems = menuItems.filter((item) => {
+    if (item.form === "visitor") return canSubmitVisitorReport(establishment);
+    if (item.form === "accommodation") return canSubmitAccommodationReport(establishment);
+    return true;
+  });
 
   const handleLogout = async () => {
   await supabase.auth.signOut();
@@ -71,7 +104,7 @@ export default function StaffLayout() {
         </div>
 
         <nav className="p-4 space-y-1.5 overflow-y-auto h-[calc(100vh-130px)] lg:h-auto">
-          {menuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Save, Send, Settings } from "lucide-react";
+import { useNavigate } from "react-router";
+import { Save, Send, Settings, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
+import { canSubmitAccommodationReport } from "../../../lib/establishmentReportForms";
 
 interface RoomOccupancy {
   roomType: string;
@@ -32,8 +34,10 @@ const parseNonNegativeInteger = (value: string) => {
 const numericInputValue = (value: number) => (value === 0 ? "" : String(value));
 
 export default function SubmitAccommodationReport() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [establishmentName, setEstablishmentName] = useState("Loading...");
   const [showRoomSetup, setShowRoomSetup] = useState(false);
   const [tempRoomCounts, setTempRoomCounts] = useState<Record<string, number>>({});
@@ -54,26 +58,57 @@ export default function SubmitAccommodationReport() {
   }, []);
 
   const loadProfile = async () => {
+    setLoadingProfile(true);
+    setError(null);
+
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (user) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      setProfile(profileData);
-      
-      if (profileData?.establishment_id) {
-        const { data: est } = await supabase
-          .from('establishments')
-          .select('name')
-          .eq('id', profileData.establishment_id)
-          .single();
-        setEstablishmentName(est?.name || "Your Establishment");
-      }
+    if (!user) {
+      setError("No user found. Please log in.");
+      setLoadingProfile(false);
+      return;
     }
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    if (!profileData) {
+      setError("Profile not found");
+      setLoadingProfile(false);
+      return;
+    }
+
+    setProfile(profileData);
+    
+    if (!profileData.establishment_id) {
+      setError("No establishment associated with your account. Please contact the municipal tourism officer.");
+      setLoadingProfile(false);
+      return;
+    }
+
+    const { data: est, error: estError } = await supabase
+      .from('establishments')
+      .select('name,type,total_rooms')
+      .eq('id', profileData.establishment_id)
+      .single();
+
+    if (estError || !est) {
+      setError("Could not load your establishment information");
+      setLoadingProfile(false);
+      return;
+    }
+
+    setEstablishmentName(est?.name || "Your Establishment");
+
+    if (!canSubmitAccommodationReport(est)) {
+      toast.error("This establishment is assigned to resort visitor reports only.");
+      navigate("/staff", { replace: true });
+      return;
+    }
+
     setLoadingProfile(false);
   };
 
@@ -259,6 +294,26 @@ export default function SubmitAccommodationReport() {
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1CA7C9] mx-auto"></div>
         <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Form</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={loadProfile}
+            className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }

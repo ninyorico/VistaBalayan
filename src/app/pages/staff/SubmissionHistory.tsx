@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Search, Eye, Download, CheckCircle, Clock, XCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { formatMonthYear, groupStaffSubmissions, StaffSubmissionSummary } from "../../../lib/reportMetrics";
+import { canSubmitAccommodationReport, canSubmitVisitorReport } from "../../../lib/establishmentReportForms";
 
 const statusStyles = {
   approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -18,6 +19,7 @@ export default function SubmissionHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [allowedForms, setAllowedForms] = useState({ visitor: false, accommodation: false });
 
   useEffect(() => {
     fetchSubmissions();
@@ -31,17 +33,44 @@ export default function SubmissionHistory() {
       return;
     }
 
-    const { data: visitorData } = await supabase
-      .from("visitor_reports")
-      .select("id, report_date, created_at, status, total_guests")
-      .eq("submitted_by", user.id)
-      .order("created_at", { ascending: false });
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("establishment_id")
+      .eq("id", user.id)
+      .maybeSingle();
 
-    const { data: accommodationData } = await supabase
-      .from("accommodation_reports")
-      .select("id, report_date, created_at, status, total_rooms, total_occupied_rooms, total_check_ins, total_guest_nights")
-      .eq("submitted_by", user.id)
-      .order("created_at", { ascending: false });
+    let canSeeVisitor = false;
+    let canSeeAccommodation = false;
+
+    if (profileData?.establishment_id) {
+      const { data: establishment } = await supabase
+        .from("establishments")
+        .select("type,total_rooms")
+        .eq("id", profileData.establishment_id)
+        .maybeSingle();
+
+      canSeeVisitor = canSubmitVisitorReport(establishment);
+      canSeeAccommodation = canSubmitAccommodationReport(establishment);
+    }
+
+    setAllowedForms({ visitor: canSeeVisitor, accommodation: canSeeAccommodation });
+
+    const [{ data: visitorData }, { data: accommodationData }] = await Promise.all([
+      canSeeVisitor
+        ? supabase
+            .from("visitor_reports")
+            .select("id, report_date, created_at, status, total_guests")
+            .eq("submitted_by", user.id)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      canSeeAccommodation
+        ? supabase
+            .from("accommodation_reports")
+            .select("id, report_date, created_at, status, total_rooms, total_occupied_rooms, total_check_ins, total_guest_nights")
+            .eq("submitted_by", user.id)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+    ]);
 
     setSubmissions(groupStaffSubmissions(visitorData || [], accommodationData || []));
     setLoading(false);
@@ -116,8 +145,8 @@ export default function SubmissionHistory() {
           </div>
           <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
             <option value="all">All types</option>
-            <option value="Visitor Report">Resort</option>
-            <option value="Accommodation Report">Hotels</option>
+            {allowedForms.visitor && <option value="Visitor Report">Resort</option>}
+            {allowedForms.accommodation && <option value="Accommodation Report">Hotels</option>}
           </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
             <option value="all">All status</option>

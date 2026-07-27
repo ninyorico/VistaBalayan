@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { groupStaffSubmissions } from "../../../lib/reportMetrics";
+import { canSubmitAccommodationReport, canSubmitVisitorReport, getPrimaryReportFormLabel } from "../../../lib/establishmentReportForms";
 
 const statusStyles = {
   approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -23,6 +24,7 @@ const statusStyles = {
 export default function StaffDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
+  const [establishment, setEstablishment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
@@ -55,6 +57,15 @@ export default function StaffDashboard() {
     setProfile(profileData);
 
     if (profileData) {
+      if (profileData.establishment_id) {
+        const { data: establishmentData } = await supabase
+          .from("establishments")
+          .select("name,type,total_rooms")
+          .eq("id", profileData.establishment_id)
+          .maybeSingle();
+        setEstablishment(establishmentData);
+      }
+
       const { data: visitorData } = await supabase
         .from("visitor_reports")
         .select("id, report_date, created_at, status, total_guests")
@@ -81,6 +92,9 @@ export default function StaffDashboard() {
   };
 
   const approvalRate = stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0;
+  const showVisitorForm = canSubmitVisitorReport(establishment);
+  const showAccommodationForm = canSubmitAccommodationReport(establishment);
+  const reportFormLabel = getPrimaryReportFormLabel(establishment);
 
   const submissionStats = [
     { title: "Total submissions", value: stats.total.toString(), icon: CheckCircle, tone: "bg-sky-50 text-sky-700 ring-sky-100" },
@@ -110,7 +124,7 @@ export default function StaffDashboard() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-200">Establishment portal</p>
               <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.035em] text-white sm:text-4xl">
-                Submit accurate tourism records for Balayan monitoring.
+                Submit your assigned {reportFormLabel.toLowerCase()} for Balayan tourism monitoring.
               </h1>
             </div>
             <button
@@ -125,41 +139,51 @@ export default function StaffDashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <button
-          onClick={() => navigate("/staff/submit-visitor-report")}
-          className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F4C75] text-white shadow-lg shadow-cyan-950/15">
-                <FileUp className="h-7 w-7" />
+        {showVisitorForm && (
+          <button
+            onClick={() => navigate("/staff/submit-visitor-report")}
+            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F4C75] text-white shadow-lg shadow-cyan-950/15">
+                  <FileUp className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-950">Resort</h3>
+                  <p className="mt-1 text-sm leading-5 text-slate-600">Submit resort visitor arrivals by origin and count.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-950">Resort</h3>
-                <p className="mt-1 text-sm leading-5 text-slate-600">Submit resort visitor arrivals by origin and count.</p>
-              </div>
+              <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
             </div>
-            <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
-          </div>
-        </button>
+          </button>
+        )}
 
-        <button
-          onClick={() => navigate("/staff/submit-accommodation-report")}
-          className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-950/15">
-                <Bed className="h-7 w-7" />
+        {showAccommodationForm && (
+          <button
+            onClick={() => navigate("/staff/submit-accommodation-report")}
+            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-950/15">
+                  <Bed className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-950">Hotels</h3>
+                  <p className="mt-1 text-sm leading-5 text-slate-600">Submit hotel room occupancy, check-ins, and guest nights.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-950">Hotels</h3>
-                <p className="mt-1 text-sm leading-5 text-slate-600">Submit hotel room occupancy, check-ins, and guest nights.</p>
-              </div>
+              <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
             </div>
-            <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
+          </button>
+        )}
+
+        {!showVisitorForm && !showAccommodationForm && (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
+            No report form is assigned to this establishment yet. Please ask the municipal tourism officer to update the establishment type or room count.
           </div>
-        </button>
+        )}
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
