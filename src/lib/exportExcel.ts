@@ -48,6 +48,25 @@ const sanitizeSheetName = (name: string) => {
   return clean.slice(0, 31) || "Report";
 };
 
+const uniqueSheetName = (workbook: ExcelJS.Workbook, baseName: string) => {
+  const sanitizedBase = sanitizeSheetName(baseName);
+  const existingNames = new Set(workbook.worksheets.map((worksheet) => worksheet.name.toLowerCase()));
+
+  if (!existingNames.has(sanitizedBase.toLowerCase())) {
+    return sanitizedBase;
+  }
+
+  for (let index = 2; index < 1000; index += 1) {
+    const suffix = ` (${index})`;
+    const candidate = `${sanitizedBase.slice(0, 31 - suffix.length)}${suffix}`;
+    if (!existingNames.has(candidate.toLowerCase())) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Unable to create a unique worksheet name for ${sanitizedBase}`);
+};
+
 const groupKey = (report: TourismReportExportRow) => {
   const date = new Date(`${report.reportDate}T00:00:00`);
   const year = Number.isFinite(date.getFullYear()) ? date.getFullYear() : new Date().getFullYear();
@@ -97,7 +116,7 @@ const addResortSheet = (
   sealImageId?: number,
   tourismImageId?: number
 ) => {
-  const worksheet = workbook.addWorksheet(sanitizeSheetName(`${shortMonths[monthIndex]} ${year} Resort`), {
+  const worksheet = workbook.addWorksheet(uniqueSheetName(workbook, `${shortMonths[monthIndex]} ${year} Resort`), {
     pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
 
@@ -226,7 +245,7 @@ const addHotelSheet = (
   monthIndex: number,
   establishment: string
 ) => {
-  const worksheet = workbook.addWorksheet(sanitizeSheetName(`${shortMonths[monthIndex]} ${year} Hotel`), {
+  const worksheet = workbook.addWorksheet(uniqueSheetName(workbook, `${shortMonths[monthIndex]} ${year} Hotel`), {
     pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
 
