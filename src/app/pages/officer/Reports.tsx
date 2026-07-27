@@ -60,14 +60,7 @@ const normalizeStatus = (status: string) => status.toLowerCase().replace(/\s+/g,
 
 const formatStatus = (status: string) => normalizeStatus(status).replace(/_/g, " ");
 
-const median = (values: number[]) => {
-  if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-};
-
-const detectReportAnomalies = (report: Submission, allReports: Submission[]) => {
+const detectReportAnomalies = (report: Submission) => {
   const reasons: string[] = [];
   const reportDate = new Date(`${report.reportDate}T00:00:00`);
 
@@ -102,29 +95,6 @@ const detectReportAnomalies = (report: Submission, allReports: Submission[]) => 
     }
     if (totalRooms > 0 && occupiedRooms > totalRooms * 0.98) {
       reasons.push("Occupancy is unusually close to or above full capacity");
-    }
-  }
-
-  const history = allReports
-    .filter((item) =>
-      item.id !== report.id &&
-      item.type === report.type &&
-      item.establishment === report.establishment &&
-      ["approved", "pending"].includes(normalizeStatus(item.status)) &&
-      item.reportDate < report.reportDate &&
-      Number.isFinite(item.visitors) &&
-      item.visitors > 0
-    )
-    .sort((a, b) => b.reportDate.localeCompare(a.reportDate))
-    .slice(0, 6);
-
-  if (history.length >= 3 && Number.isFinite(report.visitors) && report.visitors > 0) {
-    const baseline = median(history.map((item) => item.visitors));
-    if (baseline > 0 && report.visitors >= baseline * 3 && report.visitors - baseline >= 50) {
-      reasons.push(`Visitor/check-in total is unusually high versus recent median (${report.visitors} vs ${Math.round(baseline)})`);
-    }
-    if (baseline >= 50 && report.visitors <= baseline * 0.2) {
-      reasons.push(`Visitor/check-in total is unusually low versus recent median (${report.visitors} vs ${Math.round(baseline)})`);
     }
   }
 
@@ -434,10 +404,12 @@ export default function Reports() {
   };
 
   const handleAutoCheckReports = async () => {
-    const reportsToCheck = filteredReports.filter((report) => normalizeStatus(report.status) === "pending");
+    const reportsToCheck = filteredReports.filter((report) =>
+      ["pending", "on_hold"].includes(normalizeStatus(report.status))
+    );
 
     if (reportsToCheck.length === 0) {
-      toast.info("No pending reports found in the selected filters");
+      toast.info("No pending or on-hold reports found in the selected filters");
       return;
     }
 
@@ -454,7 +426,7 @@ export default function Reports() {
     let failed = 0;
 
     for (const report of reportsToCheck) {
-      const anomalies = detectReportAnomalies(report, submissions);
+      const anomalies = detectReportAnomalies(report);
       const table = report.type === "Visitor Report" ? "visitor_reports" : "accommodation_reports";
       const nextStatus = anomalies.length ? "on_hold" : "approved";
       const autoNotes = anomalies.length
@@ -523,6 +495,7 @@ export default function Reports() {
   const onHoldCount = filteredReports.filter((s) => normalizeStatus(s.status) === "on_hold").length;
   const approvedCount = filteredReports.filter((s) => normalizeStatus(s.status) === "approved").length;
   const rejectedCount = filteredReports.filter((s) => normalizeStatus(s.status) === "rejected").length;
+  const autoCheckCount = pendingCount + onHoldCount;
   const totalVisitors = filteredReports.reduce((sum, report) => sum + report.visitors, 0);
   const establishmentsCovered = new Set(filteredReports.map((report) => report.establishment)).size;
   const topEstablishment = Object.entries(
@@ -646,12 +619,12 @@ export default function Reports() {
           {/* Auto Check Button */}
           <button
             onClick={handleAutoCheckReports}
-            disabled={autoChecking || pendingCount === 0}
+            disabled={autoChecking || autoCheckCount === 0}
             className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-sm"
-            title="Automatically approve normal pending reports and place anomalous reports on hold"
+            title="Automatically approve normal pending/on-hold reports and keep structurally invalid reports on hold"
           >
             {autoChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
-            {autoChecking ? "Checking..." : `Auto Check (${pendingCount})`}
+            {autoChecking ? "Checking..." : `Auto Check (${autoCheckCount})`}
           </button>
 
           {/* Export Button */}
@@ -782,7 +755,7 @@ export default function Reports() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Submissions</h3>
-          <p className="text-sm text-gray-600">Use Auto Check to approve normal pending reports and place anomalous reports on hold, then click Review to approve or reject held reports.</p>
+          <p className="text-sm text-gray-600">Use Auto Check to approve normal pending/on-hold reports and keep only structurally invalid reports on hold, then click Review when manual action is needed.</p>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
