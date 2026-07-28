@@ -1,4 +1,5 @@
 import * as ExcelJS from "exceljs";
+import { canSubmitAccommodationReport } from "./establishmentReportForms";
 
 export type TourismReportType = "Visitor Report" | "Accommodation Report";
 
@@ -19,8 +20,24 @@ export interface TourismReportExportRow {
 export const reportHasRoomInventory = (report: TourismReportExportRow) =>
   Number(report.details?.total_rooms ?? 0) > 0;
 
-export const getTourismReportFormType = (report: TourismReportExportRow): TourismReportType =>
-  reportHasRoomInventory(report) ? "Accommodation Report" : "Visitor Report";
+const getJoinedEstablishment = (report: TourismReportExportRow) => {
+  const joined = report.details?.establishments;
+  if (Array.isArray(joined)) return joined[0] || null;
+  return joined || null;
+};
+
+export const getTourismReportFormType = (report: TourismReportExportRow): TourismReportType => {
+  const establishment = getJoinedEstablishment(report);
+  const reportRooms = Number(report.details?.total_rooms ?? 0);
+  const establishmentRooms = Number(establishment?.total_rooms ?? 0);
+
+  return canSubmitAccommodationReport({
+    type: establishment?.type,
+    total_rooms: reportRooms > 0 ? reportRooms : establishmentRooms,
+  })
+    ? "Accommodation Report"
+    : "Visitor Report";
+};
 
 const months = [
   "January",

@@ -161,7 +161,9 @@ export default function Reports() {
       .select(`
         *,
         establishments!visitor_reports_establishment_id_fkey (
-          name
+          name,
+          type,
+          total_rooms
         )
       `)
       .order("created_at", { ascending: false });
@@ -173,7 +175,9 @@ export default function Reports() {
       .select(`
         *,
         establishments!accommodation_reports_establishment_id_fkey (
-          name
+          name,
+          type,
+          total_rooms
         )
       `)
       .order("created_at", { ascending: false });

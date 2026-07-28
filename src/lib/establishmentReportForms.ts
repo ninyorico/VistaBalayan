@@ -3,25 +3,40 @@ export interface EstablishmentReportFormSource {
   total_rooms?: number | null;
 }
 
+const normalize = (value?: string | null) => (value || "").trim().toLowerCase();
+
+const accommodationTypes = new Set([
+  "accommodation",
+  "accommodation establishment",
+  "hotel",
+  "lodge",
+  "inn",
+  "motel",
+  "apartelle",
+  "hostel",
+]);
+
 const hasRooms = (establishment?: EstablishmentReportFormSource | null) =>
   Number(establishment?.total_rooms || 0) > 0;
+
+const isAccommodationType = (establishment?: EstablishmentReportFormSource | null) =>
+  accommodationTypes.has(normalize(establishment?.type));
 
 export const canSubmitAccommodationReport = (establishment?: EstablishmentReportFormSource | null) => {
   if (!establishment) return false;
 
-  // The hotel/accommodation report requires a configured room inventory.
-  // Some establishments imported from Excel have an accommodation-like type but no rooms;
-  // those accounts must not be routed to the hotel form because the hotel report cannot be
-  // submitted without configured rooms.
-  return hasRooms(establishment);
+  // Only actual accommodation categories with room inventory use the hotel form.
+  // Resorts remain on the resort/non-accommodation report even if imported data has a room count.
+  return isAccommodationType(establishment) && hasRooms(establishment);
 };
 
 export const canSubmitVisitorReport = (establishment?: EstablishmentReportFormSource | null) => {
   if (!establishment) return false;
 
-  // No-room establishments report visitor/day-use arrivals, even when the imported type is
-  // hotel/lodge/accommodation but the Excel record did not include room inventory.
-  return !hasRooms(establishment);
+  // Resorts and other non-accommodation categories use the visitor/non-accommodation form.
+  // Accommodation categories without room inventory also fall back to the visitor form so staff
+  // are not sent to a hotel report they cannot complete.
+  return !canSubmitAccommodationReport(establishment);
 };
 
 export const getPrimaryReportFormLabel = (establishment?: EstablishmentReportFormSource | null) => {
