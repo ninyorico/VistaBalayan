@@ -24,7 +24,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
-import { datestampedWorkbookFilename, downloadTourismReportsWorkbook } from "../../../lib/exportExcel";
+import { datestampedWorkbookFilename, downloadTourismReportsWorkbook, getTourismReportFormType } from "../../../lib/exportExcel";
 
 const getCurrentYear = () => new Date().getFullYear().toString();
 
@@ -46,8 +46,8 @@ const getWeekRange = (year: string, week: string) => {
   };
 };
 
-const getReportTypeLabel = (type: Submission["type"]) =>
-  type === "Visitor Report" ? "Resort" : "Hotels";
+const getReportTypeLabel = (report: Submission) =>
+  getTourismReportFormType(report) === "Visitor Report" ? "Resort" : "Hotels";
 
 const statusStyles: Record<string, string> = {
   approved: "bg-green-100 text-green-700",
@@ -72,7 +72,7 @@ const detectReportAnomalies = (report: Submission) => {
     reasons.push("Invalid visitor/check-in total");
   }
 
-  if (report.type === "Visitor Report") {
+  if (getTourismReportFormType(report) === "Visitor Report") {
     const male = Number(report.details?.total_male ?? 0);
     const female = Number(report.details?.total_female ?? 0);
     const guests = Number(report.details?.total_guests ?? report.visitors ?? 0);
@@ -776,7 +776,7 @@ export default function Reports() {
                 {filteredReports.slice(0, 50).map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{report.establishment}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{getReportTypeLabel(report.type)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{getReportTypeLabel(report)}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{report.reportDate}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{report.visitors}</td>
                     <td className="px-4 py-3">
@@ -811,7 +811,7 @@ export default function Reports() {
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Review Submission</h2>
-                <p className="text-sm text-gray-600">{selectedSubmission.establishment} - {selectedSubmission.type}</p>
+                <p className="text-sm text-gray-600">{selectedSubmission.establishment} - {getReportTypeLabel(selectedSubmission)}</p>
               </div>
               <button onClick={() => { setShowDetailModal(false); setReviewNotes(""); }} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5" />

@@ -16,6 +16,12 @@ export interface TourismReportExportRow {
   details?: any;
 }
 
+export const reportHasRoomInventory = (report: TourismReportExportRow) =>
+  Number(report.details?.total_rooms ?? 0) > 0;
+
+export const getTourismReportFormType = (report: TourismReportExportRow): TourismReportType =>
+  reportHasRoomInventory(report) ? "Accommodation Report" : "Visitor Report";
+
 const months = [
   "January",
   "February",
@@ -71,7 +77,7 @@ const groupKey = (report: TourismReportExportRow) => {
   const date = new Date(`${report.reportDate}T00:00:00`);
   const year = Number.isFinite(date.getFullYear()) ? date.getFullYear() : new Date().getFullYear();
   const month = Number.isFinite(date.getMonth()) ? date.getMonth() : 0;
-  return `${report.type}|${report.establishment}|${year}|${month}`;
+  return `${getTourismReportFormType(report)}|${report.establishment}|${year}|${month}`;
 };
 
 const sortByReportDate = (a: TourismReportExportRow, b: TourismReportExportRow) =>
@@ -203,7 +209,7 @@ const addResortSheet = (
           "",
           report.details?.total_male ?? "",
           report.details?.total_female ?? "",
-          report.details?.total_guests ?? report.visitors ?? "",
+          report.details?.total_guests ?? report.details?.total_check_ins ?? report.visitors ?? "",
           "",
           "",
         ]
@@ -374,7 +380,7 @@ export async function downloadTourismReportsWorkbook(filename: string, reports: 
     const date = new Date(`${first.reportDate}T00:00:00`);
     const year = date.getFullYear();
     const monthIndex = date.getMonth();
-    if (first.type === "Visitor Report") {
+    if (getTourismReportFormType(first) === "Visitor Report") {
       addResortSheet(workbook, groupRows, year, monthIndex, first.establishment, sealImageId, tourismImageId);
     } else {
       addHotelSheet(workbook, groupRows, year, monthIndex, first.establishment);
