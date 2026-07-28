@@ -18,6 +18,35 @@ interface ProfileData {
   establishment_amenities: string;
 }
 
+const compressPermitImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Unable to read image file"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Unable to process image file"));
+      img.onload = () => {
+        const maxDimension = 1400;
+        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Unable to prepare image preview"));
+          return;
+        }
+
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = String(reader.result || "");
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function Profile() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,39 +212,33 @@ export default function Profile() {
     setUploadingPermit(true);
     const nextImages = [...(profile.business_permit_images || [])];
 
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) {
-        toast.error(`${file.name} is not an image file`);
-        continue;
+    try {
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`${file.name} is not an image file`);
+          continue;
+        }
+
+        const compressedImage = await compressPermitImage(file);
+        if (compressedImage.length > 900_000) {
+          toast.error(`${file.name} is too large. Please use a clearer cropped photo or a smaller image.`);
+          continue;
+        }
+
+        nextImages.push(compressedImage);
       }
 
-      const fileExt = file.name.split(".").pop() || "jpg";
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-      const filePath = `business-permits/${profile.establishment_id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("establishment-images")
-        .upload(filePath, file, { contentType: file.type, upsert: false });
-
-      if (uploadError) {
-        toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
-        continue;
+      if (nextImages.length !== (profile.business_permit_images || []).length) {
+        const saved = await persistBusinessPermitImages(nextImages);
+        if (saved) toast.success("Business permit image uploaded");
       }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("establishment-images")
-        .getPublicUrl(filePath);
-
-      nextImages.push(publicUrl);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to process business permit image";
+      toast.error(message);
+    } finally {
+      e.target.value = "";
+      setUploadingPermit(false);
     }
-
-    if (nextImages.length !== (profile.business_permit_images || []).length) {
-      const saved = await persistBusinessPermitImages(nextImages);
-      if (saved) toast.success("Business permit image uploaded");
-    }
-
-    e.target.value = "";
-    setUploadingPermit(false);
   };
 
   const removeBusinessPermitImage = async (index: number) => {
