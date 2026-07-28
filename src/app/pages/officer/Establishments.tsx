@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Building2, MapPin, Phone, UserCog, Mail, Shield, X, Loader2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Building2, MapPin, Phone, UserCog, Mail, Shield, X, Loader2, FileImage, ExternalLink, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
+import { getBusinessPermitImages } from "../../../lib/businessPermitImages";
 
 interface Establishment {
   id: string;
@@ -13,6 +14,8 @@ interface Establishment {
   total_rooms: number;
   status: string;
   staff_count?: number;
+  business_permit_images?: string[];
+  amenities?: string;
 }
 
 interface Profile {
@@ -40,6 +43,7 @@ export default function Establishments() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingEstablishment, setEditingEstablishment] = useState<Establishment | null>(null);
+  const [viewingPermitEstablishment, setViewingPermitEstablishment] = useState<Establishment | null>(null);
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "establishment" | "user"; id: string } | null>(null);
 
@@ -478,6 +482,7 @@ export default function Establishments() {
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Address</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Rooms</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Permit</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Staff</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
@@ -509,6 +514,22 @@ export default function Establishments() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-gray-900">{establishment.total_rooms || "N/A"}</td>
+                        <td className="px-6 py-4">
+                          {getBusinessPermitImages(establishment).length > 0 ? (
+                            <button
+                              onClick={() => setViewingPermitEstablishment(establishment)}
+                              className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              {getBusinessPermitImages(establishment).length} image(s)
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">
+                              <FileImage className="w-3.5 h-3.5" />
+                              No permit
+                            </span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 text-gray-900">{staffCountByEstablishment[establishment.id] || 0}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -531,7 +552,7 @@ export default function Establishments() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                         No establishments found. Click "Add Record" to get started.
                       </td>
                     </tr>
@@ -690,6 +711,45 @@ export default function Establishments() {
             </div>
           </div>
         </>
+      )}
+
+
+      {/* Business Permit Viewer */}
+      {viewingPermitEstablishment && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Business Permit</h2>
+                <p className="text-sm text-gray-500 mt-1">{viewingPermitEstablishment.name}</p>
+              </div>
+              <button onClick={() => setViewingPermitEstablishment(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              {getBusinessPermitImages(viewingPermitEstablishment).length > 0 ? (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  {getBusinessPermitImages(viewingPermitEstablishment).map((imageUrl, index) => (
+                    <div key={imageUrl} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                      <a href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg bg-white">
+                        <img src={imageUrl} alt={`${viewingPermitEstablishment.name} business permit ${index + 1}`} className="max-h-[60vh] w-full object-contain" />
+                      </a>
+                      <a href={imageUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
+                        <ExternalLink className="w-4 h-4" />
+                        Open full-size permit image {index + 1}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center text-gray-500">
+                  No business permit pictures have been uploaded for this establishment.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Establishment Modal */}
