@@ -20,6 +20,14 @@ interface Insight {
   description: string
   impact: string
   category: string
+  recommended_action?: string
+  confidence_score?: number
+}
+
+const brief = (value: string | null | undefined, maxLength: number) => {
+  const text = String(value || '').replace(/\s+/g, ' ').trim()
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, maxLength - 1).trim()}…`
 }
 
 export default function AIInsights() {
@@ -236,9 +244,17 @@ export default function AIInsights() {
                     {insight.impact} impact
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">{insight.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 font-medium">Category: {insight.category}</span>
+                <p className="text-sm text-gray-600 mb-2">{brief(insight.description, 130)}</p>
+                {insight.recommended_action && (
+                  <p className="text-sm font-medium text-gray-900 mb-3">
+                    Action: {brief(insight.recommended_action, 95)}
+                  </p>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-gray-500 font-medium">{insight.category}</span>
+                  {typeof insight.confidence_score === 'number' && (
+                    <span className="text-xs text-gray-400">{Math.round(insight.confidence_score * 100)}% confidence</span>
+                  )}
                 </div>
               </div>
             ))

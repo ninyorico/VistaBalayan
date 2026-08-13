@@ -23,6 +23,12 @@ type Anomaly = {
   confidence_score?: number
 }
 
+const toBriefText = (value: unknown, maxLength: number, fallback: string) => {
+  const text = String(value || fallback).replace(/\s+/g, ' ').trim()
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, maxLength - 1).trim()}…`
+}
+
 const clampConfidence = (value: unknown, fallback = 0.65) => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return fallback
@@ -51,21 +57,21 @@ const safeInsert = async (table: string, payload: Record<string, any>, fallbackP
 
 const normalizeInsights = (items: any[]): Insight[] =>
   items.map((insight) => ({
-    title: String(insight.title || 'Tourism insight'),
-    description: String(insight.description || ''),
+    title: toBriefText(insight.title, 64, 'Tourism insight'),
+    description: toBriefText(insight.description, 135, ''),
     impact: String(insight.impact || 'medium').toLowerCase(),
-    category: String(insight.category || 'Operations'),
-    recommended_action: String(insight.recommended_action || insight.action || insight.description || ''),
+    category: toBriefText(insight.category, 32, 'Operations'),
+    recommended_action: toBriefText(insight.recommended_action || insight.action || insight.description, 110, 'Review this trend and take one focused action.'),
     confidence_score: clampConfidence(insight.confidence_score),
   }))
 
 const normalizeAnomalies = (items: any[]): Anomaly[] =>
   items.map((anomaly) => ({
-    type: String(anomaly.type || anomaly.anomaly_type || 'Operational anomaly'),
+    type: toBriefText(anomaly.type || anomaly.anomaly_type, 64, 'Operational anomaly'),
     severity: String(anomaly.severity || 'medium').toLowerCase(),
-    description: String(anomaly.description || ''),
-    recommendation: String(anomaly.recommendation || anomaly.recommended_action || 'Review this record manually.'),
-    establishment: anomaly.establishment ? String(anomaly.establishment) : undefined,
+    description: toBriefText(anomaly.description, 140, ''),
+    recommendation: toBriefText(anomaly.recommendation || anomaly.recommended_action, 110, 'Review this record manually.'),
+    establishment: anomaly.establishment ? toBriefText(anomaly.establishment, 80, '') : undefined,
     confidence_score: clampConfidence(anomaly.confidence_score),
   }))
 
@@ -111,17 +117,17 @@ export const geminiService = {
         {
           "insights": [
             {
-              "title": "Insight title",
-              "description": "specific evidence-backed insight",
+              "title": "max 6 words",
+              "description": "one sentence, max 18 words, include the key evidence",
               "impact": "high|medium|low",
               "category": "Seasonal|Operations|Marketing|Infrastructure",
-              "recommended_action": "clear action for the tourism officer",
+              "recommended_action": "one action sentence, max 14 words",
               "confidence_score": 0.0
             }
           ]
         }
 
-        Provide 4 actionable insights. Use confidence_score from 0 to 1. Use low confidence when data is sparse.
+        Provide exactly 4 recommendations. Keep every field brief but meaningful. No paragraphs. Avoid generic advice.
       `
 
       const result = await model.generateContent(prompt)
@@ -192,17 +198,17 @@ export const geminiService = {
         {
           "insights": [
             {
-              "title": "Insight title",
-              "description": "specific establishment insight",
+              "title": "max 6 words",
+              "description": "one sentence, max 18 words, include the key evidence",
               "impact": "high|medium|low",
               "category": "Operations|Marketing|Revenue",
-              "recommended_action": "clear action for establishment management",
+              "recommended_action": "one action sentence, max 14 words",
               "confidence_score": 0.0
             }
           ]
         }
 
-        Provide 3-4 actionable insights. Use confidence_score from 0 to 1.
+        Provide exactly 3 recommendations. Keep every field brief but meaningful. No paragraphs. Avoid generic advice.
       `
 
       const result = await model.generateContent(prompt)
