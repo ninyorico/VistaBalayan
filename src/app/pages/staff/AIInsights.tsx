@@ -246,7 +246,7 @@ const loadCachedData = async (estId: string) => {
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={loadUserAndData}
-            className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition"
+            className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#BA5A5A] transition"
           >
             Try Again
           </button>
@@ -267,7 +267,7 @@ const loadCachedData = async (estId: string) => {
         <button
           onClick={refreshData}
           disabled={refreshing}
-          className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition flex items-center gap-2"
+          className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#BA5A5A] transition flex items-center gap-2"
         >
           {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           {refreshing ? 'Refreshing...' : 'Refresh Analysis'}
