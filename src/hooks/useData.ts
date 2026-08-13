@@ -1,15 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-
-// Temporarily hardcoded profile for testing
-const getTempProfile = () => {
-  return {
-    id: 'a71b14e7-c790-427a-b14b-0c34d4c796f9',
-    role: 'municipal_officer',
-    establishment_id: null,
-    email: 'officer@balayan.gov'
-  };
-};
+import { useAuth } from '../contexts/AuthContext';
 
 export function useEstablishments() {
   const [data, setData] = useState<any[]>([]);
@@ -34,13 +25,14 @@ export function useEstablishments() {
 export function useVisitorReports(filters?: { establishment_id?: string; status?: string; start_date?: string; end_date?: string }) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const profile = getTempProfile();
+  const { profile, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    fetchReports();
-  }, [filters]);
+    if (!authLoading) fetchReports();
+  }, [filters, profile?.id, authLoading]);
 
   async function fetchReports() {
+    setLoading(true);
     let query = supabase
       .from('visitor_reports')
       .select(`
@@ -63,19 +55,20 @@ export function useVisitorReports(filters?: { establishment_id?: string; status?
     setLoading(false);
   }
 
-  return { data, loading, refetch: fetchReports };
+  return { data, loading: loading || authLoading, refetch: fetchReports };
 }
 
 export function useAccommodationReports(filters?: any) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const profile = getTempProfile();
+  const { profile, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    fetchReports();
-  }, [filters]);
+    if (!authLoading) fetchReports();
+  }, [filters, profile?.id, authLoading]);
 
   async function fetchReports() {
+    setLoading(true);
     let query = supabase
       .from('accommodation_reports')
       .select(`
@@ -89,13 +82,17 @@ export function useAccommodationReports(filters?: any) {
     if (profile?.role === 'establishment_staff' && profile.establishment_id) {
       query = query.eq('establishment_id', profile.establishment_id);
     }
+    if (filters?.establishment_id) query = query.eq('establishment_id', filters.establishment_id);
+    if (filters?.status) query = query.eq('status', filters.status);
+    if (filters?.start_date) query = query.gte('report_date', filters.start_date);
+    if (filters?.end_date) query = query.lte('report_date', filters.end_date);
 
     const { data, error } = await query;
     if (!error) setData(data || []);
     setLoading(false);
   }
 
-  return { data, loading, refetch: fetchReports };
+  return { data, loading: loading || authLoading, refetch: fetchReports };
 }
 
 export function useAnalytics() {
@@ -103,20 +100,26 @@ export function useAnalytics() {
   const [occupancyRate, setOccupancyRate] = useState(0);
   const [totalVisitors, setTotalVisitors] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { profile, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    if (!authLoading) fetchAnalytics();
+  }, [profile?.id, authLoading]);
 
   async function fetchAnalytics() {
-    // Monthly visitor trends
-    const { data: visitorData } = await supabase
+    setLoading(true);
+    let visitorQuery = supabase
       .from('visitor_reports')
-      .select('report_date, total_guests')
+      .select('report_date, total_guests, establishment_id')
       .eq('status', 'approved')
       .order('report_date');
 
-    // Aggregate by month
+    if (profile?.role === 'establishment_staff' && profile.establishment_id) {
+      visitorQuery = visitorQuery.eq('establishment_id', profile.establishment_id);
+    }
+
+    const { data: visitorData } = await visitorQuery;
+
     const monthly: Record<string, number> = {};
     visitorData?.forEach(v => {
       const month = v.report_date.slice(0, 7);
@@ -124,14 +127,18 @@ export function useAnalytics() {
     });
     const trends = Object.entries(monthly).map(([month, visitors]) => ({ month, visitors }));
 
-    // Total visitors
     const total = visitorData?.reduce((sum, v) => sum + (v.total_guests || 0), 0) || 0;
 
-    // Average occupancy
-    const { data: occData } = await supabase
+    let occQuery = supabase
       .from('accommodation_reports')
-      .select('total_rooms, total_occupied_rooms')
+      .select('total_rooms, total_occupied_rooms, establishment_id')
       .eq('status', 'approved');
+
+    if (profile?.role === 'establishment_staff' && profile.establishment_id) {
+      occQuery = occQuery.eq('establishment_id', profile.establishment_id);
+    }
+
+    const { data: occData } = await occQuery;
     let avgOcc = 0;
     if (occData && occData.length) {
       const totalRooms = occData.reduce((sum, r) => sum + r.total_rooms, 0);
@@ -145,5 +152,5 @@ export function useAnalytics() {
     setLoading(false);
   }
 
-  return { visitorTrends, totalVisitors, occupancyRate, loading };
+  return { visitorTrends, totalVisitors, occupancyRate, loading: loading || authLoading };
 }

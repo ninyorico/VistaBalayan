@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import { supabase } from "../../../lib/supabase";
 import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
+import { calculateAverageResolutionHours, normalizeReportStatus } from "../../../lib/governance";
 
 interface RecentSubmission {
   id: string;
@@ -56,6 +57,13 @@ export default function OfficerDashboard() {
   const [demographics, setDemographics] = useState<Demographic[]>([]);
   const [topEstablishments, setTopEstablishments] = useState<TopEstablishment[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
+  const [workflowMetrics, setWorkflowMetrics] = useState({
+    activeReports: 0,
+    pendingReports: 0,
+    onHoldReports: 0,
+    resolvedReports: 0,
+    averageResolutionHours: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -197,15 +205,15 @@ setOccupancyRate(occupancyRate);
       // 6. Fetch recent submissions
       const { data: visitorRecent } = await supabase
         .from('visitor_reports')
-        .select(`id, report_date, status, created_at, establishments(name)`)
+        .select(`id, report_date, status, created_at, reviewed_at, establishments(name)`)
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(25);
 
       const { data: accommodationRecent } = await supabase
         .from('accommodation_reports')
-        .select(`id, report_date, status, created_at, establishments(name)`)
+        .select(`id, report_date, status, created_at, reviewed_at, establishments(name)`)
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(25);
 
       const combined = [
         ...(visitorRecent || []).map((v: any) => ({
@@ -215,6 +223,7 @@ setOccupancyRate(occupancyRate);
           status: v.status,
           date: v.report_date,
           created_at: v.created_at,
+          reviewed_at: v.reviewed_at,
         })),
         ...(accommodationRecent || []).map((a: any) => ({
           id: a.id,
@@ -223,11 +232,19 @@ setOccupancyRate(occupancyRate);
           status: a.status,
           date: a.report_date,
           created_at: a.created_at,
+          reviewed_at: a.reviewed_at,
         })),
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-       .slice(0, 5);
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      setRecentSubmissions(combined);
+      setWorkflowMetrics({
+        activeReports: combined.filter((report) => ["pending", "under_review", "on_hold"].includes(normalizeReportStatus(report.status))).length,
+        pendingReports: combined.filter((report) => normalizeReportStatus(report.status) === "pending").length,
+        onHoldReports: combined.filter((report) => normalizeReportStatus(report.status) === "on_hold").length,
+        resolvedReports: combined.filter((report) => ["approved", "rejected"].includes(normalizeReportStatus(report.status))).length,
+        averageResolutionHours: calculateAverageResolutionHours(combined),
+      });
+
+      setRecentSubmissions(combined.slice(0, 5));
 
       // 7. Fetch anomalies
       const { data: anomalyData } = await supabase
@@ -312,6 +329,29 @@ setOccupancyRate(occupancyRate);
               </div>
               <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
                 <stat.icon className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {[
+          { label: "Active reports", value: workflowMetrics.activeReports, helper: "Pending, under review, or on hold", icon: AlertTriangle, tone: "bg-orange-50 text-orange-700 ring-orange-100" },
+          { label: "Pending reports", value: workflowMetrics.pendingReports, helper: "Waiting for officer review", icon: Clock, tone: "bg-yellow-50 text-yellow-700 ring-yellow-100" },
+          { label: "On-hold reports", value: workflowMetrics.onHoldReports, helper: "Needs manual verification", icon: AlertTriangle, tone: "bg-red-50 text-red-700 ring-red-100" },
+          { label: "Resolved reports", value: workflowMetrics.resolvedReports, helper: "Approved or rejected", icon: CheckCircle, tone: "bg-green-50 text-green-700 ring-green-100" },
+          { label: "Avg. resolution", value: `${workflowMetrics.averageResolutionHours.toFixed(1)}h`, helper: "From submit to decision", icon: TrendingUp, tone: "bg-blue-50 text-blue-700 ring-blue-100" },
+        ].map((metric) => (
+          <div key={metric.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+                <p className="mt-2 text-2xl font-bold tracking-[-0.03em] text-slate-950">{metric.value}</p>
+                <p className="mt-1 text-xs text-slate-500">{metric.helper}</p>
+              </div>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${metric.tone}`}>
+                <metric.icon className="h-5 w-5" />
               </div>
             </div>
           </div>

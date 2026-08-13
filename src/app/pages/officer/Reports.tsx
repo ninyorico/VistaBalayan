@@ -25,6 +25,12 @@ import {
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedWorkbookFilename, downloadTourismReportsWorkbook, getTourismReportFormType } from "../../../lib/exportExcel";
+import {
+  normalizeReportStatus,
+  reportStatusClasses,
+  reportStatusLabel,
+  updateReportStatusWithAudit,
+} from "../../../lib/governance";
 
 const getCurrentYear = () => new Date().getFullYear().toString();
 
@@ -49,16 +55,9 @@ const getWeekRange = (year: string, week: string) => {
 const getReportTypeLabel = (report: Submission) =>
   getTourismReportFormType(report) === "Visitor Report" ? "Resort" : "Hotels";
 
-const statusStyles: Record<string, string> = {
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-  on_hold: "bg-orange-100 text-orange-700",
-  pending: "bg-yellow-100 text-yellow-700",
-};
-
-const normalizeStatus = (status: string) => status.toLowerCase().replace(/\s+/g, "_");
-
-const formatStatus = (status: string) => normalizeStatus(status).replace(/_/g, " ");
+const statusStyles = reportStatusClasses;
+const normalizeStatus = normalizeReportStatus;
+const formatStatus = reportStatusLabel;
 
 const detectReportAnomalies = (report: Submission) => {
   const reasons: string[] = [];
@@ -345,31 +344,22 @@ export default function Reports() {
   };
 
   const handleApprove = async (id: string, type: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      toast.error("You must be logged in to approve reports");
-      return;
-    }
-
     const table = type === "Visitor Report" ? "visitor_reports" : "accommodation_reports";
-    const { error } = await supabase
-      .from(table)
-      .update({
-        status: "approved",
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-        notes: reviewNotes || null,
-      })
-      .eq("id", id);
 
-    if (error) {
-      toast.error("Failed to approve: " + error.message);
-    } else {
+    try {
+      await updateReportStatusWithAudit({
+        table,
+        id,
+        status: "approved",
+        notes: reviewNotes || null,
+        action: "report_approved",
+      });
       toast.success("Submission approved");
       fetchSubmissions();
       setShowDetailModal(false);
       setReviewNotes("");
+    } catch (error: any) {
+      toast.error("Failed to approve: " + (error?.message || "Unknown error"));
     }
   };
 
@@ -379,31 +369,22 @@ export default function Reports() {
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      toast.error("You must be logged in to reject reports");
-      return;
-    }
-
     const table = type === "Visitor Report" ? "visitor_reports" : "accommodation_reports";
-    const { error } = await supabase
-      .from(table)
-      .update({
-        status: "rejected",
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-        notes: reviewNotes,
-      })
-      .eq("id", id);
 
-    if (error) {
-      toast.error("Failed to reject: " + error.message);
-    } else {
+    try {
+      await updateReportStatusWithAudit({
+        table,
+        id,
+        status: "rejected",
+        notes: reviewNotes,
+        action: "report_rejected",
+      });
       toast.success("Submission rejected");
       fetchSubmissions();
       setShowDetailModal(false);
       setReviewNotes("");
+    } catch (error: any) {
+      toast.error("Failed to reject: " + (error?.message || "Unknown error"));
     }
   };
 
@@ -424,7 +405,6 @@ export default function Reports() {
     }
 
     setAutoChecking(true);
-    const checkedAt = new Date().toISOString();
     let approved = 0;
     let onHold = 0;
     let failed = 0;
@@ -437,23 +417,23 @@ export default function Reports() {
         ? `Auto-check placed this report on hold for municipal review. Detected: ${anomalies.join("; ")}`
         : "Auto-check approved: no anomaly detected.";
 
-      const { error } = await supabase
-        .from(table)
-        .update({
+      try {
+        await updateReportStatusWithAudit({
+          table,
+          id: report.id,
           status: nextStatus,
-          reviewed_by: user.id,
-          reviewed_at: checkedAt,
           notes: autoNotes,
-        })
-        .eq("id", report.id);
+          action: anomalies.length ? "report_auto_on_hold" : "report_auto_approved",
+        });
 
-      if (error) {
+        if (nextStatus === "on_hold") {
+          onHold += 1;
+        } else {
+          approved += 1;
+        }
+      } catch (error) {
         console.error("Auto-check update error:", error);
         failed += 1;
-      } else if (nextStatus === "on_hold") {
-        onHold += 1;
-      } else {
-        approved += 1;
       }
     }
 

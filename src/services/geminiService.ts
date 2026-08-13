@@ -1,11 +1,75 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { supabase } from '../lib/supabase'
+import { createAuditLog, confidenceTone } from '../lib/governance'
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '')
 const MODEL_NAME = 'models/gemini-2.5-flash'
 
+type Insight = {
+  title: string
+  description: string
+  impact: 'low' | 'medium' | 'high' | string
+  category: string
+  recommended_action?: string
+  confidence_score?: number
+}
+
+type Anomaly = {
+  type: string
+  severity: 'low' | 'medium' | 'high' | string
+  description: string
+  recommendation: string
+  establishment?: string
+  confidence_score?: number
+}
+
+const clampConfidence = (value: unknown, fallback = 0.65) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(0, Math.min(1, parsed))
+}
+
+const extractJsonObject = (text: string) => {
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) return null
+  return JSON.parse(jsonMatch[0])
+}
+
+const safeInsert = async (table: string, payload: Record<string, any>, fallbackPayload?: Record<string, any>) => {
+  const { error } = await supabase.from(table).insert(payload)
+  if (!error) return
+
+  // Older deployments may not have the new AI confidence/history columns yet.
+  // Retry with legacy fields so Gemini features keep working until migration is applied.
+  if (fallbackPayload) {
+    const retry = await supabase.from(table).insert(fallbackPayload)
+    if (!retry.error) return
+  }
+
+  console.warn(`${table} insert failed:`, error.message)
+}
+
+const normalizeInsights = (items: any[]): Insight[] =>
+  items.map((insight) => ({
+    title: String(insight.title || 'Tourism insight'),
+    description: String(insight.description || ''),
+    impact: String(insight.impact || 'medium').toLowerCase(),
+    category: String(insight.category || 'Operations'),
+    recommended_action: String(insight.recommended_action || insight.action || insight.description || ''),
+    confidence_score: clampConfidence(insight.confidence_score),
+  }))
+
+const normalizeAnomalies = (items: any[]): Anomaly[] =>
+  items.map((anomaly) => ({
+    type: String(anomaly.type || anomaly.anomaly_type || 'Operational anomaly'),
+    severity: String(anomaly.severity || 'medium').toLowerCase(),
+    description: String(anomaly.description || ''),
+    recommendation: String(anomaly.recommendation || anomaly.recommended_action || 'Review this record manually.'),
+    establishment: anomaly.establishment ? String(anomaly.establishment) : undefined,
+    confidence_score: clampConfidence(anomaly.confidence_score),
+  }))
+
 export const geminiService = {
-  // Check if we have cached insights
   async getCachedInsights() {
     const { data, error } = await supabase
       .from('ai_insights_cache')
@@ -17,13 +81,10 @@ export const geminiService = {
       .limit(1)
       .single()
 
-    if (error || !data) {
-      return null
-    }
+    if (error || !data) return null
     return data.data
   },
 
-  // Check if we have cached anomalies
   async getCachedAnomalies() {
     const { data, error } = await supabase
       .from('ai_anomalies_cache')
@@ -31,163 +92,178 @@ export const geminiService = {
       .eq('status', 'active')
       .order('detected_at', { ascending: false })
 
-    if (error) {
-      return []
-    }
+    if (error) return []
     return data || []
   },
 
-  // Generate and save insights (for officer - all establishments)
   async generateAndSaveInsights(analyticsData: any) {
     try {
       const model = genAI.getGenerativeModel({ model: MODEL_NAME })
-      
       const prompt = `
         You are a tourism data analyst for Balayan, Batangas.
-        
+
         Based on this tourism data, provide INSIGHTS AND RECOMMENDATIONS:
-        
         Total Visitors: ${analyticsData.totalVisitors || 0}
         Average Occupancy: ${analyticsData.avgOccupancy || 0}%
         Monthly Trends: ${JSON.stringify(analyticsData.monthlyTrends || {})}
-        
+
         Return ONLY valid JSON in this exact format:
         {
           "insights": [
             {
               "title": "Insight title",
-              "description": "detailed insight",
-              "impact": "high",
-              "category": "Seasonal"
+              "description": "specific evidence-backed insight",
+              "impact": "high|medium|low",
+              "category": "Seasonal|Operations|Marketing|Infrastructure",
+              "recommended_action": "clear action for the tourism officer",
+              "confidence_score": 0.0
             }
           ]
         }
-        
-        Provide 4 actionable insights for tourism management.
+
+        Provide 4 actionable insights. Use confidence_score from 0 to 1. Use low confidence when data is sparse.
       `
 
       const result = await model.generateContent(prompt)
       const responseText = await result.response.text()
-      
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        const insights = parsed.insights || []
+      const parsed = extractJsonObject(responseText)
+      const insights = normalizeInsights(parsed?.insights || [])
 
-        // Save to ai_recommendations table
-        for (const insight of insights) {
-          await supabase.from('ai_recommendations').insert({
-            title: insight.title,
-            description: insight.description,
-            impact: insight.impact,
-            category: insight.category,
-            status: 'active',
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          })
-        }
-
-        // Save to cache
-        await supabase.from('ai_insights_cache').insert({
-          insight_type: 'recommendations',
-          data: { insights },
-          generated_at: new Date(),
-          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
-        })
-
-        return insights
-      }
-      return []
-    } catch (error) {
-      console.error('Gemini API error:', error)
-      return []
-    }
-  },
-
-  // Generate insights for a specific establishment (for staff)
-async generateAndSaveInsightsForEstablishment(establishmentData: any) {
-  try {
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME })
-    
-    const prompt = `
-      You are a tourism data analyst for ${establishmentData.establishmentName}.
-      
-      Based on this tourism data for this specific establishment, provide INSIGHTS AND RECOMMENDATIONS:
-      
-      Total Visitors: ${establishmentData.totalVisitors || 0}
-      Average Occupancy: ${establishmentData.avgOccupancy || 0}%
-      Monthly Trends: ${JSON.stringify(establishmentData.monthlyTrends || {})}
-      
-      Return ONLY valid JSON in this exact format:
-      {
-        "insights": [
-          {
-            "title": "Insight title",
-            "description": "detailed insight specific to this establishment",
-            "impact": "high",
-            "category": "Operations/Marketing/Revenue"
-          }
-        ]
-      }
-      
-      Provide 3-4 actionable insights for this establishment's management.
-    `
-
-    const result = await model.generateContent(prompt)
-    const responseText = await result.response.text()
-    
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-      const insights = parsed.insights || []
-
-      // Save to ai_recommendations table with establishment_id
       for (const insight of insights) {
-        await supabase.from('ai_recommendations').insert({
+        const payload = {
           title: insight.title,
           description: insight.description,
           impact: insight.impact,
           category: insight.category,
-          establishment_id: establishmentData.establishmentId,  // ← ADD THIS
+          recommended_action: insight.recommended_action,
+          confidence_score: insight.confidence_score,
+          model_name: MODEL_NAME,
+          input_snapshot: analyticsData,
           status: 'active',
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        }
+        await safeInsert('ai_recommendations', payload, {
+          title: insight.title,
+          description: `${insight.description}\n\nRecommended action: ${insight.recommended_action}\nConfidence: ${confidenceTone(insight.confidence_score)} (${insight.confidence_score})`,
+          impact: insight.impact,
+          category: insight.category,
+          status: 'active',
+          expires_at: payload.expires_at,
+        })
+      }
+
+      await safeInsert('ai_insights_cache', {
+        insight_type: 'recommendations',
+        data: { insights, model_name: MODEL_NAME, input_snapshot: analyticsData },
+        generated_at: new Date(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      }, {
+        insight_type: 'recommendations',
+        data: { insights },
+        generated_at: new Date(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      })
+
+      await createAuditLog({
+        action: 'ai_insights_generated',
+        entity_type: 'ai_recommendations',
+        new_values: { count: insights.length, model_name: MODEL_NAME },
+      })
+
+      return insights
+    } catch (error) {
+      console.error('Gemini API error:', error)
+      return []
+    }
+  },
+
+  async generateAndSaveInsightsForEstablishment(establishmentData: any) {
+    try {
+      const model = genAI.getGenerativeModel({ model: MODEL_NAME })
+      const prompt = `
+        You are a tourism data analyst for ${establishmentData.establishmentName}.
+
+        Based on this establishment tourism data, provide INSIGHTS AND RECOMMENDATIONS:
+        Total Visitors: ${establishmentData.totalVisitors || 0}
+        Average Occupancy: ${establishmentData.avgOccupancy || 0}%
+        Monthly Trends: ${JSON.stringify(establishmentData.monthlyTrends || {})}
+
+        Return ONLY valid JSON in this exact format:
+        {
+          "insights": [
+            {
+              "title": "Insight title",
+              "description": "specific establishment insight",
+              "impact": "high|medium|low",
+              "category": "Operations|Marketing|Revenue",
+              "recommended_action": "clear action for establishment management",
+              "confidence_score": 0.0
+            }
+          ]
+        }
+
+        Provide 3-4 actionable insights. Use confidence_score from 0 to 1.
+      `
+
+      const result = await model.generateContent(prompt)
+      const responseText = await result.response.text()
+      const parsed = extractJsonObject(responseText)
+      const insights = normalizeInsights(parsed?.insights || [])
+
+      for (const insight of insights) {
+        const payload = {
+          title: insight.title,
+          description: insight.description,
+          impact: insight.impact,
+          category: insight.category,
+          recommended_action: insight.recommended_action,
+          confidence_score: insight.confidence_score,
+          model_name: MODEL_NAME,
+          input_snapshot: establishmentData,
+          establishment_id: establishmentData.establishmentId,
+          status: 'active',
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        }
+        await safeInsert('ai_recommendations', payload, {
+          title: insight.title,
+          description: `${insight.description}\n\nRecommended action: ${insight.recommended_action}\nConfidence: ${confidenceTone(insight.confidence_score)} (${insight.confidence_score})`,
+          impact: insight.impact,
+          category: insight.category,
+          establishment_id: establishmentData.establishmentId,
+          status: 'active',
+          expires_at: payload.expires_at,
         })
       }
 
       return insights
-    }
-    return []
-  } catch (error) {
-    console.error('Gemini API error:', error)
-    return []
-  }
-},
-
-  // Generate and save anomalies (for officer - all establishments)
-  async generateAndSaveAnomalies(visitorData: any[]) {
-    if (!visitorData || visitorData.length === 0) {
+    } catch (error) {
+      console.error('Gemini API error:', error)
       return []
     }
+  },
+
+  async generateAndSaveAnomalies(visitorData: any[]) {
+    if (!visitorData || visitorData.length === 0) return []
 
     try {
       const model = genAI.getGenerativeModel({ model: MODEL_NAME })
-      
+      const inputSnapshot = visitorData.slice(0, 50)
       const prompt = `
         You are a tourism data analyst for Balayan, Batangas.
-        
+
         Analyze this visitor data and identify ANOMALIES:
-        
-        Visitor Data (last ${visitorData.length} records):
-        ${JSON.stringify(visitorData.slice(0, 50), null, 2)}
-        
+        ${JSON.stringify(inputSnapshot, null, 2)}
+
         Return ONLY valid JSON in this exact format:
         {
           "anomalies": [
             {
               "type": "Unusual Drop",
-              "severity": "medium", 
+              "severity": "high|medium|low",
               "description": "describe the anomaly",
               "recommendation": "what to do about it",
-              "establishment": "name of affected establishment"
+              "establishment": "name of affected establishment",
+              "confidence_score": 0.0
             }
           ]
         }
@@ -195,70 +271,78 @@ async generateAndSaveInsightsForEstablishment(establishmentData: any) {
 
       const result = await model.generateContent(prompt)
       const responseText = await result.response.text()
-      
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        const anomalies = parsed.anomalies || []
+      const parsed = extractJsonObject(responseText)
+      const anomalies = normalizeAnomalies(parsed?.anomalies || [])
 
-        // Save to ai_anomalies_cache table
-        for (const anomaly of anomalies) {
-          let establishmentId = null
-          if (anomaly.establishment) {
-            const { data: est } = await supabase
-              .from('establishments')
-              .select('id')
-              .eq('name', anomaly.establishment)
-              .maybeSingle()
-            establishmentId = est?.id || null
-          }
-
-          await supabase.from('ai_anomalies_cache').insert({
-            anomaly_type: anomaly.type,
-            severity: anomaly.severity,
-            description: anomaly.description,
-            recommendation: anomaly.recommendation,
-            establishment_id: establishmentId,
-            detected_at: new Date(),
-            status: 'active',
-            is_resolved: false
-          })
+      for (const anomaly of anomalies) {
+        let establishmentId = null
+        if (anomaly.establishment) {
+          const { data: est } = await supabase
+            .from('establishments')
+            .select('id')
+            .eq('name', anomaly.establishment)
+            .maybeSingle()
+          establishmentId = est?.id || null
         }
 
-        return anomalies
+        await safeInsert('ai_anomalies_cache', {
+          anomaly_type: anomaly.type,
+          severity: anomaly.severity,
+          description: anomaly.description,
+          recommendation: anomaly.recommendation,
+          establishment_id: establishmentId,
+          confidence_score: anomaly.confidence_score,
+          model_name: MODEL_NAME,
+          input_snapshot: inputSnapshot,
+          detected_at: new Date(),
+          status: 'active',
+          is_resolved: false,
+        }, {
+          anomaly_type: anomaly.type,
+          severity: anomaly.severity,
+          description: `${anomaly.description}\n\nConfidence: ${confidenceTone(anomaly.confidence_score)} (${anomaly.confidence_score})`,
+          recommendation: anomaly.recommendation,
+          establishment_id: establishmentId,
+          detected_at: new Date(),
+          status: 'active',
+          is_resolved: false,
+        })
       }
-      return []
+
+      await createAuditLog({
+        action: 'ai_anomalies_generated',
+        entity_type: 'ai_anomalies_cache',
+        new_values: { count: anomalies.length, model_name: MODEL_NAME },
+      })
+
+      return anomalies
     } catch (error) {
       console.error('Gemini API error:', error)
       return []
     }
   },
 
-  // Generate anomalies for a specific establishment (for staff)
   async generateAndSaveAnomaliesForEstablishment(visitorData: any[], establishmentId: string, establishmentName: string) {
-    if (!visitorData || visitorData.length === 0) {
-      return []
-    }
+    if (!visitorData || visitorData.length === 0) return []
 
     try {
       const model = genAI.getGenerativeModel({ model: MODEL_NAME })
-      
+      const inputSnapshot = visitorData.slice(0, 30)
       const prompt = `
         You are a tourism data analyst for ${establishmentName}.
-        
+
         Analyze this visitor data for this specific establishment and identify ANOMALIES:
-        
-        Visitor Data (last ${visitorData.length} records):
-        ${JSON.stringify(visitorData.slice(0, 30), null, 2)}
-        
+        ${JSON.stringify(inputSnapshot, null, 2)}
+
         Return ONLY valid JSON in this exact format:
         {
           "anomalies": [
             {
               "type": "Unusual Drop",
-              "severity": "medium", 
+              "severity": "high|medium|low",
               "description": "describe the anomaly specific to this establishment",
-              "recommendation": "what to do about it"
+              "recommendation": "what to do about it",
+              "confidence_score": 0.0
             }
           ]
         }
@@ -266,40 +350,44 @@ async generateAndSaveInsightsForEstablishment(establishmentData: any) {
 
       const result = await model.generateContent(prompt)
       const responseText = await result.response.text()
-      
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        const anomalies = parsed.anomalies || []
+      const parsed = extractJsonObject(responseText)
+      const anomalies = normalizeAnomalies(parsed?.anomalies || [])
 
-        // Save to ai_anomalies_cache table with establishment_id
-        for (const anomaly of anomalies) {
-          await supabase.from('ai_anomalies_cache').insert({
-            anomaly_type: anomaly.type,
-            severity: anomaly.severity,
-            description: anomaly.description,
-            recommendation: anomaly.recommendation,
-            establishment_id: establishmentId,
-            detected_at: new Date(),
-            status: 'active',
-            is_resolved: false
-          })
-        }
-
-        return anomalies
+      for (const anomaly of anomalies) {
+        await safeInsert('ai_anomalies_cache', {
+          anomaly_type: anomaly.type,
+          severity: anomaly.severity,
+          description: anomaly.description,
+          recommendation: anomaly.recommendation,
+          establishment_id: establishmentId,
+          confidence_score: anomaly.confidence_score,
+          model_name: MODEL_NAME,
+          input_snapshot: inputSnapshot,
+          detected_at: new Date(),
+          status: 'active',
+          is_resolved: false,
+        }, {
+          anomaly_type: anomaly.type,
+          severity: anomaly.severity,
+          description: `${anomaly.description}\n\nConfidence: ${confidenceTone(anomaly.confidence_score)} (${anomaly.confidence_score})`,
+          recommendation: anomaly.recommendation,
+          establishment_id: establishmentId,
+          detected_at: new Date(),
+          status: 'active',
+          is_resolved: false,
+        })
       }
-      return []
+
+      return anomalies
     } catch (error) {
       console.error('Gemini API error:', error)
       return []
     }
   },
 
-  // Force refresh all AI data (for officer)
   async refreshAllData() {
     console.log('🔄 Refreshing AI data...')
-    
-    // Fetch latest data from database
+
     const { data: visitorData } = await supabase
       .from('visitor_reports')
       .select('report_date, total_guests, residence_type, establishments(name)')
@@ -312,7 +400,6 @@ async generateAndSaveInsightsForEstablishment(establishmentData: any) {
       .select('report_date, total_rooms, total_occupied_rooms')
       .eq('status', 'approved')
 
-    // Calculate analytics
     const totalVisitors = visitorData?.reduce((sum, v) => sum + (v.total_guests || 0), 0) || 0
     let avgOccupancy = 0
     if (accommodationData && accommodationData.length > 0) {
@@ -329,14 +416,12 @@ async generateAndSaveInsightsForEstablishment(establishmentData: any) {
       }
     })
 
-    // Generate new insights and anomalies
     const [insights, anomalies] = await Promise.all([
       this.generateAndSaveInsights({ totalVisitors, avgOccupancy, monthlyTrends }),
       this.generateAndSaveAnomalies(visitorData || [])
     ])
 
     console.log('✅ AI data refreshed:', { insights: insights.length, anomalies: anomalies.length })
-    
     return { insights, anomalies }
   }
 }
