@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, TrendingUp, CheckCircle, Info, Brain, Loader2, RefreshCw } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { geminiService } from '../../../services/geminiService'
+import { cleanAiText, formatConfidence, splitAiRecommendation } from '../../../lib/aiText'
 
 interface Anomaly {
   id: string
@@ -22,12 +23,6 @@ interface Insight {
   category: string
   recommended_action?: string
   confidence_score?: number
-}
-
-const brief = (value: string | null | undefined, maxLength: number) => {
-  const text = String(value || '').replace(/\s+/g, ' ').trim()
-  if (text.length <= maxLength) return text
-  return `${text.slice(0, maxLength - 1).trim()}…`
 }
 
 export default function AIInsights() {
@@ -200,11 +195,11 @@ export default function AIInsights() {
                       <p className="text-sm text-gray-700 font-medium mb-1">
                         {anomaly.establishments?.name || 'Unknown Establishment'}
                       </p>
-                      <p className="text-sm text-gray-600 mb-2">{anomaly.description}</p>
+                      <p className="text-sm text-gray-600 mb-2">{cleanAiText(anomaly.description)}</p>
                       {anomaly.recommendation && (
                         <div className="flex items-center gap-2 text-sm">
                           <Info className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-600">{anomaly.recommendation}</span>
+                          <span className="text-gray-600">{cleanAiText(anomaly.recommendation)}</span>
                         </div>
                       )}
                     </div>
@@ -234,30 +229,34 @@ export default function AIInsights() {
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {insights.length > 0 ? (
-            insights.map((insight) => (
+            insights.map((insight) => {
+              const { summary, action } = splitAiRecommendation(insight.description, insight.recommended_action)
+              const confidence = formatConfidence(insight.confidence_score)
+
+              return (
               <div key={insight.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
                 <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-semibold text-gray-900">{insight.title}</h4>
+                  <h4 className="font-semibold text-gray-900">{cleanAiText(insight.title)}</h4>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                     insight.impact === 'high' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
                   }`}>
                     {insight.impact} impact
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mb-2">{brief(insight.description, 130)}</p>
-                {insight.recommended_action && (
+                <p className="text-sm text-gray-600 mb-2">{summary}</p>
+                {action && (
                   <p className="text-sm font-medium text-gray-900 mb-3">
-                    Action: {brief(insight.recommended_action, 95)}
+                    Action: {action}
                   </p>
                 )}
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-gray-500 font-medium">{insight.category}</span>
-                  {typeof insight.confidence_score === 'number' && (
-                    <span className="text-xs text-gray-400">{Math.round(insight.confidence_score * 100)}% confidence</span>
+                  <span className="text-xs text-gray-500 font-medium">{cleanAiText(insight.category)}</span>
+                  {confidence && (
+                    <span className="text-xs text-gray-400">{confidence}</span>
                   )}
                 </div>
               </div>
-            ))
+            )})
           ) : (
             <div className="col-span-2 text-center py-8 text-gray-500">
               No recommendations available. Click "Refresh Analysis" to generate insights.

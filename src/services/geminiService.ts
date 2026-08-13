@@ -23,11 +23,8 @@ type Anomaly = {
   confidence_score?: number
 }
 
-const toBriefText = (value: unknown, maxLength: number, fallback: string) => {
-  const text = String(value || fallback).replace(/\s+/g, ' ').trim()
-  if (text.length <= maxLength) return text
-  return `${text.slice(0, maxLength - 1).trim()}…`
-}
+const cleanGeneratedText = (value: unknown, fallback: string) =>
+  String(value || fallback).replace(/\s+/g, ' ').trim()
 
 const clampConfidence = (value: unknown, fallback = 0.65) => {
   const parsed = Number(value)
@@ -57,21 +54,21 @@ const safeInsert = async (table: string, payload: Record<string, any>, fallbackP
 
 const normalizeInsights = (items: any[]): Insight[] =>
   items.map((insight) => ({
-    title: toBriefText(insight.title, 64, 'Tourism insight'),
-    description: toBriefText(insight.description, 135, ''),
+    title: cleanGeneratedText(insight.title, 'Tourism insight'),
+    description: cleanGeneratedText(insight.description, ''),
     impact: String(insight.impact || 'medium').toLowerCase(),
-    category: toBriefText(insight.category, 32, 'Operations'),
-    recommended_action: toBriefText(insight.recommended_action || insight.action || insight.description, 110, 'Review this trend and take one focused action.'),
+    category: cleanGeneratedText(insight.category, 'Operations'),
+    recommended_action: cleanGeneratedText(insight.recommended_action || insight.action, 'Review this trend and take one focused action.'),
     confidence_score: clampConfidence(insight.confidence_score),
   }))
 
 const normalizeAnomalies = (items: any[]): Anomaly[] =>
   items.map((anomaly) => ({
-    type: toBriefText(anomaly.type || anomaly.anomaly_type, 64, 'Operational anomaly'),
+    type: cleanGeneratedText(anomaly.type || anomaly.anomaly_type, 'Operational anomaly'),
     severity: String(anomaly.severity || 'medium').toLowerCase(),
-    description: toBriefText(anomaly.description, 140, ''),
-    recommendation: toBriefText(anomaly.recommendation || anomaly.recommended_action, 110, 'Review this record manually.'),
-    establishment: anomaly.establishment ? toBriefText(anomaly.establishment, 80, '') : undefined,
+    description: cleanGeneratedText(anomaly.description, ''),
+    recommendation: cleanGeneratedText(anomaly.recommendation || anomaly.recommended_action, 'Review this record manually.'),
+    establishment: anomaly.establishment ? cleanGeneratedText(anomaly.establishment, '') : undefined,
     confidence_score: clampConfidence(anomaly.confidence_score),
   }))
 
