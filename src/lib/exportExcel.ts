@@ -94,7 +94,12 @@ const groupKey = (report: TourismReportExportRow) => {
   const date = new Date(`${report.reportDate}T00:00:00`);
   const year = Number.isFinite(date.getFullYear()) ? date.getFullYear() : new Date().getFullYear();
   const month = Number.isFinite(date.getMonth()) ? date.getMonth() : 0;
-  return `${getTourismReportFormType(report)}|${report.establishment}|${year}|${month}`;
+
+  // Municipal exports should compile all establishments into a single monthly
+  // worksheet per report form type, instead of creating one worksheet per
+  // establishment. For example, January 2025 Visitor/Resort reports are all
+  // exported in one January 2025 Resort sheet.
+  return `${getTourismReportFormType(report)}|${year}|${month}`;
 };
 
 const sortByReportDate = (a: TourismReportExportRow, b: TourismReportExportRow) =>
@@ -144,17 +149,18 @@ const addResortSheet = (
   });
 
   worksheet.columns = [
-    { key: "reservedDate", width: 27.25 },
-    { key: "guestName", width: 36.88 },
-    { key: "residence", width: 30.63 },
-    { key: "contact", width: 23.5 },
-    { key: "adult", width: 13 },
-    { key: "child", width: 13 },
-    { key: "male", width: 13 },
-    { key: "female", width: 13 },
-    { key: "total", width: 13 },
-    { key: "purpose", width: 13.63 },
-    { key: "duration", width: 15.5 },
+    { key: "establishment", width: 28 },
+    { key: "reservedDate", width: 20 },
+    { key: "guestName", width: 32 },
+    { key: "residence", width: 28 },
+    { key: "contact", width: 20 },
+    { key: "adult", width: 12 },
+    { key: "child", width: 12 },
+    { key: "male", width: 12 },
+    { key: "female", width: 12 },
+    { key: "total", width: 12 },
+    { key: "purpose", width: 13 },
+    { key: "duration", width: 15 },
   ];
 
   worksheet.mergeCells("C2:F2");
@@ -190,6 +196,7 @@ const addResortSheet = (
   });
 
   const headers = [
+    "ESTABLISHMENT",
     "RESERVED DATE",
     "GUEST NAME",
     "MUNICIPALITY & PROVINCE",
@@ -218,6 +225,7 @@ const addResortSheet = (
     worksheet.getRow(rowNumber).height = 37.5;
     const values = report
       ? [
+          report.establishment,
           report.reportDate,
           report.details?.guest_name || "",
           report.details?.place_of_residence || report.details?.residence_type || "",
@@ -230,7 +238,7 @@ const addResortSheet = (
           "",
           "",
         ]
-      : Array(11).fill("");
+      : Array(12).fill("");
     values.forEach((value, colIndex) => {
       const cell = worksheet.getCell(rowNumber, colIndex + 1);
       cell.value = value;
@@ -254,7 +262,7 @@ const addResortSheet = (
   worksheet.getCell(`J${footerStart + 2}`).value = "(SIGNATURE OVER PRINTED NAME)";
 
   for (let row = footerStart; row <= footerStart + 2; row += 1) {
-    for (let col = 1; col <= 11; col += 1) {
+    for (let col = 1; col <= 12; col += 1) {
       worksheet.getCell(row, col).font = { name: "Roboto Condensed", size: 11, bold: row === footerStart };
       worksheet.getCell(row, col).alignment = { vertical: "middle", wrapText: true };
     }
@@ -273,7 +281,9 @@ const addHotelSheet = (
   });
 
   worksheet.views = [{ state: "frozen", ySplit: 7 }];
-  worksheet.columns = Array.from({ length: 26 }, (_, index) => ({ width: index === 0 ? 3.13 : index === 1 ? 4.63 : 13 }));
+  worksheet.columns = Array.from({ length: 27 }, (_, index) => ({
+    width: index === 0 ? 3.13 : index === 1 ? 4.63 : index === 26 ? 28 : 13,
+  }));
 
   worksheet.mergeCells("B1:U1");
   worksheet.mergeCells("Y1:Z1");
@@ -285,6 +295,7 @@ const addHotelSheet = (
   worksheet.mergeCells("X6:X7");
   worksheet.mergeCells("Y6:Y7");
   worksheet.mergeCells("Z6:Z7");
+  worksheet.mergeCells("AA6:AA7");
 
   worksheet.getCell("B1").value = "Monthly Recording Format for Accommodation Establishment";
   worksheet.getCell("Y1").value = "Form: DAE-1A";
@@ -298,6 +309,7 @@ const addHotelSheet = (
   worksheet.getCell("X6").value = "(5) \nNumber of Guests Check IN \n(unit: visitors)";
   worksheet.getCell("Y6").value = "(6)\nNumber of Guests\nstaying over-night\n(Guest Nights)";
   worksheet.getCell("Z6").value = "(7)\nNumber of Rooms Occupied by  Guests\n(unit: rooms)";
+  worksheet.getCell("AA6").value = "Reporting Establishment(s)";
   worksheet.getCell("A7").value = "Day";
   worksheet.getCell("B7").value = "Day of the week\nSun-Sat";
 
@@ -314,7 +326,7 @@ const addHotelSheet = (
   worksheet.getRow(7).height = 65.25;
 
   for (let row = 1; row <= 7; row += 1) {
-    for (let col = 1; col <= 26; col += 1) {
+    for (let col = 1; col <= 27; col += 1) {
       const cell = worksheet.getCell(row, col);
       cell.font = { name: row <= 5 ? (row === 2 ? "Arial Narrow" : "Arial") : "Arial Narrow", size: row === 6 || row === 7 ? 9 : row === 2 ? 10 : 11, bold: row === 1 || row === 6 };
       cell.alignment = { horizontal: row === 2 ? "left" : "center", vertical: "middle", wrapText: true };
@@ -343,8 +355,9 @@ const addHotelSheet = (
     worksheet.getCell(rowNumber, 24).value = checkIns || "";
     worksheet.getCell(rowNumber, 25).value = guestNights || "";
     worksheet.getCell(rowNumber, 26).value = occupiedRooms || "";
+    worksheet.getCell(rowNumber, 27).value = Array.from(new Set(reportsForDay.map((report) => report.establishment).filter(Boolean))).join(", ");
 
-    for (let col = 1; col <= 26; col += 1) {
+    for (let col = 1; col <= 27; col += 1) {
       const cell = worksheet.getCell(rowNumber, col);
       cell.font = { name: col >= 3 && col <= 23 ? "MS PGothic" : "Arial Narrow", size: col >= 3 && col <= 23 ? 11 : 10, bold: col >= 3 && col <= 23 };
       cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
@@ -397,10 +410,11 @@ export async function downloadTourismReportsWorkbook(filename: string, reports: 
     const date = new Date(`${first.reportDate}T00:00:00`);
     const year = date.getFullYear();
     const monthIndex = date.getMonth();
+    const establishmentLabel = "All Establishments";
     if (getTourismReportFormType(first) === "Visitor Report") {
-      addResortSheet(workbook, groupRows, year, monthIndex, first.establishment, sealImageId, tourismImageId);
+      addResortSheet(workbook, groupRows, year, monthIndex, establishmentLabel, sealImageId, tourismImageId);
     } else {
-      addHotelSheet(workbook, groupRows, year, monthIndex, first.establishment);
+      addHotelSheet(workbook, groupRows, year, monthIndex, establishmentLabel);
     }
   });
 
