@@ -3,36 +3,26 @@
 :root {
   --font-size: 16px;
 
-  /* VistaBalayan civic palette */
-  --vb-rose: #BA5A5A;
-  --vb-sun: #F7E49B;
-  --vb-leaf: #A4CE8B;
-  --vb-tide: #86BCBD;
-  --vb-ink: #2E3436;
-  --vb-earth: #6F3F3F;
-  --vb-cream: #FFF9DF;
-  --vb-mist: #EEF6F1;
-
-  /* Legacy aliases mapped to the requested palette */
-  --ocean-blue: var(--vb-rose);
-  --navy-blue: var(--vb-earth);
-  --teal-blue: var(--vb-tide);
-  --cyan-teal: var(--vb-tide);
-  --bright-cyan: var(--vb-leaf);
+  /* VistaBalayan Primary Colors */
+  --ocean-blue: #0F4C75;
+  --navy-blue: #0B3C5D;
+  --teal-blue: #1293B8;
+  --cyan-teal: #1CA7C9;
+  --bright-cyan: #26B6D4;
 
   /* Neutral Colors */
-  --pure-white: #FFFEF7;
-  --light-gray-bg: #F8F1D2;
-  --border-gray: #E7DCA9;
-  --text-secondary: #74665F;
-  --text-dark-navy: var(--vb-ink);
+  --pure-white: #FFFFFF;
+  --light-gray-bg: #F2F5F7;
+  --border-gray: #D9E2EC;
+  --text-secondary: #6B7280;
+  --text-dark-navy: #0F172A;
 
   /* Accent Colors */
-  --success-green: var(--vb-leaf);
-  --warning-orange: var(--vb-sun);
-  --alert-yellow: var(--vb-sun);
-  --soft-purple: var(--vb-rose);
-  --info-blue: var(--vb-tide);
+  --success-green: #22C55E;
+  --warning-orange: #F59E0B;
+  --alert-yellow: #FACC15;
+  --soft-purple: #A855F7;
+  --info-blue: #3B82F6;
 
   /* Application Variables */
   --background: var(--light-gray-bg);
@@ -44,12 +34,12 @@
   --primary: var(--ocean-blue);
   --primary-foreground: var(--pure-white);
   --secondary: var(--teal-blue);
-  --secondary-foreground: var(--vb-ink);
+  --secondary-foreground: var(--pure-white);
   --muted: var(--light-gray-bg);
   --muted-foreground: var(--text-secondary);
   --accent: var(--cyan-teal);
-  --accent-foreground: var(--vb-ink);
-  --destructive: #A63D40;
+  --accent-foreground: var(--pure-white);
+  --destructive: #EF4444;
   --destructive-foreground: var(--pure-white);
   --border: var(--border-gray);
   --input: transparent;
@@ -57,89 +47,34 @@
   --switch-background: var(--border-gray);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: var(--vb-rose);
+  --ring: var(--cyan-teal);
 
   /* Chart Colors */
-  --chart-1: var(--vb-rose);
-  --chart-2: var(--vb-tide);
-  --chart-3: var(--vb-leaf);
-  --chart-4: var(--vb-sun);
-  --chart-5: var(--vb-earth);
+  --chart-1: var(--teal-blue);
+  --chart-2: var(--warning-orange);
+  --chart-3: var(--navy-blue);
+  --chart-4: var(--alert-yellow);
+  --chart-5: var(--soft-purple);
 
   --radius: 1rem;
   --sidebar: var(--pure-white);
   --sidebar-foreground: var(--text-dark-navy);
-  --sidebar-primary: var(--vb-rose);
+  --sidebar-primary: var(--navy-blue);
   --sidebar-primary-foreground: var(--pure-white);
-  --sidebar-accent: var(--vb-cream);
+  --sidebar-accent: var(--light-gray-bg);
   --sidebar-accent-foreground: var(--text-dark-navy);
   --sidebar-border: var(--border-gray);
-  --sidebar-ring: var(--vb-rose);
+  --sidebar-ring: var(--cyan-teal);
 }
 
 @layer base {
   * {
     border-color: var(--border);
   }
-
-  html {
-    scroll-behavior: smooth;
-  }
   
   body {
-    min-width: 320px;
-    background:
-      radial-gradient(circle at 10% 0%, rgba(247, 228, 155, 0.46), transparent 34rem),
-      radial-gradient(circle at 92% 12%, rgba(134, 188, 189, 0.26), transparent 28rem),
-      linear-gradient(180deg, #fff9df 0%, #f4edcc 46%, #eef6f1 100%);
+    background-color: var(--background);
     color: var(--foreground);
-    font-family: "Outfit", "Aptos", "Segoe UI", system-ui, sans-serif;
-    text-rendering: optimizeLegibility;
-  }
-
-  :focus-visible {
-    outline: 3px solid rgba(186, 90, 90, 0.45);
-    outline-offset: 3px;
-  }
-}
-
-@layer utilities {
-  .vb-shell-bg {
-    background:
-      radial-gradient(circle at 7% 2%, rgba(247, 228, 155, 0.62), transparent 30rem),
-      radial-gradient(circle at 92% 0%, rgba(134, 188, 189, 0.34), transparent 28rem),
-      radial-gradient(circle at 55% 105%, rgba(164, 206, 139, 0.26), transparent 28rem),
-      linear-gradient(140deg, #fff9df 0%, #f8f0ce 44%, #eef6f1 100%);
-  }
-
-  .vb-paper {
-    background: rgba(255, 254, 247, 0.88);
-    border: 1px solid rgba(111, 63, 63, 0.12);
-    box-shadow: 0 18px 55px rgba(111, 63, 63, 0.10);
-    backdrop-filter: blur(18px);
-  }
-
-  .vb-sidebar {
-    background:
-      linear-gradient(180deg, rgba(255, 254, 247, 0.96), rgba(255, 249, 223, 0.94)),
-      radial-gradient(circle at 0% 0%, rgba(247, 228, 155, 0.58), transparent 16rem);
-    box-shadow: 12px 0 42px rgba(111, 63, 63, 0.12);
-  }
-
-  .vb-noise::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.13;
-    background-image: radial-gradient(circle at 1px 1px, rgba(111, 63, 63, 0.24) 1px, transparent 0);
-    background-size: 22px 22px;
-    mask-image: linear-gradient(to bottom, black, transparent 85%);
-  }
-
-  .vb-focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#BA5A5A]/25;
   }
 }
 
@@ -204,30 +139,26 @@ html {
 
 h1 {
   font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -0.035em;
-  text-wrap: balance;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
 }
 
 h2 {
   font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.18;
-  letter-spacing: -0.025em;
-  text-wrap: balance;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
 }
 
 h3 {
   font-size: 1.125rem;
   font-weight: var(--font-weight-medium);
-  line-height: 1.35;
+  line-height: 1.5;
 }
 
 h4 {
   font-size: 1rem;
   font-weight: var(--font-weight-medium);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 label {

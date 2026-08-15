@@ -78,7 +78,7 @@ export default function StaffLayout() {
   };
 
   return (
-    <div className="relative min-h-[100dvh] vb-shell-bg vb-noise text-[#2E3436]">
+    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,rgba(15,76,117,0.10),transparent_32%),linear-gradient(180deg,#f8fbfc_0%,#eef4f7_100%)] text-slate-950">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -89,16 +89,16 @@ export default function StaffLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 lg:top-0 h-full lg:h-full border-r border-[#BA5A5A]/15 vb-sidebar backdrop-blur-xl transition-all duration-300 ${
+        className={`fixed left-0 top-0 lg:top-0 h-full lg:h-full border-r border-slate-200 bg-white/92 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl transition-all duration-300 ${
           sidebarOpen ? "w-64 z-50" : "w-0 lg:w-64 z-40"
         } overflow-hidden`}
       >
-        <div className="border-b border-[#BA5A5A]/15 bg-[radial-gradient(circle_at_15%_5%,rgba(247,228,155,0.9),transparent_65%),linear-gradient(135deg,rgba(255,254,247,0.95),rgba(164,206,139,0.22))] p-6">
+        <div className="border-b border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-[#BA5A5A] text-sm font-black text-[#FFF9DF] shadow-lg shadow-[#BA5A5A]/20 ring-4 ring-[#F7E49B]/70">VB</div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0F4C75] text-sm font-black text-white shadow-lg shadow-cyan-950/15">VB</div>
             <div>
-              <h1 className="text-xl font-extrabold tracking-[-0.04em] text-[#2E3436]">VistaBalayan</h1>
-              <p className="mt-0.5 text-sm font-semibold text-[#BA5A5A]">Establishment Portal</p>
+              <h1 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">VistaBalayan</h1>
+              <p className="mt-0.5 text-sm font-medium text-[#0F4C75]">Establishment Portal</p>
             </div>
           </div>
         </div>
@@ -113,8 +113,8 @@ export default function StaffLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? "bg-[#BA5A5A] text-[#FFF9DF] shadow-lg shadow-[#BA5A5A]/18"
-                    : "text-[#74665F] hover:bg-[#F7E49B]/55 hover:text-[#2E3436]"
+                    ? "bg-[#0F4C75] text-white shadow-lg shadow-cyan-950/15"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                 }`
               }
             >
@@ -128,11 +128,11 @@ export default function StaffLayout() {
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Navbar */}
-        <header className="sticky top-0 z-40 border-b border-[#BA5A5A]/12 bg-[#FFF9DF]/80 shadow-sm shadow-[#6F3F3F]/5 backdrop-blur-xl">
-          <div className="px-4 sm:px-6 py-3.5 flex items-center justify-between">
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/82 shadow-sm backdrop-blur-xl">
+          <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded-2xl bg-[#BA5A5A] p-2.5 shadow-lg shadow-[#BA5A5A]/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#A94E4E] active:translate-y-0 lg:hidden"
+              className="rounded-2xl bg-[#0F4C75] p-2.5 shadow-lg shadow-cyan-950/15 transition-all duration-200 hover:bg-[#0B3C5D] lg:hidden"
             >
               <Menu className="w-5 h-5 text-white" />
             </button>
@@ -141,15 +141,15 @@ export default function StaffLayout() {
               <div className="relative">
                 <button
                   onClick={() => setNotificationOpen(!notificationOpen)}
-                  className="relative rounded-2xl p-2.5 transition-colors hover:bg-[#F7E49B]/55 vb-focus-ring"
+                  className="relative rounded-2xl p-2.5 transition-colors hover:bg-slate-100"
                 >
-                  <Bell className="w-5 h-5 text-[#74665F]" />
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-[#BA5A5A] rounded-full ring-2 ring-[#FFF9DF]"></span>
+                  <Bell className="w-5 h-5 text-slate-500" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-[#F59E0B] rounded-full ring-2 ring-white"></span>
                 </button>
 
                 {/* Notification Dropdown */}
                 {notificationOpen && (
-                  <div className="absolute right-0 z-50 mt-2 max-h-96 w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-3xl border border-[#BA5A5A]/15 bg-[#FFFEF7] shadow-xl shadow-[#6F3F3F]/12">
+                  <div className="absolute right-0 z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl">
                     <div className="p-4 border-b border-[#D9E2EC]">
                       <h3 className="text-sm font-semibold text-[#0F172A]">Deadline Reminders</h3>
                     </div>
@@ -200,21 +200,21 @@ export default function StaffLayout() {
                 )}
               </div>
 
-              <div className="h-8 w-px bg-[#BA5A5A]/15"></div>
+              <div className="h-8 w-px bg-slate-200"></div>
 
               <div className="relative">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 rounded-2xl px-2 py-1.5 transition-colors hover:bg-[#F7E49B]/55 sm:gap-3 vb-focus-ring"
+                  className="flex items-center gap-2 rounded-2xl px-2 py-1.5 transition-colors hover:bg-slate-100 sm:gap-3"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#86BCBD] text-xs font-extrabold text-[#2E3436] shadow-md ring-2 ring-[#F7E49B] sm:h-10 sm:w-10 sm:text-sm">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#0F4C75] text-xs font-bold text-white shadow-md sm:h-10 sm:w-10 sm:text-sm">
                     ES
                   </div>
                   <div className="hidden sm:block text-left">
-                    <div className="text-sm font-semibold text-[#2E3436]">
+                    <div className="text-sm font-semibold text-[#0F172A]">
                       Establishment Staff
                     </div>
-                    <div className="text-xs text-[#74665F]">
+                    <div className="text-xs text-[#6B7280]">
                       staff@establishment.com
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export default function StaffLayout() {
 
                 {/* Profile Dropdown */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-56 rounded-3xl border border-[#BA5A5A]/15 bg-[#FFFEF7] py-2 shadow-xl shadow-[#6F3F3F]/12">
+                  <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white py-2 shadow-xl">
                     <button
                       onClick={() => {
                         navigate("/staff/profile");
@@ -252,7 +252,7 @@ export default function StaffLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="relative z-[1] mx-auto w-full max-w-[1500px] p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8">
+        <main className="p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
