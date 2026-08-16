@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 import { getBusinessPermitImages } from "../../../lib/businessPermitImages";
+import { DEFAULT_ROOM_CONFIG, EstablishmentRoomConfig, getRoomConfigFromAmenities, setRoomConfigInAmenities } from "../../../lib/establishmentRoomConfig";
 
 interface Establishment {
   id: string;
@@ -53,6 +54,7 @@ export default function Establishments() {
     address: "",
     contact_number: "",
     total_rooms: 0,
+    room_config: DEFAULT_ROOM_CONFIG,
     status: "active",
   });
 
@@ -129,6 +131,7 @@ export default function Establishments() {
       address: "",
       contact_number: "",
       total_rooms: 0,
+      room_config: DEFAULT_ROOM_CONFIG,
       status: "active",
     });
     setShowEstablishmentModal(true);
@@ -144,10 +147,39 @@ export default function Establishments() {
         address: establishment.address,
         contact_number: establishment.contact_number,
         total_rooms: establishment.total_rooms,
+        room_config: getRoomConfigFromAmenities(establishment.amenities),
         status: establishment.status,
       });
       setShowEstablishmentModal(true);
     }
+  };
+
+  const updateRoomConfig = (index: number, field: keyof EstablishmentRoomConfig, value: string | number) => {
+    setEstablishmentForm((current) => ({
+      ...current,
+      room_config: current.room_config.map((room, roomIndex) =>
+        roomIndex === index
+          ? {
+              ...room,
+              [field]: field === "count" ? Math.max(0, Number.parseInt(String(value), 10) || 0) : String(value),
+            }
+          : room
+      ),
+    }));
+  };
+
+  const addRoomConfigRow = () => {
+    setEstablishmentForm((current) => ({
+      ...current,
+      room_config: [...current.room_config, { type: "", code: "", count: 0 }],
+    }));
+  };
+
+  const removeRoomConfigRow = (index: number) => {
+    setEstablishmentForm((current) => ({
+      ...current,
+      room_config: current.room_config.filter((_, roomIndex) => roomIndex !== index),
+    }));
   };
 
   const handleSaveEstablishment = async () => {
@@ -155,6 +187,16 @@ export default function Establishments() {
       toast.error("Please fill in all required fields");
       return;
     }
+
+    const normalizedRoomConfig = establishmentForm.room_config
+      .map((room) => ({
+        type: room.type.trim(),
+        code: room.code.trim().toUpperCase(),
+        count: Math.max(0, Number(room.count || 0)),
+      }))
+      .filter((room) => room.type && room.code);
+    const roomTotal = normalizedRoomConfig.reduce((sum, room) => sum + room.count, 0);
+    const totalRooms = roomTotal || establishmentForm.total_rooms;
 
     if (editingEstablishment) {
       const { error } = await supabase
@@ -164,7 +206,8 @@ export default function Establishments() {
           type: establishmentForm.type,
           address: establishmentForm.address,
           contact_number: establishmentForm.contact_number,
-          total_rooms: establishmentForm.total_rooms,
+          total_rooms: totalRooms,
+          amenities: setRoomConfigInAmenities(editingEstablishment.amenities, normalizedRoomConfig),
           status: establishmentForm.status,
         })
         .eq('id', editingEstablishment.id);
@@ -184,7 +227,8 @@ export default function Establishments() {
           type: establishmentForm.type,
           address: establishmentForm.address,
           contact_number: establishmentForm.contact_number,
-          total_rooms: establishmentForm.total_rooms,
+          total_rooms: totalRooms,
+          amenities: setRoomConfigInAmenities("", normalizedRoomConfig),
           status: establishmentForm.status,
         }]);
       
@@ -790,6 +834,30 @@ export default function Establishments() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Number of Rooms *</label>
                 <input type="number" value={establishmentForm.total_rooms} onChange={(e) => setEstablishmentForm({ ...establishmentForm, total_rooms: parseInt(e.target.value) || 0 })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" min="0" />
+                <p className="mt-1 text-xs text-gray-500">This is updated automatically when room rows below have counts.</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Room Names</label>
+                    <p className="text-xs text-gray-500">These room names/codes appear in the establishment staff hotel report form.</p>
+                  </div>
+                  <button type="button" onClick={addRoomConfigRow} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100">
+                    <Plus className="h-4 w-4" /> Add Room
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {establishmentForm.room_config.map((room, index) => (
+                    <div key={index} className="grid grid-cols-1 gap-2 rounded-lg bg-gray-50 p-3 sm:grid-cols-[1fr_120px_120px_auto]">
+                      <input type="text" value={room.type} onChange={(e) => updateRoomConfig(index, "type", e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Room name e.g. Deluxe" />
+                      <input type="text" value={room.code} onChange={(e) => updateRoomConfig(index, "code", e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase" placeholder="Code" />
+                      <input type="number" min="0" value={room.count} onChange={(e) => updateRoomConfig(index, "count", e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Rooms" />
+                      <button type="button" onClick={() => removeRoomConfigRow(index)} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-red-600 hover:bg-red-50" aria-label="Remove room">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>

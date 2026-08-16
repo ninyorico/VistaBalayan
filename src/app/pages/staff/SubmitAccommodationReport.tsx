@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
 import { canSubmitAccommodationReport } from "../../../lib/establishmentReportForms";
+import { DEFAULT_ROOM_CONFIG, getRoomConfigFromAmenities } from "../../../lib/establishmentRoomConfig";
 
 interface RoomOccupancy {
   roomType: string;
@@ -14,15 +15,6 @@ interface RoomOccupancy {
   checkIns: number;
   guestNights: number;
 }
-
-const roomTypes = [
-  { type: "Green", code: "G" },
-  { type: "Red", code: "R" },
-  { type: "Orange", code: "O" },
-  { type: "Rose", code: "RS" },
-  { type: "Blue", code: "B" },
-  { type: "Ocean View", code: "OV" },
-];
 
 const parseNonNegativeInteger = (value: string) => {
   if (value.trim() === "") return 0;
@@ -41,6 +33,7 @@ export default function SubmitAccommodationReport() {
   const [establishmentName, setEstablishmentName] = useState("Loading...");
   const [showRoomSetup, setShowRoomSetup] = useState(false);
   const [tempRoomCounts, setTempRoomCounts] = useState<Record<string, number>>({});
+  const [roomTypes, setRoomTypes] = useState(DEFAULT_ROOM_CONFIG);
   const [submitting, setSubmitting] = useState(false);
 
   const getTodayDate = () => {
@@ -91,7 +84,7 @@ export default function SubmitAccommodationReport() {
 
     const { data: est, error: estError } = await supabase
       .from('establishments')
-      .select('name,type,total_rooms')
+      .select('name,type,total_rooms,amenities')
       .eq('id', profileData.establishment_id)
       .single();
 
@@ -109,33 +102,42 @@ export default function SubmitAccommodationReport() {
       return;
     }
 
+    const officerRoomConfig = getRoomConfigFromAmenities(est.amenities);
+    const savedConfig = loadRoomConfig(profileData.establishment_id);
+    setRoomTypes(officerRoomConfig);
+    setTempRoomCounts(
+      officerRoomConfig.reduce<Record<string, number>>((counts, room) => {
+        counts[room.code] = savedConfig[room.code] ?? room.count ?? 0;
+        return counts;
+      }, {})
+    );
+    setRoomData(buildRoomData(officerRoomConfig, savedConfig));
+
     setLoadingProfile(false);
   };
 
-  const loadRoomConfig = () => {
-    const saved = localStorage.getItem("roomConfiguration");
+  const roomConfigStorageKey = (establishmentId?: string) =>
+    establishmentId ? `roomConfiguration:${establishmentId}` : "roomConfiguration";
+
+  const loadRoomConfig = (establishmentId?: string) => {
+    const saved = localStorage.getItem(roomConfigStorageKey(establishmentId));
     if (saved) {
       return JSON.parse(saved);
     }
     return {};
   };
 
-  const [roomData, setRoomData] = useState<RoomOccupancy[]>(() => {
-    const savedConfig = loadRoomConfig();
-    return roomTypes.map((room) => ({
+  const buildRoomData = (rooms = roomTypes, savedConfig: Record<string, number> = {}) =>
+    rooms.map((room) => ({
       roomType: room.type,
       roomCode: room.code,
-      numberOfRooms: savedConfig[room.code] || 0,
+      numberOfRooms: savedConfig[room.code] ?? room.count ?? 0,
       occupied: 0,
       checkIns: 0,
       guestNights: 0,
     }));
-  });
 
-  useEffect(() => {
-    const savedConfig = loadRoomConfig();
-    setTempRoomCounts(savedConfig);
-  }, []);
+  const [roomData, setRoomData] = useState<RoomOccupancy[]>(() => buildRoomData(DEFAULT_ROOM_CONFIG));
 
   const totalRooms = roomData.reduce(
     (sum, r) => sum + Number(r.numberOfRooms || 0),
@@ -147,7 +149,7 @@ export default function SubmitAccommodationReport() {
     roomTypes.forEach((room) => {
       config[room.code] = tempRoomCounts[room.code] || 0;
     });
-    localStorage.setItem("roomConfiguration", JSON.stringify(config));
+    localStorage.setItem(roomConfigStorageKey(profile?.establishment_id), JSON.stringify(config));
 
     setRoomData(
       roomData.map((room) => ({

@@ -31,7 +31,7 @@ export default function SubmitVisitorReport() {
   const [submitting, setSubmitting] = useState(false);
   const [reportDate, setReportDate] = useState(new Date().toISOString().slice(0, 10));
   const [entries, setEntries] = useState<VisitorEntry[]>([
-    { id: 1, groupName: "", male: 0, female: 0, total: 0, residenceType: "Batangas Resident", placeOfResidence: "" }
+    { id: 1, groupName: "", male: 0, female: 0, total: 0, residenceType: "Within Batangas", placeOfResidence: "" }
   ]);
   const [nextId, setNextId] = useState(2);
   const [establishmentName, setEstablishmentName] = useState("Loading...");
@@ -133,6 +133,9 @@ const loadProfile = async () => {
     setEntries(entries.map(entry => {
       if (entry.id === id) {
         const updated = { ...entry, [field]: value };
+        if (field === "residenceType" && value !== "Others, specify") {
+          updated.placeOfResidence = "";
+        }
         if (field === "male" || field === "female") {
           updated.total = (Number(updated.male) || 0) + (Number(updated.female) || 0);
         }
@@ -149,7 +152,7 @@ const loadProfile = async () => {
       male: 0,
       female: 0,
       total: 0,
-      residenceType: "Batangas Resident",
+      residenceType: "Within Batangas",
       placeOfResidence: ""
     }]);
     setNextId(nextId + 1);
@@ -192,7 +195,7 @@ const loadProfile = async () => {
         total_female: entry.female,
         total_guests: entry.total,
         residence_type: entry.residenceType,
-        place_of_residence: entry.placeOfResidence || null,
+        place_of_residence: entry.residenceType === "Others, specify" ? entry.placeOfResidence || null : null,
         status: "pending"
       }));
 
@@ -212,7 +215,7 @@ const loadProfile = async () => {
     } else {
       toast.success(`${submissions.length} visitor record(s) submitted successfully`);
       // Reset form
-      setEntries([{ id: 1, groupName: "", male: 0, female: 0, total: 0, residenceType: "Batangas Resident", placeOfResidence: "" }]);
+      setEntries([{ id: 1, groupName: "", male: 0, female: 0, total: 0, residenceType: "Within Batangas", placeOfResidence: "" }]);
       setNextId(2);
       setReportDate(new Date().toISOString().slice(0, 10));
     }
@@ -293,7 +296,6 @@ const loadProfile = async () => {
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Female</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Total</th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Place of Residence</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Location <span className="text-gray-400">(if outside Batangas, state municipality)</span></th>
                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -312,13 +314,13 @@ const loadProfile = async () => {
                   <td className="px-3 py-2 font-medium text-center">{entry.total}</td>
                   <td className="px-3 py-2">
                     <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="w-44 px-2 py-1 border rounded text-sm">
-                      <option>Batangas Resident</option>
-                      <option>Outside Batangas</option>
-                      <option>Foreign</option>
+                      <option>Within Batangas</option>
+                      <option>Outside of Batangas</option>
+                      <option>Others, specify</option>
                     </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Municipality / province" className="w-44 px-2 py-1 border rounded text-sm" />
+                    {entry.residenceType === "Others, specify" && (
+                      <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Specify residence" className="mt-2 w-44 px-2 py-1 border rounded text-sm" />
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <button onClick={() => removeEntry(entry.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
@@ -332,7 +334,7 @@ const loadProfile = async () => {
               <tr>
                 <td colSpan={3} className="px-3 py-2 text-right font-semibold">Total Visitors Today:</td>
                 <td className="px-3 py-2 font-bold text-blue-600 text-lg">{calculateTotalVisitors()}</td>
-                <td colSpan={3}></td>
+                <td colSpan={2}></td>
               </tr>
             </tfoot>
           </table>
