@@ -5,11 +5,18 @@ import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
 import { canSubmitAccommodationReport } from "../../../lib/establishmentReportForms";
-import { DEFAULT_ROOM_CONFIG, getRoomConfigFromAmenities } from "../../../lib/establishmentRoomConfig";
+import {
+  DEFAULT_ROOM_CONFIG,
+  EstablishmentRoomConfig,
+  ROOM_SIZE_OPTIONS,
+  getRoomConfigFromAmenities,
+  normalizeRoomConfig,
+} from "../../../lib/establishmentRoomConfig";
 
 interface RoomOccupancy {
   roomType: string;
   roomCode: string;
+  roomSize: string;
   numberOfRooms: number;
   occupied: number;
   checkIns: number;
@@ -103,15 +110,15 @@ export default function SubmitAccommodationReport() {
     }
 
     const officerRoomConfig = getRoomConfigFromAmenities(est.amenities);
-    const savedConfig = loadRoomConfig(profileData.establishment_id);
-    setRoomTypes(officerRoomConfig);
+    const savedConfig = loadRoomConfig(profileData.establishment_id, officerRoomConfig);
+    setRoomTypes(savedConfig);
     setTempRoomCounts(
-      officerRoomConfig.reduce<Record<string, number>>((counts, room) => {
-        counts[room.code] = savedConfig[room.code] ?? room.count ?? 0;
+      savedConfig.reduce<Record<string, number>>((counts, room) => {
+        counts[room.code] = room.count ?? 0;
         return counts;
       }, {})
     );
-    setRoomData(buildRoomData(officerRoomConfig, savedConfig));
+    setRoomData(buildRoomData(savedConfig));
 
     setLoadingProfile(false);
   };
@@ -119,19 +126,37 @@ export default function SubmitAccommodationReport() {
   const roomConfigStorageKey = (establishmentId?: string) =>
     establishmentId ? `roomConfiguration:${establishmentId}` : "roomConfiguration";
 
-  const loadRoomConfig = (establishmentId?: string) => {
+  const loadRoomConfig = (establishmentId?: string, fallbackRooms: EstablishmentRoomConfig[] = DEFAULT_ROOM_CONFIG) => {
+    const fallback = normalizeRoomConfig(fallbackRooms);
     const saved = localStorage.getItem(roomConfigStorageKey(establishmentId));
-    if (saved) {
-      return JSON.parse(saved);
+    if (!saved) return fallback;
+
+    try {
+      const parsed = JSON.parse(saved);
+
+      if (Array.isArray(parsed)) {
+        return normalizeRoomConfig(parsed);
+      }
+
+      if (parsed && typeof parsed === "object") {
+        return fallback.map((room) => ({
+          ...room,
+          count: Math.max(0, Number.parseInt(String((parsed as Record<string, number>)[room.code] ?? room.count ?? 0), 10) || 0),
+        }));
+      }
+    } catch {
+      return fallback;
     }
-    return {};
+
+    return fallback;
   };
 
-  const buildRoomData = (rooms = roomTypes, savedConfig: Record<string, number> = {}) =>
+  const buildRoomData = (rooms = roomTypes) =>
     rooms.map((room) => ({
       roomType: room.type,
       roomCode: room.code,
-      numberOfRooms: savedConfig[room.code] ?? room.count ?? 0,
+      roomSize: room.size,
+      numberOfRooms: room.count ?? 0,
       occupied: 0,
       checkIns: 0,
       guestNights: 0,
@@ -145,21 +170,32 @@ export default function SubmitAccommodationReport() {
   );
 
   const saveRoomConfiguration = () => {
-    const config: Record<string, number> = {};
-    roomTypes.forEach((room) => {
-      config[room.code] = tempRoomCounts[room.code] || 0;
-    });
-    localStorage.setItem(roomConfigStorageKey(profile?.establishment_id), JSON.stringify(config));
-
-    setRoomData(
-      roomData.map((room) => ({
+    const config = normalizeRoomConfig(
+      roomTypes.map((room) => ({
         ...room,
-        numberOfRooms: config[room.roomCode] || 0,
+        count: tempRoomCounts[room.code] || 0,
       }))
     );
 
+    localStorage.setItem(roomConfigStorageKey(profile?.establishment_id), JSON.stringify(config));
+    setRoomTypes(config);
+    setRoomData(buildRoomData(config));
+
     setShowRoomSetup(false);
     toast.success("Room configuration saved successfully");
+  };
+
+  const updateRoomConfiguration = (index: number, field: keyof EstablishmentRoomConfig, value: string | number) => {
+    setRoomTypes((current) =>
+      current.map((room, roomIndex) =>
+        roomIndex === index
+          ? {
+              ...room,
+              [field]: field === "count" ? parseNonNegativeInteger(String(value)) : String(value),
+            }
+          : room
+      )
+    );
   };
 
   const updateRoomData = (index: number, field: string, value: number | string) => {
@@ -262,7 +298,7 @@ export default function SubmitAccommodationReport() {
     // Insert room details
     const roomDetails = roomData.map(room => ({
       accommodation_report_id: reportData.id,
-      room_type: room.roomType,
+      room_type: room.roomSize ? `${room.roomType} (${room.roomSize})` : room.roomType,
       room_code: room.roomCode,
       number_of_rooms: room.numberOfRooms,
       occupied_rooms: room.occupied,
@@ -348,25 +384,39 @@ export default function SubmitAccommodationReport() {
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-900">Room Configuration</h2>
               <p className="text-gray-600 mt-1">
-                Set the number of rooms for each room type. This will be saved for future reports.
+                Update each room name, room size, and number of available rooms. This will be saved for future reports.
               </p>
             </div>
 
             <div className="p-6">
               <div className="space-y-4">
-                {roomTypes.map((room) => (
-                  <div key={room.code} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <span className="px-3 py-1 bg-gray-100 rounded font-mono text-sm font-semibold">
-                        {room.code}
-                      </span>
-                      <div>
-                        <p className="font-medium text-gray-900">{room.type}</p>
-                        <p className="text-sm text-gray-500">Room Type</p>
-                      </div>
+                {roomTypes.map((room, index) => (
+                  <div key={`${room.code}-${index}`} className="grid grid-cols-1 gap-3 p-4 border border-gray-200 rounded-lg md:grid-cols-[1fr_180px_140px]">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Room Name</label>
+                      <input
+                        type="text"
+                        value={room.type}
+                        onChange={(e) => updateRoomConfiguration(index, "type", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Room name"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Code: <span className="font-mono font-semibold">{room.code}</span></p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-gray-700">Number of Rooms:</label>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Room Size</label>
+                      <select
+                        value={room.size}
+                        onChange={(e) => updateRoomConfiguration(index, "size", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                      >
+                        {ROOM_SIZE_OPTIONS.map((size) => (
+                          <option key={size} value={size}>{size}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Number of Rooms</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -378,7 +428,7 @@ export default function SubmitAccommodationReport() {
                             [room.code]: parseNonNegativeInteger(e.target.value),
                           })
                         }
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         placeholder="0"
                       />
                     </div>
@@ -442,6 +492,7 @@ export default function SubmitAccommodationReport() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Room Type</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Room Size</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Room Code</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Number of Rooms</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Occupied Rooms</th>
@@ -454,6 +505,7 @@ export default function SubmitAccommodationReport() {
                 return (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 font-medium text-gray-900">{room.roomType}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{room.roomSize}</td>
                     <td className="px-6 py-4"><span className="px-3 py-1 bg-gray-100 rounded font-mono text-sm">{room.roomCode}</span></td>
                     <td className="px-6 py-4"><div className="w-24 px-3 py-2 bg-gray-50 border rounded-lg text-sm font-semibold">{room.numberOfRooms}</div></td>
                     <td className="px-6 py-4">
@@ -469,7 +521,7 @@ export default function SubmitAccommodationReport() {
                 );
               })}
               <tr className="bg-gray-50 font-semibold">
-                <td className="px-6 py-4" colSpan={2}>Total</td>
+                <td className="px-6 py-4" colSpan={3}>Total</td>
                 <td className="px-6 py-4 text-blue-600">{totalRooms}</td>
                 <td className="px-6 py-4 text-blue-600">{totalOccupiedRooms}</td>
                 <td className="px-6 py-4 text-blue-600">{totalCheckIns}</td>
