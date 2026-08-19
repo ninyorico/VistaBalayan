@@ -268,7 +268,7 @@ setOccupancyRate(occupancyRate);
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1CA7C9] mx-auto"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#34A0A4] mx-auto"></div>
         <p className="mt-4 text-gray-600">Loading dashboard data...</p>
       </div>
     );
@@ -291,8 +291,8 @@ setOccupancyRate(occupancyRate);
   }
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-sm">
+    <div className="space-y-7">
+      <section className="overflow-hidden rounded-[2rem] border border-white/20 tourism-panel-dark shadow-[0_28px_90px_rgba(7,59,76,0.22)]">
         <div className="relative p-6 sm:p-8 lg:p-10">
           <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-cyan-400/20 blur-3xl" />
           <div className="absolute bottom-0 left-1/3 h-44 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
@@ -321,11 +321,11 @@ setOccupancyRate(occupancyRate);
           { label: "Occupancy rate", value: `${occupancyRate.toFixed(1)}%`, icon: Bed, tone: "bg-amber-50 text-amber-700 ring-amber-100" },
           { label: "Establishments", value: totalEstablishments.toString(), icon: Building2, tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div key={stat.label} className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-tourism-hover">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-950">{stat.value}</p>
+                <p className="text-sm font-medium text-[#5D6F73]">{stat.label}</p>
+                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#0B2530]">{stat.value}</p>
               </div>
               <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
                 <stat.icon className="h-5 w-5" />
@@ -343,12 +343,12 @@ setOccupancyRate(occupancyRate);
           { label: "Resolved reports", value: workflowMetrics.resolvedReports, helper: "Approved or rejected", icon: CheckCircle, tone: "bg-green-50 text-green-700 ring-green-100" },
           { label: "Avg. resolution", value: `${workflowMetrics.averageResolutionHours.toFixed(1)}h`, helper: "From submit to decision", icon: TrendingUp, tone: "bg-blue-50 text-blue-700 ring-blue-100" },
         ].map((metric) => (
-          <div key={metric.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div key={metric.label} className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-tourism-hover">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-slate-500">{metric.label}</p>
-                <p className="mt-2 text-2xl font-bold tracking-[-0.03em] text-slate-950">{metric.value}</p>
-                <p className="mt-1 text-xs text-slate-500">{metric.helper}</p>
+                <p className="text-sm font-medium text-[#5D6F73]">{metric.label}</p>
+                <p className="mt-2 text-2xl font-bold tracking-[-0.03em] text-[#0B2530]">{metric.value}</p>
+                <p className="mt-1 text-xs text-[#5D6F73]">{metric.helper}</p>
               </div>
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${metric.tone}`}>
                 <metric.icon className="h-5 w-5" />
@@ -359,36 +359,36 @@ setOccupancyRate(occupancyRate);
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
           <div className="mb-5">
-            <h3 className="text-lg font-bold text-slate-950">Monthly visitor trends</h3>
-            <p className="mt-1 text-sm text-slate-500">Aggregated visitor counts by report month.</p>
+            <h3 className="text-lg font-bold text-[#0B2530]">Monthly visitor trends</h3>
+            <p className="mt-1 text-sm text-[#5D6F73]">Aggregated visitor counts by report month.</p>
           </div>
           {visitorTrends.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={visitorTrends}>
                 <defs>
                   <linearGradient id="visitorFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0F4C75" stopOpacity={0.32} />
-                    <stop offset="95%" stopColor="#0F4C75" stopOpacity={0.02} />
+                    <stop offset="5%" stopColor="#0E5A72" stopOpacity={0.32} />
+                    <stop offset="95%" stopColor="#0E5A72" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" stroke="#64748b" />
                 <YAxis stroke="#64748b" />
                 <Tooltip />
-                <Area type="monotone" dataKey="visitors" stroke="#0F4C75" fill="url(#visitorFill)" strokeWidth={3} name="Visitors" />
+                <Area type="monotone" dataKey="visitors" stroke="#0E5A72" fill="url(#visitorFill)" strokeWidth={3} name="Visitors" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No visitor data available</div>
+            <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-12 text-center text-sm text-[#5D6F73]">No visitor data available</div>
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
           <div className="mb-5">
-            <h3 className="text-lg font-bold text-slate-950">Visitor demographics</h3>
-            <p className="mt-1 text-sm text-slate-500">Share of visitors by residence category.</p>
+            <h3 className="text-lg font-bold text-[#0B2530]">Visitor demographics</h3>
+            <p className="mt-1 text-sm text-[#5D6F73]">Share of visitors by residence category.</p>
           </div>
           {demographics.length > 0 && demographics.some((d) => d.value > 0) ? (
             <ResponsiveContainer width="100%" height={300}>
@@ -400,15 +400,15 @@ setOccupancyRate(occupancyRate);
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No demographic data available</div>
+            <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-12 text-center text-sm text-[#5D6F73]">No demographic data available</div>
           )}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
         <div className="mb-5">
-          <h3 className="text-lg font-bold text-slate-950">Top performing establishments</h3>
-          <p className="mt-1 text-sm text-slate-500">Ranked by submitted visitor volume.</p>
+          <h3 className="text-lg font-bold text-[#0B2530]">Top performing establishments</h3>
+          <p className="mt-1 text-sm text-[#5D6F73]">Ranked by submitted visitor volume.</p>
         </div>
         {topEstablishments.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
@@ -417,24 +417,24 @@ setOccupancyRate(occupancyRate);
               <XAxis dataKey="name" angle={-35} textAnchor="end" height={90} stroke="#64748b" />
               <YAxis stroke="#64748b" />
               <Tooltip />
-              <Bar dataKey="visitors" fill="#0F4C75" radius={[10, 10, 0, 0]} name="Visitors" />
+              <Bar dataKey="visitors" fill="#0E5A72" radius={[10, 10, 0, 0]} name="Visitors" />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No establishment data available</div>
+          <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-12 text-center text-sm text-[#5D6F73]">No establishment data available</div>
         )}
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-950">Recent submissions</h3>
+        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
+          <h3 className="text-lg font-bold text-[#0B2530]">Recent submissions</h3>
           <div className="mt-5 space-y-3">
             {recentSubmissions.length > 0 ? (
               recentSubmissions.map((sub) => (
-                <div key={sub.id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+                <div key={sub.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4">
                   <div>
-                    <p className="font-semibold text-slate-950">{sub.establishment_name}</p>
-                    <p className="mt-1 text-sm text-slate-600">{sub.type}</p>
+                    <p className="font-semibold text-[#0B2530]">{sub.establishment_name}</p>
+                    <p className="mt-1 text-sm text-[#5D6F73]">{sub.type}</p>
                   </div>
                   <div className="text-right">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ${
@@ -445,18 +445,18 @@ setOccupancyRate(occupancyRate);
                       {sub.status === "pending" && <Clock className="h-3 w-3" />}
                       {sub.status}
                     </span>
-                    <p className="mt-1 text-xs text-slate-500">{sub.date}</p>
+                    <p className="mt-1 text-xs text-[#5D6F73]">{sub.date}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">No submissions yet</div>
+              <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-10 text-center text-sm text-[#5D6F73]">No submissions yet</div>
             )}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-950">Service Gaps or Operational Challenges</h3>
+        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
+          <h3 className="text-lg font-bold text-[#0B2530]">Service Gaps or Operational Challenges</h3>
           <div className="mt-5 space-y-3">
             {anomalies.length > 0 ? (
               anomalies.map((anomaly) => (
@@ -468,7 +468,7 @@ setOccupancyRate(occupancyRate);
                   }`} />
                   <div className="flex-1">
                     <div className="flex justify-between gap-3">
-                      <p className="font-semibold text-slate-950">{anomaly.anomaly_type}</p>
+                      <p className="font-semibold text-[#0B2530]">{anomaly.anomaly_type}</p>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
                         anomaly.severity === "high" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
                       }`}>{anomaly.severity}</span>
@@ -478,7 +478,7 @@ setOccupancyRate(occupancyRate);
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">No service gaps or operational challenges detected</div>
+              <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-10 text-center text-sm text-[#5D6F73]">No service gaps or operational challenges detected</div>
             )}
           </div>
         </div>

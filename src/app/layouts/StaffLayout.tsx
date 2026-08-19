@@ -78,7 +78,7 @@ export default function StaffLayout() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,rgba(15,76,117,0.10),transparent_32%),linear-gradient(180deg,#f8fbfc_0%,#eef4f7_100%)] text-slate-950">
+    <div className="min-h-[100dvh] tourism-shell text-slate-950">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -89,16 +89,16 @@ export default function StaffLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 lg:top-0 h-full lg:h-full border-r border-slate-200 bg-white/92 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl transition-all duration-300 ${
+        className={`fixed left-0 top-0 lg:top-0 h-full lg:h-full border-r border-[#d7e5e2] bg-white/88 shadow-[0_24px_80px_rgba(7,59,76,0.12)] backdrop-blur-xl transition-all duration-300 ${
           sidebarOpen ? "w-64 z-50" : "w-0 lg:w-64 z-40"
         } overflow-hidden`}
       >
-        <div className="border-b border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-6">
+        <div className="border-b border-[#d7e5e2] bg-[linear-gradient(135deg,rgba(244,235,216,0.95),rgba(248,251,248,0.96)_45%,rgba(229,241,242,0.95))] p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0F4C75] text-sm font-black text-white shadow-lg shadow-cyan-950/15">VB</div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0E5A72] text-sm font-black text-white shadow-lg shadow-teal-950/15">VB</div>
             <div>
-              <h1 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">VistaBalayan</h1>
-              <p className="mt-0.5 text-sm font-medium text-[#0F4C75]">Establishment Portal</p>
+              <h1 className="text-xl font-semibold tracking-[-0.035em] text-[#0B2530]">VistaBalayan</h1>
+              <p className="mt-0.5 text-sm font-medium text-[#0E5A72]">Establishment Portal</p>
             </div>
           </div>
         </div>
@@ -113,8 +113,8 @@ export default function StaffLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? "bg-[#0F4C75] text-white shadow-lg shadow-cyan-950/15"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                    ? "bg-[#0E5A72] text-white shadow-lg shadow-teal-950/15"
+                    : "text-slate-600 hover:bg-[#e5f1f2] hover:text-[#0B2530]"
                 }`
               }
             >
@@ -128,11 +128,11 @@ export default function StaffLayout() {
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Navbar */}
-        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/82 shadow-sm backdrop-blur-xl">
+        <header className="sticky top-0 z-40 border-b border-[#d7e5e2] bg-white/78 shadow-[0_10px_40px_rgba(7,59,76,0.06)] backdrop-blur-xl">
           <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded-2xl bg-[#0F4C75] p-2.5 shadow-lg shadow-cyan-950/15 transition-all duration-200 hover:bg-[#0B3C5D] lg:hidden"
+              className="rounded-2xl bg-[#0E5A72] p-2.5 shadow-lg shadow-teal-950/15 transition-all duration-200 hover:bg-[#073B4C] lg:hidden"
             >
               <Menu className="w-5 h-5 text-white" />
             </button>
@@ -141,7 +141,7 @@ export default function StaffLayout() {
               <div className="relative">
                 <button
                   onClick={() => setNotificationOpen(!notificationOpen)}
-                  className="relative rounded-2xl p-2.5 transition-colors hover:bg-slate-100"
+                  className="relative rounded-2xl p-2.5 transition-colors hover:bg-[#e5f1f2]"
                 >
                   <Bell className="w-5 h-5 text-slate-500" />
                   <span className="absolute top-2 right-2 w-2 h-2 bg-[#F59E0B] rounded-full ring-2 ring-white"></span>
@@ -192,7 +192,7 @@ export default function StaffLayout() {
                       </div>
                     </div>
                     <div className="p-3 border-t border-[#D9E2EC]">
-                      <button className="w-full text-center text-sm font-medium text-[#1CA7C9] hover:text-[#0F4C75] transition-colors">
+                      <button className="w-full text-center text-sm font-medium text-[#1CA7C9] hover:text-[#0E5A72] transition-colors">
                         View All Notifications
                       </button>
                     </div>
@@ -207,7 +207,7 @@ export default function StaffLayout() {
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                   className="flex items-center gap-2 rounded-2xl px-2 py-1.5 transition-colors hover:bg-slate-100 sm:gap-3"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#0F4C75] text-xs font-bold text-white shadow-md sm:h-10 sm:w-10 sm:text-sm">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#0E5A72] text-xs font-bold text-white shadow-md sm:h-10 sm:w-10 sm:text-sm">
                     ES
                   </div>
                   <div className="hidden sm:block text-left">
@@ -252,7 +252,7 @@ export default function StaffLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

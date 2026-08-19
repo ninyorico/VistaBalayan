@@ -107,16 +107,16 @@ export default function StaffDashboard() {
     return (
       <div className="grid min-h-[60vh] place-items-center">
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-b-[#0F4C75]"></div>
-          <p className="mt-4 text-sm font-medium text-slate-600">Loading establishment dashboard</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-b-[#0E5A72]"></div>
+          <p className="mt-4 text-sm font-medium text-[#5D6F73]">Loading establishment dashboard</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-sm">
+    <div className="space-y-7">
+      <section className="overflow-hidden rounded-[2rem] border border-white/20 tourism-panel-dark shadow-[0_28px_90px_rgba(7,59,76,0.22)]">
         <div className="relative p-6 sm:p-8 lg:p-10">
           <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl" />
           <div className="absolute bottom-0 left-1/2 h-40 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
@@ -129,7 +129,7 @@ export default function StaffDashboard() {
             </div>
             <button
               onClick={() => navigate("/staff/submission-history")}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#0B2530] transition hover:bg-cyan-50 active:scale-[0.98]"
             >
               View history
               <ArrowRight className="h-4 w-4" />
@@ -142,19 +142,19 @@ export default function StaffDashboard() {
         {showVisitorForm && (
           <button
             onClick={() => navigate("/staff/submit-visitor-report")}
-            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99]"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F4C75] text-white shadow-lg shadow-cyan-950/15">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0E5A72] text-white shadow-lg shadow-cyan-950/15">
                   <FileUp className="h-7 w-7" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-950">Resort</h3>
-                  <p className="mt-1 text-sm leading-5 text-slate-600">Submit resort visitor arrivals by origin and count.</p>
+                  <h3 className="text-lg font-bold text-[#0B2530]">Resort</h3>
+                  <p className="mt-1 text-sm leading-5 text-[#5D6F73]">Submit resort visitor arrivals by origin and count.</p>
                 </div>
               </div>
-              <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
+              <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0E5A72]" />
             </div>
           </button>
         )}
@@ -162,7 +162,7 @@ export default function StaffDashboard() {
         {showAccommodationForm && (
           <button
             onClick={() => navigate("/staff/submit-accommodation-report")}
-            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0F4C75]/30 hover:shadow-lg active:scale-[0.99]"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99]"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -170,17 +170,17 @@ export default function StaffDashboard() {
                   <Bed className="h-7 w-7" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-950">Hotels</h3>
-                  <p className="mt-1 text-sm leading-5 text-slate-600">Submit hotel room occupancy, check-ins, and guest nights.</p>
+                  <h3 className="text-lg font-bold text-[#0B2530]">Hotels</h3>
+                  <p className="mt-1 text-sm leading-5 text-[#5D6F73]">Submit hotel room occupancy, check-ins, and guest nights.</p>
                 </div>
               </div>
-              <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0F4C75]" />
+              <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#0E5A72]" />
             </div>
           </button>
         )}
 
         {!showVisitorForm && !showAccommodationForm && (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
+          <div className="rounded-3xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] bg-white p-6 text-sm text-[#5D6F73]">
             No report form is assigned to this establishment yet. Please ask the municipal tourism officer to update the establishment type or room count.
           </div>
         )}
@@ -188,11 +188,11 @@ export default function StaffDashboard() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {submissionStats.map((stat) => (
-          <div key={stat.title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div key={stat.title} className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-tourism-hover">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-slate-500">{stat.title}</p>
-                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-slate-950">{stat.value}</p>
+                <p className="text-sm font-medium text-[#5D6F73]">{stat.title}</p>
+                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#0B2530]">{stat.value}</p>
               </div>
               <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
                 <stat.icon className="h-5 w-5" />
@@ -203,46 +203,46 @@ export default function StaffDashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-950">Recent submissions</h3>
-              <p className="mt-1 text-sm text-slate-500">Grouped by actual submitted report.</p>
+              <h3 className="text-lg font-bold text-[#0B2530]">Recent submissions</h3>
+              <p className="mt-1 text-sm text-[#5D6F73]">Grouped by actual submitted report.</p>
             </div>
             <History className="h-5 w-5 text-slate-400" />
           </div>
           <div className="mt-5 space-y-3">
             {recentSubmissions.length > 0 ? (
               recentSubmissions.map((submission) => (
-                <div key={submission.id} className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+                <div key={submission.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4">
                   <div>
-                    <p className="font-semibold text-slate-950">{submission.type}</p>
-                    <p className="mt-1 text-sm text-slate-600">{submission.dataSummary}</p>
+                    <p className="font-semibold text-[#0B2530]">{submission.type}</p>
+                    <p className="mt-1 text-sm text-[#5D6F73]">{submission.dataSummary}</p>
                   </div>
                   <div className="text-right">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ${statusStyles[submission.status as keyof typeof statusStyles] || statusStyles.pending}`}>
                       {submission.status}
                     </span>
-                    <p className="mt-1 text-xs text-slate-500">{submission.submittedDate}</p>
+                    <p className="mt-1 text-xs text-[#5D6F73]">{submission.submittedDate}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] p-8 text-center text-sm text-[#5D6F73]">
                 No submissions yet. Start by submitting a resort or hotel report.
               </div>
             )}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-950">Reporting reminder</h3>
+        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
+          <h3 className="text-lg font-bold text-[#0B2530]">Reporting reminder</h3>
           <div className="mt-5 rounded-2xl bg-cyan-50 p-4 ring-1 ring-cyan-100">
             <div className="flex items-start gap-3">
-              <Calendar className="mt-0.5 h-5 w-5 text-[#0F4C75]" />
+              <Calendar className="mt-0.5 h-5 w-5 text-[#0E5A72]" />
               <div>
-                <p className="font-semibold text-slate-950">Daily reports keep analytics reliable</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
+                <p className="font-semibold text-[#0B2530]">Daily reports keep analytics reliable</p>
+                <p className="mt-1 text-sm leading-6 text-[#5D6F73]">
                   Submit resort and hotel data after business close. The tourism office uses approved records for reports, analytics, and AI insights.
                 </p>
               </div>
