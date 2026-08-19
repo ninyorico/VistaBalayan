@@ -41,6 +41,24 @@ const getWeekDateRange = (year: number, month: number, weekNumber: number) => {
 
 const formatSelectedMonth = (year: number, month: number) => `${monthNames[month]} ${year}`;
 
+const escapeCsvValue = (value: string | number) => {
+  const stringValue = String(value ?? "");
+  return /[",\n\r]/.test(stringValue) ? `"${stringValue.replace(/"/g, '""')}"` : stringValue;
+};
+
+const downloadCsv = (filename: string, rows: (string | number)[][]) => {
+  const csv = rows.map((row) => row.map(escapeCsvValue).join(",")).join("\n");
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 export default function SubmissionHistory() {
   const [submissions, setSubmissions] = useState<StaffSubmissionSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +173,47 @@ export default function SubmissionHistory() {
   const pendingCount = filteredSubmissions.filter((s) => s.status === "pending").length;
   const rejectedCount = filteredSubmissions.filter((s) => s.status === "rejected").length;
 
+  const handleExportHistory = () => {
+    const selectedMonthLabel = formatSelectedMonth(selectedYear, selectedMonth);
+    const typeLabel = filterType === "all" ? "All types" : getReportTypeLabel(filterType);
+    const statusLabel = filterStatus === "all" ? "All status" : filterStatus;
+    const generatedAt = new Date().toLocaleString();
+    const filenameParts = [
+      "submission-history",
+      selectedMonthLabel.toLowerCase().replace(/\s+/g, "-"),
+      filterType === "all" ? "all-types" : getReportTypeLabel(filterType).toLowerCase(),
+      filterStatus === "all" ? "all-status" : filterStatus.toLowerCase(),
+    ];
+    const filename = `${filenameParts.join("-").replace(/[^a-z0-9-]+/g, "-")}.csv`;
+
+    const rows: (string | number)[][] = [
+      ["VistaBalayan Submission History"],
+      ["Generated", generatedAt],
+      ["Month", selectedMonthLabel],
+      ["Report type filter", typeLabel],
+      ["Status filter", statusLabel],
+      ["Search filter", searchTerm.trim() || "None"],
+      ["Matching records", filteredSubmissions.length],
+      [],
+      ["Report date", "Week", "Report type", "Status", "Submitted", "Summary", "Record count", "Submission ID"],
+      ...filteredSubmissions.map((submission) => {
+        const dateParts = getDateParts(submission.reportDate);
+        return [
+          formatDate(submission.reportDate),
+          dateParts ? `Week ${getWeekNumberInFourWeekMonth(dateParts.day)}` : "",
+          getReportTypeLabel(submission.type),
+          submission.status,
+          submission.submittedDate,
+          submission.dataSummary,
+          submission.recordCount,
+          submission.id,
+        ];
+      }),
+    ];
+
+    downloadCsv(filename, rows);
+  };
+
   if (loading) {
     return (
       <div className="grid min-h-[60vh] place-items-center">
@@ -196,6 +255,22 @@ export default function SubmissionHistory() {
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Filter submissions</h2>
+            <p className="mt-1 text-sm text-slate-500">Export uses the current month, type, status, and search filters.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportHistory}
+            disabled={filteredSubmissions.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0E5A72] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-950/10 transition hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+            aria-label="Export filtered submission history"
+          >
+            <Download className="h-4 w-4" />
+            Export history
+          </button>
+        </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <div className="relative">
