@@ -99,8 +99,8 @@ export default function Analytics() {
 
     if (accError) console.error("Error fetching accommodation data:", accError);
 
-    const visitors = (visitorData || []) as unknown as VisitorReport[];
-    const accommodations = (accommodationData || []) as unknown as AccommodationReport[];
+    const visitors = (visitorData || []) as VisitorReport[];
+    const accommodations = (accommodationData || []) as AccommodationReport[];
 
     const monthlyData: Record<string, { label: string; visitors: number; guestNights: number }> = {};
     visitors.forEach((item) => {

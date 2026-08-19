@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 import { getBusinessPermitImages } from "../../../lib/businessPermitImages";
-import { DEFAULT_ROOM_CONFIG, EstablishmentRoomConfig, ROOM_SIZE_OPTIONS, getRoomConfigFromAmenities, setRoomConfigInAmenities } from "../../../lib/establishmentRoomConfig";
+import { DEFAULT_ROOM_CONFIG, EstablishmentRoomConfig, getRoomConfigFromAmenities, setRoomConfigInAmenities } from "../../../lib/establishmentRoomConfig";
 
 interface Establishment {
   id: string;
@@ -171,7 +171,7 @@ export default function Establishments() {
   const addRoomConfigRow = () => {
     setEstablishmentForm((current) => ({
       ...current,
-      room_config: [...current.room_config, { type: "", code: "", count: 0, size: "Single" }],
+      room_config: [...current.room_config, { type: "", code: "", count: 0 }],
     }));
   };
 
@@ -193,7 +193,6 @@ export default function Establishments() {
         type: room.type.trim(),
         code: room.code.trim().toUpperCase(),
         count: Math.max(0, Number(room.count || 0)),
-        size: room.size,
       }))
       .filter((room) => room.type && room.code);
     const roomTotal = normalizedRoomConfig.reduce((sum, room) => sum + room.count, 0);
@@ -849,13 +848,8 @@ export default function Establishments() {
                 </div>
                 <div className="space-y-3">
                   {establishmentForm.room_config.map((room, index) => (
-                    <div key={index} className="grid grid-cols-1 gap-2 rounded-lg bg-gray-50 p-3 sm:grid-cols-[1fr_160px_120px_120px_auto]">
+                    <div key={index} className="grid grid-cols-1 gap-2 rounded-lg bg-gray-50 p-3 sm:grid-cols-[1fr_120px_120px_auto]">
                       <input type="text" value={room.type} onChange={(e) => updateRoomConfig(index, "type", e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Room name e.g. Deluxe" />
-                      <select value={room.size} onChange={(e) => updateRoomConfig(index, "size", e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm" aria-label="Room size">
-                        {ROOM_SIZE_OPTIONS.map((size) => (
-                          <option key={size} value={size}>{size}</option>
-                        ))}
-                      </select>
                       <input type="text" value={room.code} onChange={(e) => updateRoomConfig(index, "code", e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase" placeholder="Code" />
                       <input type="number" min="0" value={room.count} onChange={(e) => updateRoomConfig(index, "count", e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Rooms" />
                       <button type="button" onClick={() => removeRoomConfigRow(index)} className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-red-600 hover:bg-red-50" aria-label="Remove room">

@@ -1,28 +1,16 @@
-export type RoomSizeOption = "Single" | "King Capacity" | "Dormitory Type";
-
 export interface EstablishmentRoomConfig {
   type: string;
   code: string;
   count: number;
-  size: RoomSizeOption;
 }
 
-export const ROOM_SIZE_OPTIONS: RoomSizeOption[] = ["Single", "King Capacity", "Dormitory Type"];
-
-export const DEFAULT_ROOM_SIZE: RoomSizeOption = "Single";
-
-const normalizeRoomSize = (value: unknown): RoomSizeOption => {
-  const roomSize = String(value || "").trim().toLowerCase();
-
-  if (roomSize === "king" || roomSize === "king capacity") return "King Capacity";
-  if (roomSize === "dormitory" || roomSize === "dormitory type") return "Dormitory Type";
-  return "Single";
-};
-
 export const DEFAULT_ROOM_CONFIG: EstablishmentRoomConfig[] = [
-  { type: "Single Room", code: "S", count: 0, size: "Single" },
-  { type: "King Room", code: "K", count: 0, size: "King Capacity" },
-  { type: "Dormitory Room", code: "D", count: 0, size: "Dormitory Type" },
+  { type: "Green", code: "G", count: 0 },
+  { type: "Red", code: "R", count: 0 },
+  { type: "Orange", code: "O", count: 0 },
+  { type: "Rose", code: "RS", count: 0 },
+  { type: "Blue", code: "B", count: 0 },
+  { type: "Ocean View", code: "OV", count: 0 },
 ];
 
 const ROOM_CONFIG_MARKER = "__room_configuration__:";
@@ -35,7 +23,6 @@ export function normalizeRoomConfig(config: unknown): EstablishmentRoomConfig[] 
       type: String(item?.type || "").trim(),
       code: String(item?.code || "").trim().toUpperCase(),
       count: Math.max(0, Number.parseInt(String(item?.count ?? 0), 10) || 0),
-      size: normalizeRoomSize(item?.size || item?.roomSize),
     }))
     .filter((item) => item.type && item.code);
 
