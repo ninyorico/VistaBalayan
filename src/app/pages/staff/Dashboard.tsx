@@ -10,9 +10,12 @@ import {
   TrendingUp,
   ArrowRight,
   History,
+  Moon,
+  Percent,
+  UsersRound,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
-import { groupStaffSubmissions } from "../../../lib/reportMetrics";
+import { calculateAccommodationOccupancy, groupStaffSubmissions } from "../../../lib/reportMetrics";
 import { canSubmitAccommodationReport, canSubmitVisitorReport, getPrimaryReportFormLabel } from "../../../lib/establishmentReportForms";
 
 const statusStyles = {
@@ -31,6 +34,11 @@ export default function StaffDashboard() {
     pending: 0,
     approved: 0,
     rejected: 0,
+  });
+  const [hotelMetrics, setHotelMetrics] = useState({
+    averageGuestNight: "0.00",
+    monthlyOccupancyRate: "0.00",
+    averageGuestPerRoom: "0.00",
   });
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
 
@@ -78,6 +86,28 @@ export default function StaffDashboard() {
 
       const submissions = groupStaffSubmissions(visitorData || [], accommodationData || []);
 
+      const now = new Date();
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const hotelReports = accommodationData || [];
+      const currentMonthHotelReports = hotelReports.filter((report) =>
+        (report.report_date || "").startsWith(currentMonthKey)
+      );
+      const totalCheckIns = hotelReports.reduce((sum, report) => sum + Number(report.total_check_ins || 0), 0);
+      const totalGuestNights = hotelReports.reduce((sum, report) => sum + Number(report.total_guest_nights || 0), 0);
+      const totalOccupiedRooms = hotelReports.reduce((sum, report) => sum + Number(report.total_occupied_rooms || 0), 0);
+      const monthlyOccupancyRates = currentMonthHotelReports.map((report) =>
+        calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date)
+      );
+
+      setHotelMetrics({
+        averageGuestNight: totalCheckIns > 0 ? (totalGuestNights / totalCheckIns).toFixed(2) : "0.00",
+        monthlyOccupancyRate:
+          monthlyOccupancyRates.length > 0
+            ? (monthlyOccupancyRates.reduce((sum, rate) => sum + rate, 0) / monthlyOccupancyRates.length).toFixed(2)
+            : "0.00",
+        averageGuestPerRoom: totalOccupiedRooms > 0 ? (totalGuestNights / totalOccupiedRooms).toFixed(2) : "0.00",
+      });
+
       setStats({
         total: submissions.length,
         pending: submissions.filter((r) => r.status === "pending").length,
@@ -101,6 +131,12 @@ export default function StaffDashboard() {
     { title: "Pending review", value: stats.pending.toString(), icon: Clock, tone: "bg-amber-50 text-amber-700 ring-amber-100" },
     { title: "Rejected", value: stats.rejected.toString(), icon: AlertCircle, tone: "bg-rose-50 text-rose-700 ring-rose-100" },
     { title: "Approval rate", value: `${approvalRate}%`, icon: TrendingUp, tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
+  ];
+
+  const hotelPerformanceStats = [
+    { title: "Average Guest Night", value: hotelMetrics.averageGuestNight, subtitle: "nights per guest", icon: Moon, tone: "bg-sky-50 text-sky-700 ring-sky-100" },
+    { title: "Occupancy Rate", value: `${hotelMetrics.monthlyOccupancyRate}%`, subtitle: "monthly average", icon: Percent, tone: "bg-violet-50 text-violet-700 ring-violet-100" },
+    { title: "Average Guest Per Room", value: hotelMetrics.averageGuestPerRoom, subtitle: "guests per room", icon: UsersRound, tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
   ];
 
   if (loading) {
@@ -201,6 +237,31 @@ export default function StaffDashboard() {
           </div>
         ))}
       </section>
+
+      {showAccommodationForm && (
+        <section className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl sm:p-6">
+          <div>
+            <h3 className="text-lg font-bold text-[#0B2530]">Hotel performance</h3>
+            <p className="mt-1 text-sm text-[#5D6F73]">Computed from your submitted hotel accommodation reports.</p>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+            {hotelPerformanceStats.map((stat) => (
+              <div key={stat.title} className="rounded-3xl border border-[#d7e5e2]/80 bg-[#f8fbf8] p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[#5D6F73]">{stat.title}</p>
+                    <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#0B2530]">{stat.value}</p>
+                    <p className="mt-1 text-xs font-medium text-[#5D6F73]">{stat.subtitle}</p>
+                  </div>
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
+                    <stat.icon className="h-5 w-5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
