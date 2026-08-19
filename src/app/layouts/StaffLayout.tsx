@@ -89,11 +89,11 @@ export default function StaffLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 lg:top-0 h-full lg:h-full border-r border-[#d7e5e2] bg-white/88 shadow-[0_24px_80px_rgba(7,59,76,0.12)] backdrop-blur-xl transition-all duration-300 ${
-          sidebarOpen ? "w-64 z-50" : "w-0 lg:w-64 z-40"
+        className={`fixed left-0 top-0 lg:top-0 h-full lg:h-full border-r border-[#d7e5e2] bg-white shadow-[0_24px_80px_rgba(7,59,76,0.18)] transition-all duration-300 lg:bg-white/92 lg:backdrop-blur-xl ${
+          sidebarOpen ? "w-[82vw] max-w-80 z-50" : "w-0 lg:w-64 z-40"
         } overflow-hidden`}
       >
-        <div className="border-b border-[#d7e5e2] bg-[linear-gradient(135deg,rgba(244,235,216,0.95),rgba(248,251,248,0.96)_45%,rgba(229,241,242,0.95))] p-6">
+        <div className="border-b border-[#d7e5e2] bg-[linear-gradient(135deg,#ffffff,#f6f8f7_55%,#eef4f2)] p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0E5A72] text-sm font-black text-white shadow-lg shadow-teal-950/15">VB</div>
             <div>
@@ -103,7 +103,7 @@ export default function StaffLayout() {
           </div>
         </div>
 
-        <nav className="p-4 space-y-1.5 overflow-y-auto h-[calc(100vh-130px)] lg:h-auto">
+        <nav className="h-[calc(100vh-130px)] space-y-1.5 overflow-y-auto bg-white p-4 lg:h-auto lg:bg-transparent">
           {visibleMenuItems.map((item) => (
             <NavLink
               key={item.path}
@@ -114,7 +114,7 @@ export default function StaffLayout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
                     ? "bg-[#0E5A72] text-white shadow-lg shadow-teal-950/15"
-                    : "text-slate-600 hover:bg-[#e5f1f2] hover:text-[#0B2530]"
+                    : "text-[#334155] hover:bg-[#e5f1f2] hover:text-[#0B2530]"
                 }`
               }
             >
