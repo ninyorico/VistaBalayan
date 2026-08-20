@@ -413,19 +413,19 @@ export default function SubmitAccommodationReport() {
       )}
 
       {/* Report Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name</label>
-            <input type="text" value={establishmentName} disabled className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50" />
+            <input type="text" value={establishmentName} disabled className="block w-full min-w-0 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50" />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-2">Report Date</label>
-            <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+            <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="block w-full min-w-0 max-w-full appearance-none px-4 py-2 border border-gray-300 rounded-lg" />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-2">Total Number of Rooms</label>
-            <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-semibold">
+            <div className="w-full min-w-0 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-semibold">
               {totalRooms}
             </div>
           </div>
@@ -437,8 +437,8 @@ export default function SubmitAccommodationReport() {
         <div className="p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Daily Room Occupancy</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="min-w-[760px] w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Room Type</th>
