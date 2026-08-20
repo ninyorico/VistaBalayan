@@ -1,8 +1,32 @@
 import { useState, useEffect } from "react";
 import { Search, Eye, Download, CheckCircle, Clock, XCircle, ChevronDown, CalendarDays, CalendarRange } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
-import { formatDate, formatMonthYear, groupStaffSubmissions, StaffSubmissionSummary } from "../../../lib/reportMetrics";
+import { calculateAccommodationOccupancy, formatDate, formatMonthYear, groupStaffSubmissions, StaffSubmissionSummary } from "../../../lib/reportMetrics";
 import { canSubmitAccommodationReport, canSubmitVisitorReport } from "../../../lib/establishmentReportForms";
+
+interface VisitorReportExportRecord {
+  id: string;
+  report_date?: string | null;
+  created_at?: string | null;
+  status?: string | null;
+  guest_name?: string | null;
+  total_male?: number | null;
+  total_female?: number | null;
+  total_guests?: number | null;
+  residence_type?: string | null;
+  place_of_residence?: string | null;
+}
+
+interface AccommodationReportExportRecord {
+  id: string;
+  report_date?: string | null;
+  created_at?: string | null;
+  status?: string | null;
+  total_rooms?: number | null;
+  total_occupied_rooms?: number | null;
+  total_check_ins?: number | null;
+  total_guest_nights?: number | null;
+}
 
 const statusStyles = {
   approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -61,6 +85,8 @@ const downloadCsv = (filename: string, rows: (string | number)[][]) => {
 
 export default function SubmissionHistory() {
   const [submissions, setSubmissions] = useState<StaffSubmissionSummary[]>([]);
+  const [visitorReports, setVisitorReports] = useState<VisitorReportExportRecord[]>([]);
+  const [accommodationReports, setAccommodationReports] = useState<AccommodationReportExportRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -110,7 +136,7 @@ export default function SubmissionHistory() {
       canSeeVisitor
         ? supabase
             .from("visitor_reports")
-            .select("id, report_date, created_at, status, total_guests")
+            .select("id, report_date, created_at, status, guest_name, total_male, total_female, total_guests, residence_type, place_of_residence")
             .eq("submitted_by", user.id)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
@@ -123,7 +149,11 @@ export default function SubmissionHistory() {
         : Promise.resolve({ data: [] }),
     ]);
 
-    setSubmissions(groupStaffSubmissions(visitorData || [], accommodationData || []));
+    const visitors = (visitorData || []) as VisitorReportExportRecord[];
+    const accommodations = (accommodationData || []) as AccommodationReportExportRecord[];
+    setVisitorReports(visitors);
+    setAccommodationReports(accommodations);
+    setSubmissions(groupStaffSubmissions(visitors, accommodations));
     setLoading(false);
   };
 
@@ -143,6 +173,34 @@ export default function SubmissionHistory() {
     const matchesDate = dateParts?.year === selectedYear && dateParts.month === selectedMonth;
     return matchesSearch && matchesType && matchesStatus && matchesDate;
   });
+
+  const filterReportRecord = (
+    record: VisitorReportExportRecord | AccommodationReportExportRecord,
+    type: "Visitor Report" | "Accommodation Report"
+  ) => {
+    const dateParts = getDateParts(record.report_date);
+    const typeLabel = getReportTypeLabel(type);
+    const searchText = [
+      formatMonthYear(record.report_date),
+      typeLabel,
+      record.status,
+      formatDate(record.created_at),
+      "total_guests" in record ? record.guest_name : "",
+      "total_guests" in record ? record.residence_type : "",
+      "total_guests" in record ? record.place_of_residence : "",
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    const matchesSearch = searchText.includes(searchTerm.toLowerCase());
+    const matchesType = filterType === "all" || type === filterType;
+    const matchesStatus = filterStatus === "all" || (record.status || "pending").toLowerCase() === filterStatus.toLowerCase();
+    const matchesDate = dateParts?.year === selectedYear && dateParts.month === selectedMonth;
+    return matchesSearch && matchesType && matchesStatus && matchesDate;
+  };
+
+  const filteredVisitorReports = visitorReports.filter((record) => filterReportRecord(record, "Visitor Report"));
+  const filteredAccommodationReports = accommodationReports.filter((record) => filterReportRecord(record, "Accommodation Report"));
 
   const weeklySubmissions = [1, 2, 3, 4].map((weekNumber) => {
     const weekSubmissions = filteredSubmissions.filter((sub) => {
@@ -179,36 +237,102 @@ export default function SubmissionHistory() {
     const statusLabel = filterStatus === "all" ? "All status" : filterStatus;
     const generatedAt = new Date().toLocaleString();
     const filenameParts = [
-      "submission-history",
+      "establishment-data",
       selectedMonthLabel.toLowerCase().replace(/\s+/g, "-"),
       filterType === "all" ? "all-types" : getReportTypeLabel(filterType).toLowerCase(),
       filterStatus === "all" ? "all-status" : filterStatus.toLowerCase(),
     ];
     const filename = `${filenameParts.join("-").replace(/[^a-z0-9-]+/g, "-")}.csv`;
 
+    const totalVisitors = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_guests || 0), 0);
+    const totalMale = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_male || 0), 0);
+    const totalFemale = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_female || 0), 0);
+    const totalRoomsReported = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_rooms || 0), 0);
+    const totalOccupiedRooms = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_occupied_rooms || 0), 0);
+    const totalCheckIns = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_check_ins || 0), 0);
+    const totalGuestNights = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_guest_nights || 0), 0);
+    const occupancyRates = filteredAccommodationReports.map((report) =>
+      calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date)
+    );
+    const averageOccupancy = occupancyRates.length > 0
+      ? occupancyRates.reduce((sum, rate) => sum + rate, 0) / occupancyRates.length
+      : 0;
+
+    const residenceTotals = filteredVisitorReports.reduce<Record<string, number>>((acc, report) => {
+      const residence = report.place_of_residence || report.residence_type || "Unspecified";
+      acc[residence] = (acc[residence] || 0) + Number(report.total_guests || 0);
+      return acc;
+    }, {});
+
+    const residenceRows = Object.entries(residenceTotals)
+      .sort(([, a], [, b]) => b - a)
+      .map(([residence, count]) => [residence, count]);
+
+    const visitorRows = filteredVisitorReports
+      .slice()
+      .sort((a, b) => (a.report_date || "").localeCompare(b.report_date || ""))
+      .map((report) => [
+        formatDate(report.report_date),
+        formatDate(report.created_at),
+        report.status || "pending",
+        report.guest_name || "",
+        report.residence_type || "",
+        report.place_of_residence || "",
+        Number(report.total_male || 0),
+        Number(report.total_female || 0),
+        Number(report.total_guests || 0),
+        report.id,
+      ]);
+
+    const accommodationRows = filteredAccommodationReports
+      .slice()
+      .sort((a, b) => (a.report_date || "").localeCompare(b.report_date || ""))
+      .map((report) => {
+        const occupancy = calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date);
+        return [
+          formatDate(report.report_date),
+          formatDate(report.created_at),
+          report.status || "pending",
+          Number(report.total_rooms || 0),
+          Number(report.total_occupied_rooms || 0),
+          `${occupancy.toFixed(2)}%`,
+          Number(report.total_check_ins || 0),
+          Number(report.total_guest_nights || 0),
+          report.id,
+        ];
+      });
+
     const rows: (string | number)[][] = [
-      ["VistaBalayan Submission History"],
+      ["VistaBalayan Establishment Data Export"],
       ["Generated", generatedAt],
       ["Month", selectedMonthLabel],
       ["Report type filter", typeLabel],
       ["Status filter", statusLabel],
       ["Search filter", searchTerm.trim() || "None"],
-      ["Matching records", filteredSubmissions.length],
+      ["Submission groups shown", filteredSubmissions.length],
       [],
-      ["Report date", "Week", "Report type", "Status", "Submitted", "Summary", "Record count", "Submission ID"],
-      ...filteredSubmissions.map((submission) => {
-        const dateParts = getDateParts(submission.reportDate);
-        return [
-          formatDate(submission.reportDate),
-          dateParts ? `Week ${getWeekNumberInFourWeekMonth(dateParts.day)}` : "",
-          getReportTypeLabel(submission.type),
-          submission.status,
-          submission.submittedDate,
-          submission.dataSummary,
-          submission.recordCount,
-          submission.id,
-        ];
-      }),
+      ["Summary metric", "Value"],
+      ["Visitor report entries", filteredVisitorReports.length],
+      ["Total visitors", totalVisitors],
+      ["Total male visitors", totalMale],
+      ["Total female visitors", totalFemale],
+      ["Accommodation report entries", filteredAccommodationReports.length],
+      ["Total rooms reported", totalRoomsReported],
+      ["Total occupied rooms", totalOccupiedRooms],
+      ["Average occupancy", `${averageOccupancy.toFixed(2)}%`],
+      ["Total check-ins", totalCheckIns],
+      ["Total guest nights", totalGuestNights],
+      [],
+      ["Visitor demographics by residence", "Visitors"],
+      ...(residenceRows.length > 0 ? residenceRows : [["No visitor records", 0]]),
+      [],
+      ["Visitor report details"],
+      ["Report date", "Submitted", "Status", "Guest / group", "Residence type", "Place of residence", "Male", "Female", "Total visitors", "Report ID"],
+      ...(visitorRows.length > 0 ? visitorRows : [["No visitor records", "", "", "", "", "", "", "", "", ""]]),
+      [],
+      ["Accommodation report details"],
+      ["Report date", "Submitted", "Status", "Total rooms", "Occupied rooms", "Occupancy", "Check-ins", "Guest nights", "Report ID"],
+      ...(accommodationRows.length > 0 ? accommodationRows : [["No accommodation records", "", "", "", "", "", "", "", ""]]),
     ];
 
     downloadCsv(filename, rows);
@@ -258,17 +382,17 @@ export default function SubmissionHistory() {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Filter submissions</h2>
-            <p className="mt-1 text-sm text-slate-500">Export uses the current month, type, status, and search filters.</p>
+            <p className="mt-1 text-sm text-slate-500">Export detailed visitor, demographic, and occupancy data for the current filters.</p>
           </div>
           <button
             type="button"
             onClick={handleExportHistory}
             disabled={filteredSubmissions.length === 0}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0E5A72] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-950/10 transition hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
-            aria-label="Export filtered submission history"
+            aria-label="Export filtered establishment data"
           >
             <Download className="h-4 w-4" />
-            Export history
+            Export data
           </button>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
