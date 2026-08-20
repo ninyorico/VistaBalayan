@@ -252,7 +252,7 @@ export default function StaffLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="w-full p-4 sm:p-5 lg:p-6 xl:p-7">
+        <main className="w-full p-3 sm:p-4 lg:p-4 xl:p-5 2xl:p-6">
           <Outlet />
         </main>
       </div>

@@ -413,7 +413,7 @@ export default function SubmitAccommodationReport() {
       )}
 
       {/* Report Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6 lg:p-8 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name</label>
@@ -433,8 +433,8 @@ export default function SubmitAccommodationReport() {
       </div>
 
       {/* Room Occupancy Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-5 lg:p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Daily Room Occupancy</h3>
         </div>
         <div className="overflow-x-auto overscroll-x-contain">
