@@ -252,7 +252,7 @@ export default function StaffLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
+        <main className="w-full p-4 sm:p-5 lg:p-6 xl:p-7">
           <Outlet />
         </main>
       </div>

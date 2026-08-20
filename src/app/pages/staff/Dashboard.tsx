@@ -174,11 +174,11 @@ export default function StaffDashboard() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <section className={`grid grid-cols-1 gap-4 ${showVisitorForm && showAccommodationForm ? "md:grid-cols-2" : ""}`}>
         {showVisitorForm && (
           <button
             onClick={() => navigate("/staff/submit-visitor-report")}
-            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99]"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99] lg:p-8"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -198,7 +198,7 @@ export default function StaffDashboard() {
         {showAccommodationForm && (
           <button
             onClick={() => navigate("/staff/submit-accommodation-report")}
-            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99]"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99] lg:p-8"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -239,14 +239,14 @@ export default function StaffDashboard() {
       </section>
 
       {showAccommodationForm && (
-        <section className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl sm:p-6">
+        <section className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl lg:p-8">
           <div>
             <h3 className="text-lg font-bold text-[#0B2530]">Hotel analytics</h3>
             <p className="mt-1 text-sm text-[#5D6F73]">Computed from your submitted hotel accommodation reports.</p>
           </div>
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
             {hotelPerformanceStats.map((stat) => (
-              <div key={stat.title} className="rounded-3xl border border-[#d7e5e2]/80 bg-[#f8fbf8] p-5">
+              <div key={stat.title} className="rounded-3xl border border-[#d7e5e2]/80 bg-[#f8fbf8] p-5 lg:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-[#5D6F73]">{stat.title}</p>
