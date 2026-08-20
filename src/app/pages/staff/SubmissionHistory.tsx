@@ -89,7 +89,6 @@ export default function SubmissionHistory() {
   const [accommodationReports, setAccommodationReports] = useState<AccommodationReportExportRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [allowedForms, setAllowedForms] = useState({ visitor: false, accommodation: false });
   const now = new Date();
@@ -168,10 +167,9 @@ export default function SubmissionHistory() {
       .join(" ")
       .toLowerCase();
     const matchesSearch = searchText.includes(searchTerm.toLowerCase());
-    const matchesType = filterType === "all" || sub.type === filterType;
     const matchesStatus = filterStatus === "all" || sub.status.toLowerCase() === filterStatus.toLowerCase();
     const matchesDate = dateParts?.year === selectedYear && dateParts.month === selectedMonth;
-    return matchesSearch && matchesType && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const filterReportRecord = (
@@ -193,10 +191,9 @@ export default function SubmissionHistory() {
       .toLowerCase();
 
     const matchesSearch = searchText.includes(searchTerm.toLowerCase());
-    const matchesType = filterType === "all" || type === filterType;
     const matchesStatus = filterStatus === "all" || (record.status || "pending").toLowerCase() === filterStatus.toLowerCase();
     const matchesDate = dateParts?.year === selectedYear && dateParts.month === selectedMonth;
-    return matchesSearch && matchesType && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate;
   };
 
   const filteredVisitorReports = visitorReports.filter((record) => filterReportRecord(record, "Visitor Report"));
@@ -233,12 +230,7 @@ export default function SubmissionHistory() {
 
   const exportBaseMetadata = () => {
     const selectedMonthLabel = formatSelectedMonth(selectedYear, selectedMonth);
-    return {
-      selectedMonthLabel,
-      statusLabel: filterStatus === "all" ? "All status" : filterStatus,
-      generatedAt: new Date().toLocaleString(),
-      searchLabel: searchTerm.trim() || "None",
-    };
+    return { selectedMonthLabel };
   };
 
   const buildExportFilename = (prefix: string) => {
@@ -246,27 +238,11 @@ export default function SubmissionHistory() {
     const filenameParts = [
       prefix,
       selectedMonthLabel.toLowerCase().replace(/\s+/g, "-"),
-      filterStatus === "all" ? "all-status" : filterStatus.toLowerCase(),
     ];
     return `${filenameParts.join("-").replace(/[^a-z0-9-]+/g, "-")}.csv`;
   };
 
   const handleExportResortData = () => {
-    const { selectedMonthLabel, statusLabel, generatedAt, searchLabel } = exportBaseMetadata();
-    const totalVisitors = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_guests || 0), 0);
-    const totalMale = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_male || 0), 0);
-    const totalFemale = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_female || 0), 0);
-
-    const residenceTotals = filteredVisitorReports.reduce<Record<string, number>>((acc, report) => {
-      const residence = report.place_of_residence || report.residence_type || "Unspecified";
-      acc[residence] = (acc[residence] || 0) + Number(report.total_guests || 0);
-      return acc;
-    }, {});
-
-    const residenceRows = Object.entries(residenceTotals)
-      .sort(([, a], [, b]) => b - a)
-      .map(([residence, count]) => [residence, count]);
-
     const visitorRows = filteredVisitorReports
       .slice()
       .sort((a, b) => (a.report_date || "").localeCompare(b.report_date || ""))
@@ -285,20 +261,6 @@ export default function SubmissionHistory() {
 
     const rows: (string | number)[][] = [
       ["VistaBalayan Resort Visitor Data Export"],
-      ["Generated", generatedAt],
-      ["Month", selectedMonthLabel],
-      ["Report type", "Resort / Visitor Report"],
-      ["Status filter", statusLabel],
-      ["Search filter", searchLabel],
-      [],
-      ["Summary metric", "Value"],
-      ["Visitor report entries", filteredVisitorReports.length],
-      ["Total visitors", totalVisitors],
-      ["Total male visitors", totalMale],
-      ["Total female visitors", totalFemale],
-      [],
-      ["Visitor demographics by residence", "Visitors"],
-      ...(residenceRows.length > 0 ? residenceRows : [["No visitor records", 0]]),
       [],
       ["Visitor report details"],
       ["Report date", "Submitted", "Status", "Guest / group", "Residence type", "Place of residence", "Male", "Female", "Total visitors", "Report ID"],
@@ -309,18 +271,6 @@ export default function SubmissionHistory() {
   };
 
   const handleExportHotelData = () => {
-    const { selectedMonthLabel, statusLabel, generatedAt, searchLabel } = exportBaseMetadata();
-    const totalRoomsReported = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_rooms || 0), 0);
-    const totalOccupiedRooms = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_occupied_rooms || 0), 0);
-    const totalCheckIns = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_check_ins || 0), 0);
-    const totalGuestNights = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_guest_nights || 0), 0);
-    const occupancyRates = filteredAccommodationReports.map((report) =>
-      calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date)
-    );
-    const averageOccupancy = occupancyRates.length > 0
-      ? occupancyRates.reduce((sum, rate) => sum + rate, 0) / occupancyRates.length
-      : 0;
-
     const accommodationRows = filteredAccommodationReports
       .slice()
       .sort((a, b) => (a.report_date || "").localeCompare(b.report_date || ""))
@@ -341,19 +291,6 @@ export default function SubmissionHistory() {
 
     const rows: (string | number)[][] = [
       ["VistaBalayan Hotel Accommodation Data Export"],
-      ["Generated", generatedAt],
-      ["Month", selectedMonthLabel],
-      ["Report type", "Hotels / Accommodation Report"],
-      ["Status filter", statusLabel],
-      ["Search filter", searchLabel],
-      [],
-      ["Summary metric", "Value"],
-      ["Accommodation report entries", filteredAccommodationReports.length],
-      ["Total rooms reported", totalRoomsReported],
-      ["Total occupied rooms", totalOccupiedRooms],
-      ["Average occupancy", `${averageOccupancy.toFixed(2)}%`],
-      ["Total check-ins", totalCheckIns],
-      ["Total guest nights", totalGuestNights],
       [],
       ["Accommodation report details"],
       ["Report date", "Submitted", "Status", "Total rooms", "Occupied rooms", "Occupancy", "Check-ins", "Guest nights", "Report ID"],
@@ -381,8 +318,8 @@ export default function SubmissionHistory() {
     { label: "Rejected", value: rejectedCount, icon: XCircle, tone: "text-rose-700 bg-rose-50 ring-rose-100" },
   ];
 
-  const showResortExport = allowedForms.visitor && (filterType === "all" || filterType === "Visitor Report");
-  const showHotelExport = allowedForms.accommodation && (filterType === "all" || filterType === "Accommodation Report");
+  const showResortExport = allowedForms.visitor;
+  const showHotelExport = allowedForms.accommodation;
 
   return (
     <div className="space-y-6">
@@ -410,7 +347,7 @@ export default function SubmissionHistory() {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Filter submissions</h2>
-            <p className="mt-1 text-sm text-slate-500">Exports are separated by establishment report type: resort visitor data and hotel accommodation data.</p>
+            <p className="mt-1 text-sm text-slate-500">The report type is detected automatically from your establishment account.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {showResortExport && (
@@ -439,7 +376,7 @@ export default function SubmissionHistory() {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -447,7 +384,7 @@ export default function SubmissionHistory() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search month, summary, type, status"
+                placeholder="Search month, summary, status"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100"
               />
             </div>
@@ -461,11 +398,6 @@ export default function SubmissionHistory() {
             {monthNames.map((month, index) => (
               <option key={month} value={index}>{month}</option>
             ))}
-          </select>
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
-            <option value="all">All types</option>
-            {allowedForms.visitor && <option value="Visitor Report">Resort</option>}
-            {allowedForms.accommodation && <option value="Accommodation Report">Hotels</option>}
           </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F4C75] focus:bg-white focus:ring-4 focus:ring-cyan-100">
             <option value="all">All status</option>
