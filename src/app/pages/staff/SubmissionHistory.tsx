@@ -231,32 +231,31 @@ export default function SubmissionHistory() {
   const pendingCount = filteredSubmissions.filter((s) => s.status === "pending").length;
   const rejectedCount = filteredSubmissions.filter((s) => s.status === "rejected").length;
 
-  const handleExportHistory = () => {
+  const exportBaseMetadata = () => {
     const selectedMonthLabel = formatSelectedMonth(selectedYear, selectedMonth);
-    const typeLabel = filterType === "all" ? "All types" : getReportTypeLabel(filterType);
-    const statusLabel = filterStatus === "all" ? "All status" : filterStatus;
-    const generatedAt = new Date().toLocaleString();
+    return {
+      selectedMonthLabel,
+      statusLabel: filterStatus === "all" ? "All status" : filterStatus,
+      generatedAt: new Date().toLocaleString(),
+      searchLabel: searchTerm.trim() || "None",
+    };
+  };
+
+  const buildExportFilename = (prefix: string) => {
+    const { selectedMonthLabel } = exportBaseMetadata();
     const filenameParts = [
-      "establishment-data",
+      prefix,
       selectedMonthLabel.toLowerCase().replace(/\s+/g, "-"),
-      filterType === "all" ? "all-types" : getReportTypeLabel(filterType).toLowerCase(),
       filterStatus === "all" ? "all-status" : filterStatus.toLowerCase(),
     ];
-    const filename = `${filenameParts.join("-").replace(/[^a-z0-9-]+/g, "-")}.csv`;
+    return `${filenameParts.join("-").replace(/[^a-z0-9-]+/g, "-")}.csv`;
+  };
 
+  const handleExportResortData = () => {
+    const { selectedMonthLabel, statusLabel, generatedAt, searchLabel } = exportBaseMetadata();
     const totalVisitors = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_guests || 0), 0);
     const totalMale = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_male || 0), 0);
     const totalFemale = filteredVisitorReports.reduce((sum, report) => sum + Number(report.total_female || 0), 0);
-    const totalRoomsReported = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_rooms || 0), 0);
-    const totalOccupiedRooms = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_occupied_rooms || 0), 0);
-    const totalCheckIns = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_check_ins || 0), 0);
-    const totalGuestNights = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_guest_nights || 0), 0);
-    const occupancyRates = filteredAccommodationReports.map((report) =>
-      calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date)
-    );
-    const averageOccupancy = occupancyRates.length > 0
-      ? occupancyRates.reduce((sum, rate) => sum + rate, 0) / occupancyRates.length
-      : 0;
 
     const residenceTotals = filteredVisitorReports.reduce<Record<string, number>>((acc, report) => {
       const residence = report.place_of_residence || report.residence_type || "Unspecified";
@@ -284,6 +283,44 @@ export default function SubmissionHistory() {
         report.id,
       ]);
 
+    const rows: (string | number)[][] = [
+      ["VistaBalayan Resort Visitor Data Export"],
+      ["Generated", generatedAt],
+      ["Month", selectedMonthLabel],
+      ["Report type", "Resort / Visitor Report"],
+      ["Status filter", statusLabel],
+      ["Search filter", searchLabel],
+      [],
+      ["Summary metric", "Value"],
+      ["Visitor report entries", filteredVisitorReports.length],
+      ["Total visitors", totalVisitors],
+      ["Total male visitors", totalMale],
+      ["Total female visitors", totalFemale],
+      [],
+      ["Visitor demographics by residence", "Visitors"],
+      ...(residenceRows.length > 0 ? residenceRows : [["No visitor records", 0]]),
+      [],
+      ["Visitor report details"],
+      ["Report date", "Submitted", "Status", "Guest / group", "Residence type", "Place of residence", "Male", "Female", "Total visitors", "Report ID"],
+      ...(visitorRows.length > 0 ? visitorRows : [["No visitor records", "", "", "", "", "", "", "", "", ""]]),
+    ];
+
+    downloadCsv(buildExportFilename("resort-visitor-data"), rows);
+  };
+
+  const handleExportHotelData = () => {
+    const { selectedMonthLabel, statusLabel, generatedAt, searchLabel } = exportBaseMetadata();
+    const totalRoomsReported = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_rooms || 0), 0);
+    const totalOccupiedRooms = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_occupied_rooms || 0), 0);
+    const totalCheckIns = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_check_ins || 0), 0);
+    const totalGuestNights = filteredAccommodationReports.reduce((sum, report) => sum + Number(report.total_guest_nights || 0), 0);
+    const occupancyRates = filteredAccommodationReports.map((report) =>
+      calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date)
+    );
+    const averageOccupancy = occupancyRates.length > 0
+      ? occupancyRates.reduce((sum, rate) => sum + rate, 0) / occupancyRates.length
+      : 0;
+
     const accommodationRows = filteredAccommodationReports
       .slice()
       .sort((a, b) => (a.report_date || "").localeCompare(b.report_date || ""))
@@ -303,19 +340,14 @@ export default function SubmissionHistory() {
       });
 
     const rows: (string | number)[][] = [
-      ["VistaBalayan Establishment Data Export"],
+      ["VistaBalayan Hotel Accommodation Data Export"],
       ["Generated", generatedAt],
       ["Month", selectedMonthLabel],
-      ["Report type filter", typeLabel],
+      ["Report type", "Hotels / Accommodation Report"],
       ["Status filter", statusLabel],
-      ["Search filter", searchTerm.trim() || "None"],
-      ["Submission groups shown", filteredSubmissions.length],
+      ["Search filter", searchLabel],
       [],
       ["Summary metric", "Value"],
-      ["Visitor report entries", filteredVisitorReports.length],
-      ["Total visitors", totalVisitors],
-      ["Total male visitors", totalMale],
-      ["Total female visitors", totalFemale],
       ["Accommodation report entries", filteredAccommodationReports.length],
       ["Total rooms reported", totalRoomsReported],
       ["Total occupied rooms", totalOccupiedRooms],
@@ -323,19 +355,12 @@ export default function SubmissionHistory() {
       ["Total check-ins", totalCheckIns],
       ["Total guest nights", totalGuestNights],
       [],
-      ["Visitor demographics by residence", "Visitors"],
-      ...(residenceRows.length > 0 ? residenceRows : [["No visitor records", 0]]),
-      [],
-      ["Visitor report details"],
-      ["Report date", "Submitted", "Status", "Guest / group", "Residence type", "Place of residence", "Male", "Female", "Total visitors", "Report ID"],
-      ...(visitorRows.length > 0 ? visitorRows : [["No visitor records", "", "", "", "", "", "", "", "", ""]]),
-      [],
       ["Accommodation report details"],
       ["Report date", "Submitted", "Status", "Total rooms", "Occupied rooms", "Occupancy", "Check-ins", "Guest nights", "Report ID"],
       ...(accommodationRows.length > 0 ? accommodationRows : [["No accommodation records", "", "", "", "", "", "", "", ""]]),
     ];
 
-    downloadCsv(filename, rows);
+    downloadCsv(buildExportFilename("hotel-accommodation-data"), rows);
   };
 
   if (loading) {
@@ -355,6 +380,9 @@ export default function SubmissionHistory() {
     { label: "Pending", value: pendingCount, icon: Clock, tone: "text-amber-700 bg-amber-50 ring-amber-100" },
     { label: "Rejected", value: rejectedCount, icon: XCircle, tone: "text-rose-700 bg-rose-50 ring-rose-100" },
   ];
+
+  const showResortExport = allowedForms.visitor && (filterType === "all" || filterType === "Visitor Report");
+  const showHotelExport = allowedForms.accommodation && (filterType === "all" || filterType === "Accommodation Report");
 
   return (
     <div className="space-y-6">
@@ -382,18 +410,34 @@ export default function SubmissionHistory() {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-slate-500">Filter submissions</h2>
-            <p className="mt-1 text-sm text-slate-500">Export detailed visitor, demographic, and occupancy data for the current filters.</p>
+            <p className="mt-1 text-sm text-slate-500">Exports are separated by establishment report type: resort visitor data and hotel accommodation data.</p>
           </div>
-          <button
-            type="button"
-            onClick={handleExportHistory}
-            disabled={filteredSubmissions.length === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0E5A72] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-950/10 transition hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
-            aria-label="Export filtered establishment data"
-          >
-            <Download className="h-4 w-4" />
-            Export data
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {showResortExport && (
+              <button
+                type="button"
+                onClick={handleExportResortData}
+                disabled={filteredVisitorReports.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0E5A72] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-950/10 transition hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+                aria-label="Export resort visitor data"
+              >
+                <Download className="h-4 w-4" />
+                Export resort data
+              </button>
+            )}
+            {showHotelExport && (
+              <button
+                type="button"
+                onClick={handleExportHotelData}
+                disabled={filteredAccommodationReports.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0E5A72] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-950/10 transition hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+                aria-label="Export hotel accommodation data"
+              >
+                <Download className="h-4 w-4" />
+                Export hotel data
+              </button>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
           <div className="lg:col-span-2">
