@@ -135,7 +135,7 @@ export default function StaffDashboard() {
 
   const hotelPerformanceStats = [
     { title: "Average Guest Night", value: hotelMetrics.averageGuestNight, subtitle: "nights per guest", icon: Moon, tone: "bg-sky-50 text-sky-700 ring-sky-100" },
-    { title: "Occupancy Rate", value: `${hotelMetrics.monthlyOccupancyRate}%`, subtitle: "monthly average", icon: Percent, tone: "bg-violet-50 text-violet-700 ring-violet-100" },
+    { title: "Average Room Occupancy Rate", value: `${hotelMetrics.monthlyOccupancyRate}%`, subtitle: "monthly average", icon: Percent, tone: "bg-violet-50 text-violet-700 ring-violet-100" },
     { title: "Average Guest Per Room", value: hotelMetrics.averageGuestPerRoom, subtitle: "guests per room", icon: UsersRound, tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
   ];
 
@@ -241,7 +241,7 @@ export default function StaffDashboard() {
       {showAccommodationForm && (
         <section className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl sm:p-6">
           <div>
-            <h3 className="text-lg font-bold text-[#0B2530]">Hotel performance</h3>
+            <h3 className="text-lg font-bold text-[#0B2530]">Hotel analytics</h3>
             <p className="mt-1 text-sm text-[#5D6F73]">Computed from your submitted hotel accommodation reports.</p>
           </div>
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
