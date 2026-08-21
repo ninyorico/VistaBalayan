@@ -354,8 +354,9 @@ export default function Establishments() {
     try {
       const { data: existingProfile, error: existingProfileError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, status')
         .eq('email', gmail)
+        .eq('status', 'active')
         .maybeSingle();
 
       if (existingProfileError) {
@@ -363,7 +364,7 @@ export default function Establishments() {
       }
 
       if (existingProfile?.id) {
-        throw new Error("A VistaBalayan profile already exists for this Gmail address");
+        throw new Error("An active VistaBalayan profile already exists for this Gmail address. Delete that user first or use another Gmail.");
       }
 
       const authClient = createEphemeralSupabaseClient();
@@ -584,16 +585,20 @@ export default function Establishments() {
         }
       }
     } else {
-      const { error } = await supabase
+      const { data: affectedUsers, error } = await supabase
         .from('profiles')
-        .update({ status: 'inactive' })
-        .eq('id', deleteTarget.id);
+        .update({ status: 'inactive', establishment_id: null })
+        .eq('id', deleteTarget.id)
+        .select('id');
       
       if (error) {
-        toast.error("Failed to deactivate user: " + error.message);
+        toast.error("Failed to remove user: " + error.message);
+      } else if (!affectedUsers?.length) {
+        toast.error("Could not remove this user. Please refresh and try again.");
       } else {
-        toast.success("User deactivated successfully");
-        fetchUsers();
+        setUsers((current) => current.filter((user) => user.id !== deleteTarget.id));
+        toast.success("User removed successfully");
+        await fetchUsers();
       }
     }
     setShowDeleteConfirm(false);
