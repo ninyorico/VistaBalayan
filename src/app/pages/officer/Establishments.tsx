@@ -46,7 +46,7 @@ export default function Establishments() {
   const [onboardingSaving, setOnboardingSaving] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState<"form" | "otp">("form");
   const [otpCode, setOtpCode] = useState("");
-  const [pendingOnboarding, setPendingOnboarding] = useState<{ establishmentId: string; userId: string | null; email: string; fullName: string } | null>(null);
+  const [pendingOnboarding, setPendingOnboarding] = useState<{ userId: string | null; email: string; fullName: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingEstablishment, setEditingEstablishment] = useState<Establishment | null>(null);
   const [viewingPermitEstablishment, setViewingPermitEstablishment] = useState<Establishment | null>(null);
@@ -345,23 +345,32 @@ export default function Establishments() {
       return;
     }
 
-    const { normalizedRoomConfig, totalRooms } = getNormalizedRoomConfig();
     setOnboardingSaving(true);
 
-    let createdEstablishmentId: string | null = null;
     try {
-      createdEstablishmentId = await createOnboardingEstablishment(normalizedRoomConfig, totalRooms);
+      const { data: existingProfile, error: existingProfileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', gmail)
+        .maybeSingle();
+
+      if (existingProfileError) {
+        throw new Error(existingProfileError.message);
+      }
+
+      if (existingProfile?.id) {
+        throw new Error("A VistaBalayan profile already exists for this Gmail address");
+      }
+
       const authClient = createEphemeralSupabaseClient();
-      const { data: authData, error: authError } = await authClient.auth.signUp({
+      const { error: authError } = await authClient.auth.signInWithOtp({
         email: gmail,
-        password: newAccountForm.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/admin/login`,
+          shouldCreateUser: true,
           data: {
             full_name: newAccountForm.full_name.trim(),
             role: "establishment_staff",
-            establishment_id: createdEstablishmentId,
-            status: "active",
+            status: "pending_otp",
           },
         },
       });
@@ -370,32 +379,16 @@ export default function Establishments() {
         throw new Error(authError.message);
       }
 
-      const userId = authData.user?.id || null;
-
-      const { error: profileRpcError } = await supabase.rpc('complete_officer_onboarding_staff_profile', {
-        p_user_id: userId,
-        p_email: gmail,
-        p_full_name: newAccountForm.full_name.trim(),
-        p_establishment_id: createdEstablishmentId,
-        p_status: 'active',
+      setPendingOnboarding({
+        userId: null,
+        email: gmail,
+        fullName: newAccountForm.full_name.trim(),
       });
-
-      if (profileRpcError) {
-        throw new Error(profileRpcError.message);
-      }
-
-      toast.success("Staff profile created. Ask the staff to open the confirmation link sent to Gmail before logging in.");
-      setShowOnboardingModal(false);
-      setOnboardingStep("form");
       setOtpCode("");
-      setPendingOnboarding(null);
-      fetchEstablishments();
-      fetchUsers();
+      setOnboardingStep("otp");
+      toast.success("OTP sent to Gmail. Enter the 6-digit code here to create the establishment and staff account.");
     } catch (error) {
-      if (createdEstablishmentId) {
-        await supabase.from('establishments').delete().eq('id', createdEstablishmentId);
-      }
-      toast.error(`Failed to create account: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Failed to send OTP: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setOnboardingSaving(false);
     }
@@ -418,7 +411,7 @@ export default function Establishments() {
       const { data, error } = await authClient.auth.verifyOtp({
         email: pendingOnboarding.email,
         token: otpCode.trim(),
-        type: 'signup',
+        type: 'email',
       });
 
       if (error) {
@@ -430,22 +423,39 @@ export default function Establishments() {
         throw new Error("OTP verified but Supabase did not return a user ID");
       }
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          email: pendingOnboarding.email,
-          full_name: pendingOnboarding.fullName,
-          role: "establishment_staff",
-          establishment_id: pendingOnboarding.establishmentId,
-          status: "active",
-        });
+      const { error: passwordError } = await authClient.auth.updateUser({
+        password: newAccountForm.password,
+      });
 
-      if (profileError) {
-        throw new Error(profileError.message);
+      if (passwordError) {
+        throw new Error(passwordError.message);
       }
 
-      toast.success("Staff account verified and linked to the establishment.");
+      const { normalizedRoomConfig, totalRooms } = getNormalizedRoomConfig();
+      let createdEstablishmentId: string | null = null;
+
+      try {
+        createdEstablishmentId = await createOnboardingEstablishment(normalizedRoomConfig, totalRooms);
+
+        const { error: profileRpcError } = await supabase.rpc('complete_officer_onboarding_staff_profile', {
+          p_user_id: userId,
+          p_email: pendingOnboarding.email,
+          p_full_name: pendingOnboarding.fullName,
+          p_establishment_id: createdEstablishmentId,
+          p_status: 'active',
+        });
+
+        if (profileRpcError) {
+          throw new Error(profileRpcError.message);
+        }
+      } catch (profileError) {
+        if (createdEstablishmentId) {
+          await supabase.from('establishments').delete().eq('id', createdEstablishmentId);
+        }
+        throw profileError;
+      }
+
+      toast.success("OTP confirmed. Staff account and establishment are now created.");
       setShowOnboardingModal(false);
       setOnboardingStep("form");
       setOtpCode("");
@@ -1020,42 +1030,54 @@ export default function Establishments() {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Add User</h2>
-                <p className="mt-1 text-sm text-gray-500">Create the establishment and staff profile, then Supabase emails the staff a confirmation link.</p>
+                <p className="mt-1 text-sm text-gray-500">Send a Gmail OTP first. The establishment and staff profile are created only after the OTP is confirmed here.</p>
               </div>
               <button onClick={() => setShowOnboardingModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={onboardingSaving}>
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
             <div className="p-6 space-y-6">
-              <>
-              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
-                <h3 className="font-semibold text-gray-900">Staff account</h3>
-                <p className="text-sm text-gray-600 mt-1">Only Gmail addresses are accepted. Supabase will email a confirmation link before the staff account can be used.</p>
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label><input type="text" value={newAccountForm.full_name} onChange={(e) => setNewAccountForm({ ...newAccountForm, full_name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Staff full name" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Gmail Address *</label><input type="email" value={newAccountForm.email} onChange={(e) => setNewAccountForm({ ...newAccountForm, email: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="staff@gmail.com" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Temporary Password *</label><input type="password" value={newAccountForm.password} onChange={(e) => setNewAccountForm({ ...newAccountForm, password: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Minimum 8 characters" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label><input type="password" value={newAccountForm.confirm_password} onChange={(e) => setNewAccountForm({ ...newAccountForm, confirm_password: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Re-type password" /></div>
-                </div>
-              </div>
+              {onboardingStep === "form" ? (
+                <>
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                    <h3 className="font-semibold text-gray-900">Staff account</h3>
+                    <p className="text-sm text-gray-600 mt-1">Only Gmail addresses are accepted. Enter the emailed 6-digit OTP in this system before the staff profile is created.</p>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label><input type="text" value={newAccountForm.full_name} onChange={(e) => setNewAccountForm({ ...newAccountForm, full_name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Staff full name" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Gmail Address *</label><input type="email" value={newAccountForm.email} onChange={(e) => setNewAccountForm({ ...newAccountForm, email: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="staff@gmail.com" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Temporary Password *</label><input type="password" value={newAccountForm.password} onChange={(e) => setNewAccountForm({ ...newAccountForm, password: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Minimum 8 characters" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label><input type="password" value={newAccountForm.confirm_password} onChange={(e) => setNewAccountForm({ ...newAccountForm, confirm_password: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Re-type password" /></div>
+                    </div>
+                  </div>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900">Establishment details</h3>
-                <p className="text-sm text-gray-500 mt-1">This establishment will be automatically assigned to the new staff account.</p>
-                <div className="mt-4 space-y-4">
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name *</label><input type="text" value={establishmentForm.name} onChange={(e) => setEstablishmentForm({ ...establishmentForm, name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter establishment name" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Type *</label><select value={establishmentForm.type} onChange={(e) => setEstablishmentForm({ ...establishmentForm, type: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all"><option value="Resort">Resort</option><option value="Hotel">Hotel</option></select></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Address *</label><input type="text" value={establishmentForm.address} onChange={(e) => setEstablishmentForm({ ...establishmentForm, address: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter address" /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label><input type="text" value={establishmentForm.contact_number} onChange={(e) => setEstablishmentForm({ ...establishmentForm, contact_number: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="+63 917 123 4567" /></div>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-900">Establishment details</h3>
+                    <p className="text-sm text-gray-500 mt-1">This establishment will be created only after the Gmail OTP is confirmed.</p>
+                    <div className="mt-4 space-y-4">
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name *</label><input type="text" value={establishmentForm.name} onChange={(e) => setEstablishmentForm({ ...establishmentForm, name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter establishment name" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Type *</label><select value={establishmentForm.type} onChange={(e) => setEstablishmentForm({ ...establishmentForm, type: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all"><option value="Resort">Resort</option><option value="Hotel">Hotel</option></select></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Address *</label><input type="text" value={establishmentForm.address} onChange={(e) => setEstablishmentForm({ ...establishmentForm, address: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter address" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label><input type="text" value={establishmentForm.contact_number} onChange={(e) => setEstablishmentForm({ ...establishmentForm, contact_number: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="+63 917 123 4567" /></div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-5">
+                  <h3 className="font-semibold text-gray-900">Confirm Gmail OTP</h3>
+                  <p className="text-sm text-gray-600 mt-1">Enter the 6-digit OTP sent to <span className="font-medium">{pendingOnboarding?.email}</span>. The staff profile and establishment will be created only after this code is accepted.</p>
+                  <div className="mt-4 max-w-xs">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">6-digit OTP *</label>
+                    <input type="text" inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-center text-2xl tracking-[0.4em] font-semibold focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="000000" />
+                  </div>
+                  <button type="button" onClick={() => { setOnboardingStep("form"); setOtpCode(""); setPendingOnboarding(null); }} className="mt-4 text-sm font-medium text-[#1293B8] hover:underline" disabled={onboardingSaving}>Edit details / resend OTP</button>
                 </div>
-              </div>
-              </>
+              )}
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white rounded-b-2xl">
               <button onClick={() => setShowOnboardingModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700" disabled={onboardingSaving}>Cancel</button>
-              <button onClick={handleCreateStaffWithEstablishment} disabled={onboardingSaving} className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg hover:shadow-lg hover:shadow-[#1CA7C9]/30 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed">
+              <button onClick={onboardingStep === "form" ? handleCreateStaffWithEstablishment : handleVerifyOnboardingOtp} disabled={onboardingSaving} className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg hover:shadow-lg hover:shadow-[#1CA7C9]/30 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed">
                 {onboardingSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                Create and Send Confirmation Email
+                {onboardingStep === "form" ? "Send OTP First" : "Confirm OTP and Create Account"}
               </button>
             </div>
           </div>
