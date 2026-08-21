@@ -370,10 +370,7 @@ export default function Establishments() {
         throw new Error(authError.message);
       }
 
-      const userId = authData.user?.id;
-      if (!userId) {
-        throw new Error("Supabase sent the confirmation email but did not return a user ID to link the profile");
-      }
+      const userId = authData.user?.id || null;
 
       const { error: profileRpcError } = await supabase.rpc('complete_officer_onboarding_staff_profile', {
         p_user_id: userId,

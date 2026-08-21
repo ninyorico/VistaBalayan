@@ -15,16 +15,32 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_user_id uuid;
 begin
   if not public.is_municipal_officer() then
     raise exception 'Only municipal officers can complete staff onboarding';
   end if;
 
-  if p_user_id is null
-    or nullif(trim(p_email), '') is null
+  if nullif(trim(p_email), '') is null
     or nullif(trim(p_full_name), '') is null
     or p_establishment_id is null then
-    raise exception 'Staff user id, email, full name, and establishment are required';
+    raise exception 'Staff email, full name, and establishment are required';
+  end if;
+
+  v_user_id := p_user_id;
+
+  if v_user_id is null then
+    select id
+      into v_user_id
+      from auth.users
+     where lower(email) = lower(trim(p_email))
+     order by created_at desc
+     limit 1;
+  end if;
+
+  if v_user_id is null then
+    raise exception 'Supabase auth user was not found for this email';
   end if;
 
   insert into public.profiles (
@@ -35,7 +51,7 @@ begin
     establishment_id,
     status
   ) values (
-    p_user_id,
+    v_user_id,
     lower(trim(p_email)),
     trim(p_full_name),
     'establishment_staff',
