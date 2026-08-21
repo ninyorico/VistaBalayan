@@ -88,7 +88,7 @@ export default function Establishments() {
     const { data, error } = await supabase
       .from('establishments')
       .select('*')
-      .neq('status', 'deleted')
+      .eq('status', 'active')
       .order('name');
     
     if (error) {
@@ -104,7 +104,7 @@ export default function Establishments() {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .neq('status', 'deleted')
+      .eq('status', 'active')
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -122,7 +122,7 @@ export default function Establishments() {
   }, {});
 
   const filteredEstablishments = establishments.filter((est) => {
-    if (est.status === "deleted") return false;
+    if (est.status !== "active") return false;
     const matchesSearch = est.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || est.type === filterType;
     const matchesStatus = filterStatus === "all" || est.status === filterStatus;
@@ -130,7 +130,7 @@ export default function Establishments() {
   });
 
   const filteredUsers = users.filter((user) => {
-    if (user.status === "deleted") return false;
+    if (user.status !== "active") return false;
     const matchesSearch =
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -555,73 +555,33 @@ export default function Establishments() {
     if (!deleteTarget) return;
 
     if (deleteTarget.type === "establishment") {
-      const { data, error } = await supabase.rpc('delete_officer_establishment_with_staff', {
-        p_establishment_id: deleteTarget.id,
-      });
+      const { data: affectedStaff, error: staffError } = await supabase
+        .from('profiles')
+        .update({ status: 'inactive', establishment_id: null })
+        .eq('establishment_id', deleteTarget.id)
+        .eq('role', 'establishment_staff')
+        .select('id');
 
-      if (!error && data && Number(data.establishment_deleted || 0) === 1) {
-        const staffDeleted = Number(data.staff_profiles_deleted || 0);
-        toast.success(`Establishment deleted successfully${staffDeleted ? ` with ${staffDeleted} staff user${staffDeleted === 1 ? "" : "s"}` : ""}`);
-        await Promise.all([fetchEstablishments(), fetchUsers()]);
-      } else if (error?.code === 'PGRST202') {
-        const { data: deletedStaff, error: staffError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('establishment_id', deleteTarget.id)
-          .eq('role', 'establishment_staff')
+      if (staffError) {
+        toast.error("Failed to remove establishment staff: " + staffError.message);
+      } else {
+        const { data: affectedEstablishments, error: establishmentError } = await supabase
+          .from('establishments')
+          .update({ status: 'inactive' })
+          .eq('id', deleteTarget.id)
           .select('id');
 
-        if (staffError) {
-          toast.error("Failed to delete establishment staff: " + staffError.message);
+        if (establishmentError) {
+          toast.error("Failed to remove establishment: " + establishmentError.message);
+        } else if (!affectedEstablishments?.length) {
+          toast.error("Could not remove this establishment. It may already be removed or you may not have permission.");
         } else {
-          const { data: deletedEstablishments, error: establishmentError } = await supabase
-            .from('establishments')
-            .delete()
-            .eq('id', deleteTarget.id)
-            .select('id');
-
-          if (establishmentError) {
-            toast.error("Failed to delete establishment: " + establishmentError.message);
-          } else if (deletedEstablishments?.length) {
-            const staffDeleted = deletedStaff?.length || 0;
-            toast.success(`Establishment deleted successfully${staffDeleted ? ` with ${staffDeleted} staff user${staffDeleted === 1 ? "" : "s"}` : ""}`);
-            await Promise.all([fetchEstablishments(), fetchUsers()]);
-          } else {
-            const { data: archivedStaff, error: archiveStaffError } = await supabase
-              .from('profiles')
-              .update({ status: 'deleted', establishment_id: null })
-              .eq('establishment_id', deleteTarget.id)
-              .eq('role', 'establishment_staff')
-              .select('id');
-
-            if (archiveStaffError) {
-              toast.error("Failed to remove establishment staff: " + archiveStaffError.message);
-              return;
-            }
-
-            const { data: archivedEstablishments, error: archiveEstablishmentError } = await supabase
-              .from('establishments')
-              .update({ status: 'deleted' })
-              .eq('id', deleteTarget.id)
-              .select('id');
-
-            if (archiveEstablishmentError) {
-              toast.error("Failed to remove establishment: " + archiveEstablishmentError.message);
-            } else if (!archivedEstablishments?.length) {
-              toast.error("Delete did not complete. Please refresh and try again.");
-            } else {
-              const staffDeleted = archivedStaff?.length || 0;
-              setEstablishments((current) => current.filter((establishment) => establishment.id !== deleteTarget.id));
-              setUsers((current) => current.filter((user) => user.establishment_id !== deleteTarget.id));
-              toast.success(`Establishment removed successfully${staffDeleted ? ` with ${staffDeleted} staff user${staffDeleted === 1 ? "" : "s"}` : ""}`);
-              await Promise.all([fetchEstablishments(), fetchUsers()]);
-            }
-          }
+          const staffRemoved = affectedStaff?.length || 0;
+          setEstablishments((current) => current.filter((establishment) => establishment.id !== deleteTarget.id));
+          setUsers((current) => current.filter((user) => user.establishment_id !== deleteTarget.id));
+          toast.success(`Establishment removed successfully${staffRemoved ? ` with ${staffRemoved} staff user${staffRemoved === 1 ? "" : "s"}` : ""}`);
+          await Promise.all([fetchEstablishments(), fetchUsers()]);
         }
-      } else if (error) {
-        toast.error("Failed to delete establishment: " + error.message);
-      } else {
-        toast.error("Delete did not complete. Please refresh and try again.");
       }
     } else {
       const { error } = await supabase
