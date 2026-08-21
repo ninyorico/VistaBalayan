@@ -356,7 +356,7 @@ export default function Establishments() {
         email: gmail,
         password: newAccountForm.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: `${window.location.origin}/admin/login`,
           data: {
             full_name: newAccountForm.full_name.trim(),
             role: "establishment_staff",
