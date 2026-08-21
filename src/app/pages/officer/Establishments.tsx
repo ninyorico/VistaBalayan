@@ -539,16 +539,18 @@ export default function Establishments() {
     if (!deleteTarget) return;
 
     if (deleteTarget.type === "establishment") {
-      const { error } = await supabase
-        .from('establishments')
-        .delete()
-        .eq('id', deleteTarget.id);
+      const { data, error } = await supabase.rpc('delete_officer_establishment_with_staff', {
+        p_establishment_id: deleteTarget.id,
+      });
       
       if (error) {
-        toast.error("Failed to delete: " + error.message);
+        toast.error("Failed to delete establishment: " + error.message);
+      } else if (!data || Number(data.establishment_deleted || 0) !== 1) {
+        toast.error("Delete did not complete. Please refresh and try again.");
       } else {
-        toast.success("Establishment deleted successfully");
-        fetchEstablishments();
+        const staffDeleted = Number(data.staff_profiles_deleted || 0);
+        toast.success(`Establishment deleted successfully${staffDeleted ? ` with ${staffDeleted} staff user${staffDeleted === 1 ? "" : "s"}` : ""}`);
+        await Promise.all([fetchEstablishments(), fetchUsers()]);
       }
     } else {
       const { error } = await supabase
