@@ -585,16 +585,35 @@ export default function Establishments() {
         }
       }
     } else {
-      const { data: affectedUsers, error } = await supabase
-        .from('profiles')
-        .update({ status: 'inactive', establishment_id: null })
-        .eq('id', deleteTarget.id)
-        .select('id');
-      
-      if (error) {
-        toast.error("Failed to remove user: " + error.message);
-      } else if (!affectedUsers?.length) {
-        toast.error("Could not remove this user. Please refresh and try again.");
+      let removeErrorMessage: string | null = null;
+
+      const { error: rpcError } = await supabase.rpc('remove_officer_user', {
+        p_user_id: deleteTarget.id,
+      });
+
+      if (rpcError) {
+        // Older deployments may not have the RPC yet. Fall back to a direct
+        // officer update and do not depend on returned rows, because RLS can
+        // make update(...).select() return an empty array even for a valid row.
+        const isMissingRpc = rpcError.code === '42883' || /remove_officer_user/i.test(rpcError.message || '');
+
+        if (isMissingRpc) {
+          const { error: fallbackError } = await supabase
+            .from('profiles')
+            .update({ status: 'inactive', establishment_id: null })
+            .eq('id', deleteTarget.id)
+            .eq('role', 'establishment_staff');
+
+          if (fallbackError) {
+            removeErrorMessage = fallbackError.message;
+          }
+        } else {
+          removeErrorMessage = rpcError.message;
+        }
+      }
+
+      if (removeErrorMessage) {
+        toast.error("Failed to remove user: " + removeErrorMessage);
       } else {
         setUsers((current) => current.filter((user) => user.id !== deleteTarget.id));
         toast.success("User removed successfully");
