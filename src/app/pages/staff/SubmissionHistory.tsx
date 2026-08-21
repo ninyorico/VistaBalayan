@@ -96,6 +96,7 @@ export default function SubmissionHistory() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [expandedWeek, setExpandedWeek] = useState<number | null>(getWeekNumberInFourWeekMonth(now.getDate()));
   const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
+  const [viewingSubmission, setViewingSubmission] = useState<StaffSubmissionSummary | null>(null);
 
   useEffect(() => {
     fetchSubmissions();
@@ -263,7 +264,7 @@ export default function SubmissionHistory() {
       ["VistaBalayan Resort Visitor Data Export"],
       [],
       ["Visitor report details"],
-      ["Report date", "Submitted", "Status", "Guest / group", "Residence type", "Place of residence", "Male", "Female", "Total visitors", "Report ID"],
+      ["Report date", "Submitted", "Status", "Guest Group", "Residence type", "Place of residence", "Male", "Female", "Total visitors", "Report ID"],
       ...(visitorRows.length > 0 ? visitorRows : [["No visitor records", "", "", "", "", "", "", "", "", ""]]),
     ];
 
@@ -285,7 +286,6 @@ export default function SubmissionHistory() {
           `${occupancy.toFixed(2)}%`,
           Number(report.total_check_ins || 0),
           Number(report.total_guest_nights || 0),
-          report.id,
         ];
       });
 
@@ -293,11 +293,71 @@ export default function SubmissionHistory() {
       ["VistaBalayan Hotel Accommodation Data Export"],
       [],
       ["Accommodation report details"],
-      ["Report date", "Submitted", "Status", "Total rooms", "Occupied rooms", "Occupancy", "Check-ins", "Guest nights", "Report ID"],
-      ...(accommodationRows.length > 0 ? accommodationRows : [["No accommodation records", "", "", "", "", "", "", "", ""]]),
+      ["Report date", "Submitted", "Status", "Total rooms", "Occupied rooms", "Occupancy", "Check-ins", "Guest nights"],
+      ...(accommodationRows.length > 0 ? accommodationRows : [["No accommodation records", "", "", "", "", "", "", ""]]),
     ];
 
     downloadCsv(buildExportFilename("hotel-accommodation-data"), rows);
+  };
+
+  const getVisitorRecordsForSubmission = (submission: StaffSubmissionSummary) =>
+    visitorReports
+      .filter((report) => submission.id === `visitor-${report.report_date || "No report date"}-${report.status || "pending"}`)
+      .sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
+
+  const getAccommodationRecordForSubmission = (submission: StaffSubmissionSummary) =>
+    accommodationReports.find((report) => report.id === submission.id) || null;
+
+  const handleViewSubmission = (submission: StaffSubmissionSummary) => {
+    setViewingSubmission(submission);
+  };
+
+  const handleDownloadSubmission = (submission: StaffSubmissionSummary) => {
+    if (submission.type === "Visitor Report") {
+      const records = getVisitorRecordsForSubmission(submission);
+      const rows: (string | number)[][] = [
+        ["VistaBalayan Resort Visitor Submission"],
+        [],
+        ["Report date", "Submitted", "Status", "Guest Group", "Residence type", "Place of residence", "Male", "Female", "Total visitors", "Report ID"],
+        ...(records.length > 0
+          ? records.map((report) => [
+              formatDate(report.report_date),
+              formatDate(report.created_at),
+              report.status || "pending",
+              report.guest_name || "",
+              report.residence_type || "",
+              report.place_of_residence || "",
+              Number(report.total_male || 0),
+              Number(report.total_female || 0),
+              Number(report.total_guests || 0),
+              report.id,
+            ])
+          : [["No visitor records", "", "", "", "", "", "", "", "", ""]]),
+      ];
+      downloadCsv(buildExportFilename("resort-submission"), rows);
+      return;
+    }
+
+    const report = getAccommodationRecordForSubmission(submission);
+    const occupancy = report ? calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date) : 0;
+    const rows: (string | number)[][] = [
+      ["VistaBalayan Hotel Accommodation Submission"],
+      [],
+      ["Report date", "Submitted", "Status", "Total rooms", "Occupied rooms", "Occupancy", "Check-ins", "Guest nights"],
+      report
+        ? [
+            formatDate(report.report_date),
+            formatDate(report.created_at),
+            report.status || "pending",
+            Number(report.total_rooms || 0),
+            Number(report.total_occupied_rooms || 0),
+            `${occupancy.toFixed(2)}%`,
+            Number(report.total_check_ins || 0),
+            Number(report.total_guest_nights || 0),
+          ]
+        : ["No accommodation record", "", "", "", "", "", "", ""],
+    ];
+    downloadCsv(buildExportFilename("hotel-submission"), rows);
   };
 
   if (loading) {
@@ -542,11 +602,11 @@ export default function SubmissionHistory() {
                                         </div>
 
                                         <div className="mt-4 flex flex-wrap gap-2">
-                                          <button className="inline-flex items-center gap-2 rounded-2xl bg-[#0F4C75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0b3d61]" aria-label="View submission">
+                                          <button type="button" onClick={() => handleViewSubmission(submission)} className="inline-flex items-center gap-2 rounded-2xl bg-[#0F4C75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0b3d61]" aria-label="View submission">
                                             <Eye className="h-4 w-4" />
                                             View
                                           </button>
-                                          <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100" aria-label="Download submission">
+                                          <button type="button" onClick={() => handleDownloadSubmission(submission)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100" aria-label="Download submission">
                                             <Download className="h-4 w-4" />
                                             Download
                                           </button>
@@ -576,6 +636,71 @@ export default function SubmissionHistory() {
           </div>
         )}
       </section>
+
+      {viewingSubmission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Submission details</p>
+                <h3 className="mt-1 text-xl font-bold text-slate-950">{getReportTypeLabel(viewingSubmission.type)} • {formatDate(viewingSubmission.reportDate)}</h3>
+                <p className="mt-1 text-sm text-slate-500">Status: {viewingSubmission.status} • Submitted {viewingSubmission.submittedDate}</p>
+              </div>
+              <button type="button" onClick={() => setViewingSubmission(null)} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                Close
+              </button>
+            </div>
+            <div className="max-h-[65vh] overflow-auto p-6">
+              {viewingSubmission.type === "Visitor Report" ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-[820px] w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2">Guest Group</th>
+                        <th className="px-3 py-2">Residence type</th>
+                        <th className="px-3 py-2">Place of residence</th>
+                        <th className="px-3 py-2">Male</th>
+                        <th className="px-3 py-2">Female</th>
+                        <th className="px-3 py-2">Total visitors</th>
+                        <th className="px-3 py-2">Report ID</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {getVisitorRecordsForSubmission(viewingSubmission).map((report) => (
+                        <tr key={report.id}>
+                          <td className="px-3 py-2 font-medium text-slate-900">{report.guest_name || "—"}</td>
+                          <td className="px-3 py-2 text-slate-700">{report.residence_type || "—"}</td>
+                          <td className="px-3 py-2 text-slate-700">{report.place_of_residence || "—"}</td>
+                          <td className="px-3 py-2 text-slate-700">{Number(report.total_male || 0)}</td>
+                          <td className="px-3 py-2 text-slate-700">{Number(report.total_female || 0)}</td>
+                          <td className="px-3 py-2 font-semibold text-slate-900">{Number(report.total_guests || 0)}</td>
+                          <td className="px-3 py-2 font-mono text-xs text-slate-500">{report.id}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                (() => {
+                  const report = getAccommodationRecordForSubmission(viewingSubmission);
+                  const occupancy = report ? calculateAccommodationOccupancy(report.total_occupied_rooms, report.total_rooms, report.report_date) : 0;
+                  return report ? (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"><p className="text-xs font-bold uppercase text-slate-500">Total rooms</p><p className="mt-2 text-2xl font-bold text-slate-950">{Number(report.total_rooms || 0)}</p></div>
+                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"><p className="text-xs font-bold uppercase text-slate-500">Occupied rooms</p><p className="mt-2 text-2xl font-bold text-slate-950">{Number(report.total_occupied_rooms || 0)}</p></div>
+                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"><p className="text-xs font-bold uppercase text-slate-500">Occupancy</p><p className="mt-2 text-2xl font-bold text-slate-950">{occupancy.toFixed(2)}%</p></div>
+                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"><p className="text-xs font-bold uppercase text-slate-500">Check-ins</p><p className="mt-2 text-2xl font-bold text-slate-950">{Number(report.total_check_ins || 0)}</p></div>
+                      <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"><p className="text-xs font-bold uppercase text-slate-500">Guest nights</p><p className="mt-2 text-2xl font-bold text-slate-950">{Number(report.total_guest_nights || 0)}</p></div>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-slate-500">No accommodation record found.</p>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
