@@ -370,15 +370,30 @@ export default function Establishments() {
         throw new Error(authError.message);
       }
 
-      setPendingOnboarding({
-        establishmentId: createdEstablishmentId,
-        userId: authData.user?.id || null,
-        email: gmail,
-        fullName: newAccountForm.full_name.trim(),
+      const userId = authData.user?.id;
+      if (!userId) {
+        throw new Error("Supabase sent the confirmation email but did not return a user ID to link the profile");
+      }
+
+      const { error: profileRpcError } = await supabase.rpc('complete_officer_onboarding_staff_profile', {
+        p_user_id: userId,
+        p_email: gmail,
+        p_full_name: newAccountForm.full_name.trim(),
+        p_establishment_id: createdEstablishmentId,
+        p_status: 'active',
       });
-      setOnboardingStep("otp");
-      toast.success("OTP sent to the Gmail address. Enter it here to finish creating the staff account.");
+
+      if (profileRpcError) {
+        throw new Error(profileRpcError.message);
+      }
+
+      toast.success("Staff profile created. Ask the staff to open the confirmation link sent to Gmail before logging in.");
+      setShowOnboardingModal(false);
+      setOnboardingStep("form");
+      setOtpCode("");
+      setPendingOnboarding(null);
       fetchEstablishments();
+      fetchUsers();
     } catch (error) {
       if (createdEstablishmentId) {
         await supabase.from('establishments').delete().eq('id', createdEstablishmentId);
@@ -1008,28 +1023,17 @@ export default function Establishments() {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Add User</h2>
-                <p className="mt-1 text-sm text-gray-500">Create the establishment, send Gmail OTP, then verify it to finish the staff account.</p>
+                <p className="mt-1 text-sm text-gray-500">Create the establishment and staff profile, then Supabase emails the staff a confirmation link.</p>
               </div>
               <button onClick={() => setShowOnboardingModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={onboardingSaving}>
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
             <div className="p-6 space-y-6">
-              {onboardingStep === "otp" && pendingOnboarding ? (
-                <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-5">
-                  <h3 className="font-semibold text-gray-900">Verify Gmail OTP</h3>
-                  <p className="mt-1 text-sm text-gray-600">We sent a 6-digit OTP to <span className="font-medium text-gray-900">{pendingOnboarding.email}</span>. Enter it below to activate the staff account and link it to the new establishment.</p>
-                  <div className="mt-4 max-w-sm">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Gmail OTP *</label>
-                    <input type="text" inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} className="w-full tracking-[0.35em] px-4 py-3 border border-gray-300 rounded-lg text-center text-lg font-semibold focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="000000" />
-                  </div>
-                  <p className="mt-3 text-xs text-gray-500">If the staff does not see the OTP, ask them to check Spam or create again with a correct Gmail address.</p>
-                </div>
-              ) : (
-                <>
+              <>
               <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
                 <h3 className="font-semibold text-gray-900">Staff account</h3>
-                <p className="text-sm text-gray-600 mt-1">Only Gmail addresses are accepted. Supabase will email an OTP/verification link before the staff account can be used.</p>
+                <p className="text-sm text-gray-600 mt-1">Only Gmail addresses are accepted. Supabase will email a confirmation link before the staff account can be used.</p>
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label><input type="text" value={newAccountForm.full_name} onChange={(e) => setNewAccountForm({ ...newAccountForm, full_name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Staff full name" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Gmail Address *</label><input type="email" value={newAccountForm.email} onChange={(e) => setNewAccountForm({ ...newAccountForm, email: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="staff@gmail.com" /></div>
@@ -1048,14 +1052,13 @@ export default function Establishments() {
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label><input type="text" value={establishmentForm.contact_number} onChange={(e) => setEstablishmentForm({ ...establishmentForm, contact_number: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="+63 917 123 4567" /></div>
                 </div>
               </div>
-                </>
-              )}
+              </>
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white rounded-b-2xl">
               <button onClick={() => setShowOnboardingModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700" disabled={onboardingSaving}>Cancel</button>
-              <button onClick={onboardingStep === "otp" ? handleVerifyOnboardingOtp : handleCreateStaffWithEstablishment} disabled={onboardingSaving} className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg hover:shadow-lg hover:shadow-[#1CA7C9]/30 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed">
+              <button onClick={handleCreateStaffWithEstablishment} disabled={onboardingSaving} className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg hover:shadow-lg hover:shadow-[#1CA7C9]/30 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed">
                 {onboardingSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {onboardingStep === "otp" ? "Verify OTP and Finish" : "Create and Send OTP"}
+                Create and Send Confirmation Email
               </button>
             </div>
           </div>
