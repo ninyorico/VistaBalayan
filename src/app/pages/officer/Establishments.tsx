@@ -542,15 +542,42 @@ export default function Establishments() {
       const { data, error } = await supabase.rpc('delete_officer_establishment_with_staff', {
         p_establishment_id: deleteTarget.id,
       });
-      
-      if (error) {
-        toast.error("Failed to delete establishment: " + error.message);
-      } else if (!data || Number(data.establishment_deleted || 0) !== 1) {
-        toast.error("Delete did not complete. Please refresh and try again.");
-      } else {
+
+      if (!error && data && Number(data.establishment_deleted || 0) === 1) {
         const staffDeleted = Number(data.staff_profiles_deleted || 0);
         toast.success(`Establishment deleted successfully${staffDeleted ? ` with ${staffDeleted} staff user${staffDeleted === 1 ? "" : "s"}` : ""}`);
         await Promise.all([fetchEstablishments(), fetchUsers()]);
+      } else if (error?.code === 'PGRST202') {
+        const { data: deletedStaff, error: staffError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('establishment_id', deleteTarget.id)
+          .eq('role', 'establishment_staff')
+          .select('id');
+
+        if (staffError) {
+          toast.error("Failed to delete establishment staff: " + staffError.message);
+        } else {
+          const { data: deletedEstablishments, error: establishmentError } = await supabase
+            .from('establishments')
+            .delete()
+            .eq('id', deleteTarget.id)
+            .select('id');
+
+          if (establishmentError) {
+            toast.error("Failed to delete establishment: " + establishmentError.message);
+          } else if (!deletedEstablishments?.length) {
+            toast.error("Delete did not complete. Please refresh and try again.");
+          } else {
+            const staffDeleted = deletedStaff?.length || 0;
+            toast.success(`Establishment deleted successfully${staffDeleted ? ` with ${staffDeleted} staff user${staffDeleted === 1 ? "" : "s"}` : ""}`);
+            await Promise.all([fetchEstablishments(), fetchUsers()]);
+          }
+        }
+      } else if (error) {
+        toast.error("Failed to delete establishment: " + error.message);
+      } else {
+        toast.error("Delete did not complete. Please refresh and try again.");
       }
     } else {
       const { error } = await supabase
