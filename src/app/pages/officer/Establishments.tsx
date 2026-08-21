@@ -392,7 +392,19 @@ export default function Establishments() {
       setOnboardingStep("otp");
       toast.success("OTP sent to Gmail. Enter the 6-digit code here to create the establishment and staff account.");
     } catch (error) {
-      toast.error(`Failed to send OTP: ${error instanceof Error ? error.message : "Unknown error"}`);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      if (message.toLowerCase().includes("rate limit")) {
+        setPendingOnboarding({
+          userId: null,
+          email: gmail,
+          fullName: newAccountForm.full_name.trim(),
+        });
+        setOtpCode("");
+        setOnboardingStep("otp");
+        toast.error("Supabase email limit was reached. If you already received an OTP, enter it here. If not, wait about 1 hour before sending another OTP.");
+      } else {
+        toast.error(`Failed to send OTP: ${message}`);
+      }
     } finally {
       setOnboardingSaving(false);
     }
@@ -1126,6 +1138,7 @@ export default function Establishments() {
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-5">
                   <h3 className="font-semibold text-gray-900">Confirm Gmail OTP</h3>
                   <p className="text-sm text-gray-600 mt-1">Enter the 6-digit OTP sent to <span className="font-medium">{pendingOnboarding?.email}</span>. The staff profile and establishment will be created only after this code is accepted.</p>
+                  <p className="mt-2 text-xs text-gray-500">If Supabase says the email rate limit was exceeded, use the OTP you already received. If no OTP arrived, wait about 1 hour before sending another OTP.</p>
                   <div className="mt-4 max-w-xs">
                     <label className="block text-sm font-medium text-gray-700 mb-2">6-digit OTP *</label>
                     <input type="text" inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} className="w-full px-4 py-3 border border-gray-300 rounded-lg text-center text-2xl tracking-[0.4em] font-semibold focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="000000" />
