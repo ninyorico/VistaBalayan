@@ -8,6 +8,7 @@ interface Profile {
   full_name: string
   role: 'municipal_officer' | 'establishment_staff'
   establishment_id: string | null
+  status?: string
 }
 
 interface AuthContextType {
@@ -41,6 +42,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null)
         return
       }
+
+      if (data?.status === 'inactive' || data?.status === 'deleted') {
+        setProfile(null)
+        setUser(null)
+        await supabase.auth.signOut()
+        return
+      }
+
       setProfile(data as Profile || null)
     }
 
@@ -85,8 +94,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', data.user.id)
+      .maybeSingle()
+
+    if (profileError) throw profileError
+
+    if (profileData?.status === 'inactive' || profileData?.status === 'deleted') {
+      await supabase.auth.signOut()
+      throw new Error('This account is no longer active')
+    }
   }
 
   const signOut = async () => {
