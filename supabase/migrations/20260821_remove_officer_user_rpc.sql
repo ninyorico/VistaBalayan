@@ -36,9 +36,9 @@ begin
     raise exception 'Municipal officer accounts cannot be removed from this screen';
   end if;
 
-  update public.profiles
-     set status = 'inactive',
-         establishment_id = null
+  -- The profile references auth.users(id), so the profile row must be removed
+  -- before deleting the auth user. Otherwise Postgres raises profiles_id_fkey.
+  delete from public.profiles
    where id = p_user_id
      and role = 'establishment_staff';
   get diagnostics v_profiles_removed = row_count;
