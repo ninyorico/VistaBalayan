@@ -283,6 +283,45 @@ export default function Establishments() {
     }
   };
 
+  const createOnboardingEstablishment = async (normalizedRoomConfig: EstablishmentRoomConfig[], totalRooms: number) => {
+    const payload = {
+      p_name: establishmentForm.name.trim(),
+      p_type: establishmentForm.type,
+      p_address: establishmentForm.address.trim(),
+      p_contact_number: establishmentForm.contact_number.trim(),
+      p_total_rooms: totalRooms,
+      p_amenities: setRoomConfigInAmenities("", normalizedRoomConfig),
+      p_status: establishmentForm.status,
+    };
+
+    const { data: rpcId, error: rpcError } = await supabase.rpc('create_officer_onboarding_establishment', payload);
+
+    if (!rpcError && rpcId) {
+      return rpcId as string;
+    }
+
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .insert([{
+        name: payload.p_name,
+        type: payload.p_type,
+        address: payload.p_address,
+        contact_number: payload.p_contact_number,
+        total_rooms: payload.p_total_rooms,
+        amenities: payload.p_amenities,
+        status: payload.p_status,
+      }])
+      .select('id')
+      .single();
+
+    if (establishmentError || !establishment?.id) {
+      const detail = rpcError && rpcError.code !== 'PGRST202' ? ` RPC failed: ${rpcError.message}.` : "";
+      throw new Error(`${establishmentError?.message || "Failed to create establishment"}.${detail}`);
+    }
+
+    return establishment.id as string;
+  };
+
   const handleCreateStaffWithEstablishment = async () => {
     const gmail = newAccountForm.email.trim().toLowerCase();
 
@@ -311,25 +350,7 @@ export default function Establishments() {
 
     let createdEstablishmentId: string | null = null;
     try {
-      const { data: establishment, error: establishmentError } = await supabase
-        .from('establishments')
-        .insert([{
-          name: establishmentForm.name.trim(),
-          type: establishmentForm.type,
-          address: establishmentForm.address.trim(),
-          contact_number: establishmentForm.contact_number.trim(),
-          total_rooms: totalRooms,
-          amenities: setRoomConfigInAmenities("", normalizedRoomConfig),
-          status: establishmentForm.status,
-        }])
-        .select('id')
-        .single();
-
-      if (establishmentError || !establishment?.id) {
-        throw new Error(establishmentError?.message || "Failed to create establishment");
-      }
-
-      createdEstablishmentId = establishment.id;
+      createdEstablishmentId = await createOnboardingEstablishment(normalizedRoomConfig, totalRooms);
       const authClient = createEphemeralSupabaseClient();
       const { data: authData, error: authError } = await authClient.auth.signUp({
         email: gmail,
@@ -350,7 +371,7 @@ export default function Establishments() {
       }
 
       setPendingOnboarding({
-        establishmentId: establishment.id as string,
+        establishmentId: createdEstablishmentId,
         userId: authData.user?.id || null,
         email: gmail,
         fullName: newAccountForm.full_name.trim(),
@@ -589,7 +610,7 @@ export default function Establishments() {
             className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>Add User + Establishment</span>
+            <span>Add User</span>
           </button>
         </div>
       </div>
@@ -986,7 +1007,7 @@ export default function Establishments() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Add User + Establishment</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Add User</h2>
                 <p className="mt-1 text-sm text-gray-500">Create the establishment, send Gmail OTP, then verify it to finish the staff account.</p>
               </div>
               <button onClick={() => setShowOnboardingModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={onboardingSaving}>
@@ -1022,10 +1043,7 @@ export default function Establishments() {
                 <p className="text-sm text-gray-500 mt-1">This establishment will be automatically assigned to the new staff account.</p>
                 <div className="mt-4 space-y-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name *</label><input type="text" value={establishmentForm.name} onChange={(e) => setEstablishmentForm({ ...establishmentForm, name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter establishment name" /></div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium text-gray-700 mb-2">Type *</label><select value={establishmentForm.type} onChange={(e) => setEstablishmentForm({ ...establishmentForm, type: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all"><option value="Resort">Resort</option><option value="Hotel">Hotel</option></select></div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-2">Number of Rooms *</label><input type="number" value={establishmentForm.total_rooms} onChange={(e) => setEstablishmentForm({ ...establishmentForm, total_rooms: parseInt(e.target.value) || 0 })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" min="0" /></div>
-                  </div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Type *</label><select value={establishmentForm.type} onChange={(e) => setEstablishmentForm({ ...establishmentForm, type: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all"><option value="Resort">Resort</option><option value="Hotel">Hotel</option></select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Address *</label><input type="text" value={establishmentForm.address} onChange={(e) => setEstablishmentForm({ ...establishmentForm, address: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter address" /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label><input type="text" value={establishmentForm.contact_number} onChange={(e) => setEstablishmentForm({ ...establishmentForm, contact_number: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="+63 917 123 4567" /></div>
                 </div>
