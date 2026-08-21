@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Building2, MapPin, Phone, UserCog, Mail, Shield, X, Loader2, FileImage, ExternalLink, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "../../../lib/supabase";
+import { createEphemeralSupabaseClient, supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 import { getBusinessPermitImages } from "../../../lib/businessPermitImages";
 import { DEFAULT_ROOM_CONFIG, EstablishmentRoomConfig, getRoomConfigFromAmenities, setRoomConfigInAmenities } from "../../../lib/establishmentRoomConfig";
@@ -41,7 +41,12 @@ export default function Establishments() {
   const [loading, setLoading] = useState(true);
 
   const [showEstablishmentModal, setShowEstablishmentModal] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [onboardingSaving, setOnboardingSaving] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState<"form" | "otp">("form");
+  const [otpCode, setOtpCode] = useState("");
+  const [pendingOnboarding, setPendingOnboarding] = useState<{ establishmentId: string; userId: string | null; email: string; fullName: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingEstablishment, setEditingEstablishment] = useState<Establishment | null>(null);
   const [viewingPermitEstablishment, setViewingPermitEstablishment] = useState<Establishment | null>(null);
@@ -64,6 +69,13 @@ export default function Establishments() {
     role: "establishment_staff",
     establishment_id: "",
     status: "active",
+  });
+
+  const [newAccountForm, setNewAccountForm] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+    confirm_password: "",
   });
 
   useEffect(() => {
@@ -137,6 +149,30 @@ export default function Establishments() {
     setShowEstablishmentModal(true);
   };
 
+  const handleAddStaffEstablishment = () => {
+    setEditingEstablishment(null);
+    setEditingUser(null);
+    setEstablishmentForm({
+      name: "",
+      type: "Hotel",
+      address: "",
+      contact_number: "",
+      total_rooms: 0,
+      room_config: DEFAULT_ROOM_CONFIG,
+      status: "active",
+    });
+    setNewAccountForm({
+      full_name: "",
+      email: "",
+      password: "",
+      confirm_password: "",
+    });
+    setOnboardingStep("form");
+    setOtpCode("");
+    setPendingOnboarding(null);
+    setShowOnboardingModal(true);
+  };
+
   const handleEditEstablishment = (id: string) => {
     const establishment = establishments.find((e) => e.id === id);
     if (establishment) {
@@ -182,12 +218,7 @@ export default function Establishments() {
     }));
   };
 
-  const handleSaveEstablishment = async () => {
-    if (!establishmentForm.name || !establishmentForm.address || !establishmentForm.contact_number) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
+  const getNormalizedRoomConfig = () => {
     const normalizedRoomConfig = establishmentForm.room_config
       .map((room) => ({
         type: room.type.trim(),
@@ -197,6 +228,16 @@ export default function Establishments() {
       .filter((room) => room.type && room.code);
     const roomTotal = normalizedRoomConfig.reduce((sum, room) => sum + room.count, 0);
     const totalRooms = roomTotal || establishmentForm.total_rooms;
+    return { normalizedRoomConfig, totalRooms };
+  };
+
+  const handleSaveEstablishment = async () => {
+    if (!establishmentForm.name || !establishmentForm.address || !establishmentForm.contact_number) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const { normalizedRoomConfig, totalRooms } = getNormalizedRoomConfig();
 
     if (editingEstablishment) {
       const { error } = await supabase
@@ -239,6 +280,149 @@ export default function Establishments() {
         fetchEstablishments();
         setShowEstablishmentModal(false);
       }
+    }
+  };
+
+  const handleCreateStaffWithEstablishment = async () => {
+    const gmail = newAccountForm.email.trim().toLowerCase();
+
+    if (!establishmentForm.name || !establishmentForm.address || !establishmentForm.contact_number || !newAccountForm.full_name || !gmail || !newAccountForm.password) {
+      toast.error("Please fill in all required establishment and account fields");
+      return;
+    }
+
+    if (!/^[^\s@]+@gmail\.com$/i.test(gmail)) {
+      toast.error("Please use a valid Gmail address ending in @gmail.com");
+      return;
+    }
+
+    if (newAccountForm.password.length < 8) {
+      toast.error("Temporary password must be at least 8 characters");
+      return;
+    }
+
+    if (newAccountForm.password !== newAccountForm.confirm_password) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    const { normalizedRoomConfig, totalRooms } = getNormalizedRoomConfig();
+    setOnboardingSaving(true);
+
+    let createdEstablishmentId: string | null = null;
+    try {
+      const { data: establishment, error: establishmentError } = await supabase
+        .from('establishments')
+        .insert([{
+          name: establishmentForm.name.trim(),
+          type: establishmentForm.type,
+          address: establishmentForm.address.trim(),
+          contact_number: establishmentForm.contact_number.trim(),
+          total_rooms: totalRooms,
+          amenities: setRoomConfigInAmenities("", normalizedRoomConfig),
+          status: establishmentForm.status,
+        }])
+        .select('id')
+        .single();
+
+      if (establishmentError || !establishment?.id) {
+        throw new Error(establishmentError?.message || "Failed to create establishment");
+      }
+
+      createdEstablishmentId = establishment.id;
+      const authClient = createEphemeralSupabaseClient();
+      const { data: authData, error: authError } = await authClient.auth.signUp({
+        email: gmail,
+        password: newAccountForm.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+          data: {
+            full_name: newAccountForm.full_name.trim(),
+            role: "establishment_staff",
+            establishment_id: createdEstablishmentId,
+            status: "active",
+          },
+        },
+      });
+
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      setPendingOnboarding({
+        establishmentId: establishment.id as string,
+        userId: authData.user?.id || null,
+        email: gmail,
+        fullName: newAccountForm.full_name.trim(),
+      });
+      setOnboardingStep("otp");
+      toast.success("OTP sent to the Gmail address. Enter it here to finish creating the staff account.");
+      fetchEstablishments();
+    } catch (error) {
+      if (createdEstablishmentId) {
+        await supabase.from('establishments').delete().eq('id', createdEstablishmentId);
+      }
+      toast.error(`Failed to create account: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setOnboardingSaving(false);
+    }
+  };
+
+  const handleVerifyOnboardingOtp = async () => {
+    if (!pendingOnboarding) {
+      toast.error("Please send the Gmail OTP first");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otpCode.trim())) {
+      toast.error("Enter the 6-digit OTP sent to Gmail");
+      return;
+    }
+
+    setOnboardingSaving(true);
+    try {
+      const authClient = createEphemeralSupabaseClient();
+      const { data, error } = await authClient.auth.verifyOtp({
+        email: pendingOnboarding.email,
+        token: otpCode.trim(),
+        type: 'signup',
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const userId = data.user?.id || pendingOnboarding.userId;
+      if (!userId) {
+        throw new Error("OTP verified but Supabase did not return a user ID");
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: pendingOnboarding.email,
+          full_name: pendingOnboarding.fullName,
+          role: "establishment_staff",
+          establishment_id: pendingOnboarding.establishmentId,
+          status: "active",
+        });
+
+      if (profileError) {
+        throw new Error(profileError.message);
+      }
+
+      toast.success("Staff account verified and linked to the establishment.");
+      setShowOnboardingModal(false);
+      setOnboardingStep("form");
+      setOtpCode("");
+      setPendingOnboarding(null);
+      fetchEstablishments();
+      fetchUsers();
+    } catch (error) {
+      toast.error(`Failed to verify OTP: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setOnboardingSaving(false);
     }
   };
 
@@ -401,11 +585,11 @@ export default function Establishments() {
             Export {activeTab === "establishments" ? "Establishments" : "Users"}
           </button>
           <button
-            onClick={activeTab === "establishments" ? handleAddEstablishment : handleAddUser}
+            onClick={handleAddStaffEstablishment}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>Add Record</span>
+            <span>Add User + Establishment</span>
           </button>
         </div>
       </div>
@@ -791,6 +975,70 @@ export default function Establishments() {
                   No business permit pictures have been uploaded for this establishment.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Combined Staff + Establishment Modal */}
+      {showOnboardingModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Add User + Establishment</h2>
+                <p className="mt-1 text-sm text-gray-500">Create the establishment, send Gmail OTP, then verify it to finish the staff account.</p>
+              </div>
+              <button onClick={() => setShowOnboardingModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={onboardingSaving}>
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {onboardingStep === "otp" && pendingOnboarding ? (
+                <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-5">
+                  <h3 className="font-semibold text-gray-900">Verify Gmail OTP</h3>
+                  <p className="mt-1 text-sm text-gray-600">We sent a 6-digit OTP to <span className="font-medium text-gray-900">{pendingOnboarding.email}</span>. Enter it below to activate the staff account and link it to the new establishment.</p>
+                  <div className="mt-4 max-w-sm">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Gmail OTP *</label>
+                    <input type="text" inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} className="w-full tracking-[0.35em] px-4 py-3 border border-gray-300 rounded-lg text-center text-lg font-semibold focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="000000" />
+                  </div>
+                  <p className="mt-3 text-xs text-gray-500">If the staff does not see the OTP, ask them to check Spam or create again with a correct Gmail address.</p>
+                </div>
+              ) : (
+                <>
+              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                <h3 className="font-semibold text-gray-900">Staff account</h3>
+                <p className="text-sm text-gray-600 mt-1">Only Gmail addresses are accepted. Supabase will email an OTP/verification link before the staff account can be used.</p>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label><input type="text" value={newAccountForm.full_name} onChange={(e) => setNewAccountForm({ ...newAccountForm, full_name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Staff full name" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Gmail Address *</label><input type="email" value={newAccountForm.email} onChange={(e) => setNewAccountForm({ ...newAccountForm, email: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="staff@gmail.com" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Temporary Password *</label><input type="password" value={newAccountForm.password} onChange={(e) => setNewAccountForm({ ...newAccountForm, password: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Minimum 8 characters" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label><input type="password" value={newAccountForm.confirm_password} onChange={(e) => setNewAccountForm({ ...newAccountForm, confirm_password: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Re-type password" /></div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900">Establishment details</h3>
+                <p className="text-sm text-gray-500 mt-1">This establishment will be automatically assigned to the new staff account.</p>
+                <div className="mt-4 space-y-4">
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name *</label><input type="text" value={establishmentForm.name} onChange={(e) => setEstablishmentForm({ ...establishmentForm, name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter establishment name" /></div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="block text-sm font-medium text-gray-700 mb-2">Type *</label><select value={establishmentForm.type} onChange={(e) => setEstablishmentForm({ ...establishmentForm, type: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all"><option value="Resort">Resort</option><option value="Hotel">Hotel</option></select></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-2">Number of Rooms *</label><input type="number" value={establishmentForm.total_rooms} onChange={(e) => setEstablishmentForm({ ...establishmentForm, total_rooms: parseInt(e.target.value) || 0 })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" min="0" /></div>
+                  </div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Address *</label><input type="text" value={establishmentForm.address} onChange={(e) => setEstablishmentForm({ ...establishmentForm, address: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter address" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label><input type="text" value={establishmentForm.contact_number} onChange={(e) => setEstablishmentForm({ ...establishmentForm, contact_number: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="+63 917 123 4567" /></div>
+                </div>
+              </div>
+                </>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white rounded-b-2xl">
+              <button onClick={() => setShowOnboardingModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700" disabled={onboardingSaving}>Cancel</button>
+              <button onClick={onboardingStep === "otp" ? handleVerifyOnboardingOtp : handleCreateStaffWithEstablishment} disabled={onboardingSaving} className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg hover:shadow-lg hover:shadow-[#1CA7C9]/30 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed">
+                {onboardingSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {onboardingStep === "otp" ? "Verify OTP and Finish" : "Create and Send OTP"}
+              </button>
             </div>
           </div>
         </div>
