@@ -548,6 +548,18 @@ export default function Establishments() {
   };
 
   const handleDeleteUser = (id: string) => {
+    const user = users.find((profile) => profile.id === id);
+
+    if (!user) {
+      toast.error("Could not find this user. Please refresh and try again.");
+      return;
+    }
+
+    if (user.role !== "establishment_staff") {
+      toast.error("Only establishment staff users can be removed from this screen.");
+      return;
+    }
+
     setDeleteTarget({ type: "user", id });
     setShowDeleteConfirm(true);
   };
@@ -585,39 +597,59 @@ export default function Establishments() {
         }
       }
     } else {
-      let removeErrorMessage: string | null = null;
+      const userToRemove = users.find((user) => user.id === deleteTarget.id);
 
-      const { error: rpcError } = await supabase.rpc('remove_officer_user', {
-        p_user_id: deleteTarget.id,
-      });
-
-      if (rpcError) {
-        // Older deployments may not have the RPC yet. Fall back to a direct
-        // officer update and do not depend on returned rows, because RLS can
-        // make update(...).select() return an empty array even for a valid row.
-        const isMissingRpc = rpcError.code === '42883' || /remove_officer_user/i.test(rpcError.message || '');
-
-        if (isMissingRpc) {
-          const { error: fallbackError } = await supabase
-            .from('profiles')
-            .update({ status: 'inactive', establishment_id: null })
-            .eq('id', deleteTarget.id)
-            .eq('role', 'establishment_staff');
-
-          if (fallbackError) {
-            removeErrorMessage = fallbackError.message;
-          }
-        } else {
-          removeErrorMessage = rpcError.message;
-        }
-      }
-
-      if (removeErrorMessage) {
-        toast.error("Failed to remove user: " + removeErrorMessage);
+      if (!userToRemove || userToRemove.role !== 'establishment_staff') {
+        toast.error("Only establishment staff users can be removed from this screen.");
       } else {
-        setUsers((current) => current.filter((user) => user.id !== deleteTarget.id));
-        toast.success("User removed successfully");
-        await fetchUsers();
+        let removeErrorMessage: string | null = null;
+
+        const { error: rpcError } = await supabase.rpc('remove_officer_user', {
+          p_user_id: deleteTarget.id,
+        });
+
+        if (rpcError) {
+          // Older deployments may not have the RPC yet. Fall back to a direct
+          // officer update, but verify afterward before showing success.
+          const isMissingRpc = rpcError.code === '42883' || /remove_officer_user/i.test(rpcError.message || '');
+
+          if (isMissingRpc) {
+            const { error: fallbackError } = await supabase
+              .from('profiles')
+              .update({ status: 'inactive', establishment_id: null })
+              .eq('id', deleteTarget.id)
+              .eq('role', 'establishment_staff');
+
+            if (fallbackError) {
+              removeErrorMessage = fallbackError.message;
+            }
+          } else {
+            removeErrorMessage = rpcError.message;
+          }
+        }
+
+        if (!removeErrorMessage) {
+          const { data: stillActiveUser, error: verifyError } = await supabase
+            .from('profiles')
+            .select('id, status, establishment_id')
+            .eq('id', deleteTarget.id)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (verifyError) {
+            removeErrorMessage = verifyError.message;
+          } else if (stillActiveUser) {
+            removeErrorMessage = "The database still shows this user as active. The Supabase removal RPC/policies need to be applied.";
+          }
+        }
+
+        if (removeErrorMessage) {
+          toast.error("Failed to remove user: " + removeErrorMessage);
+        } else {
+          setUsers((current) => current.filter((user) => user.id !== deleteTarget.id));
+          toast.success("User removed successfully");
+          await fetchUsers();
+        }
       }
     }
     setShowDeleteConfirm(false);
