@@ -32,8 +32,17 @@ const getEnv = (name, fallbackName) => {
   return value;
 };
 
+const safeProjectRefFromUrl = (url = '') => {
+  const match = String(url).match(/^https:\/\/([^.]+)\.supabase\.co/i);
+  return match?.[1] || 'unknown-project';
+};
+
+export const getSupabaseUrl = () => process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+
 export const getSupabaseAdmin = () => {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const url = getSupabaseUrl();
+  if (!url) throw new Error('Missing server environment variable: SUPABASE_URL');
+
   const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
   return createClient(url, serviceKey, {
     auth: {
@@ -63,10 +72,15 @@ export const getBearerToken = (req) => {
 
 export const verifyOfficerToken = async (req, supabaseAdmin) => {
   const token = getBearerToken(req);
-  if (!token) throw new Error('Missing officer session');
+  if (!token) throw new Error('Missing officer session. Please sign in again.');
 
   const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-  if (userError || !userData?.user?.id) throw new Error('Invalid officer session');
+  if (userError || !userData?.user?.id) {
+    const serverProject = safeProjectRefFromUrl(getSupabaseUrl());
+    throw new Error(
+      `Invalid officer session. Check Vercel env: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be from the same Supabase project as the live app (${serverProject}). Please sign out and sign in again after fixing env vars.`
+    );
+  }
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
