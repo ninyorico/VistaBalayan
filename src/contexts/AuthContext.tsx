@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { User } from '@supabase/supabase-js'
 
@@ -25,9 +25,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const profileRef = useRef<Profile | null>(null)
 
   useEffect(() => {
     let mounted = true
+
+    const updateProfile = (nextProfile: Profile | null) => {
+      profileRef.current = nextProfile
+      setProfile(nextProfile)
+    }
 
     const fetchProfile = async (userId: string) => {
       const { data, error } = await supabase
@@ -39,18 +45,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return
       if (error) {
         console.error('Profile fetch error:', error)
-        setProfile(null)
+        updateProfile(null)
         return
       }
 
       if (data?.status === 'inactive' || data?.status === 'deleted') {
-        setProfile(null)
+        updateProfile(null)
         setUser(null)
         await supabase.auth.signOut()
         return
       }
 
-      setProfile(data as Profile || null)
+      updateProfile(data as Profile || null)
     }
 
     // Check current session
@@ -63,28 +69,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         await fetchProfile(session.user.id)
       } else {
-        setProfile(null)
+        updateProfile(null)
       }
       if (mounted) setLoading(false)
     }
     
     checkSession()
 
-    // Listen for auth changes. Defer Supabase queries outside the auth callback
-    // to avoid leaving the app stuck on the loading screen after sign-in.
+    // Listen for auth changes. Avoid putting protected routes back into a global
+    // loading screen for token refreshes, because that unmounts the current page
+    // and makes the UI look like it restarts when the user changes browser tabs.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(true)
-      
-      if (session?.user) {
-        setTimeout(async () => {
-          await fetchProfile(session.user.id)
-          if (mounted) setLoading(false)
-        }, 0)
-      } else {
-        setProfile(null)
+      const nextUser = session?.user ?? null
+      setUser(nextUser)
+
+      if (!nextUser) {
+        updateProfile(null)
         setLoading(false)
+        return
       }
+
+      const hasCurrentProfile = Boolean(profileRef.current)
+      const sameProfileUser = profileRef.current?.id === nextUser.id
+      const shouldSilentlyKeepUi =
+        hasCurrentProfile && sameProfileUser && (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')
+
+      if (shouldSilentlyKeepUi) {
+        setLoading(false)
+        return
+      }
+
+      setLoading(!hasCurrentProfile)
+
+      setTimeout(async () => {
+        await fetchProfile(nextUser.id)
+        if (mounted) setLoading(false)
+      }, 0)
     })
 
     return () => {
@@ -114,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+    profileRef.current = null
     setProfile(null)
     setUser(null)
   }
