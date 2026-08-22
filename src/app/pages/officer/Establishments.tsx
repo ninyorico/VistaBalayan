@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Building2, MapPin, Phone, UserCog, Mail, Shield, X, Loader2, FileImage, ExternalLink, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { createEphemeralSupabaseClient, supabase } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
 import { getBusinessPermitImages } from "../../../lib/businessPermitImages";
 import { DEFAULT_ROOM_CONFIG, EstablishmentRoomConfig, getRoomConfigFromAmenities, setRoomConfigInAmenities } from "../../../lib/establishmentRoomConfig";
@@ -326,6 +326,32 @@ export default function Establishments() {
     return establishment.id as string;
   };
 
+  const callOfficerOtpApi = async (path: string, body: Record<string, unknown>) => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (sessionError || !accessToken) {
+      throw new Error("Officer session expired. Please sign in again.");
+    }
+
+    const response = await fetch(path, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.error || "OTP request failed");
+    }
+
+    return result;
+  };
+
   const handleCreateStaffWithEstablishment = async () => {
     const gmail = newAccountForm.email.trim().toLowerCase();
 
@@ -367,22 +393,10 @@ export default function Establishments() {
         throw new Error("An active VistaBalayan profile already exists for this Gmail address. Delete that user first or use another Gmail.");
       }
 
-      const authClient = createEphemeralSupabaseClient();
-      const { error: authError } = await authClient.auth.signInWithOtp({
+      await callOfficerOtpApi('/api/send-staff-otp', {
         email: gmail,
-        options: {
-          shouldCreateUser: true,
-          data: {
-            full_name: newAccountForm.full_name.trim(),
-            role: "establishment_staff",
-            status: "pending_otp",
-          },
-        },
+        fullName: newAccountForm.full_name.trim(),
       });
-
-      if (authError) {
-        throw new Error(authError.message);
-      }
 
       setPendingOnboarding({
         userId: null,
@@ -394,18 +408,7 @@ export default function Establishments() {
       toast.success("OTP sent to Gmail. Enter the 6-digit code here to create the establishment and staff account.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      if (message.toLowerCase().includes("rate limit")) {
-        setPendingOnboarding({
-          userId: null,
-          email: gmail,
-          fullName: newAccountForm.full_name.trim(),
-        });
-        setOtpCode("");
-        setOnboardingStep("otp");
-        toast.error("Supabase email limit was reached. If you already received an OTP, enter it here. If not, wait about 1 hour before sending another OTP.");
-      } else {
-        toast.error(`Failed to send OTP: ${message}`);
-      }
+      toast.error(`Failed to send OTP: ${message}`);
     } finally {
       setOnboardingSaving(false);
     }
@@ -424,28 +427,16 @@ export default function Establishments() {
 
     setOnboardingSaving(true);
     try {
-      const authClient = createEphemeralSupabaseClient();
-      const { data, error } = await authClient.auth.verifyOtp({
+      const result = await callOfficerOtpApi('/api/verify-staff-otp', {
         email: pendingOnboarding.email,
-        token: otpCode.trim(),
-        type: 'email',
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      const userId = data.user?.id || pendingOnboarding.userId;
-      if (!userId) {
-        throw new Error("OTP verified but Supabase did not return a user ID");
-      }
-
-      const { error: passwordError } = await authClient.auth.updateUser({
+        otp: otpCode.trim(),
         password: newAccountForm.password,
+        fullName: pendingOnboarding.fullName,
       });
 
-      if (passwordError) {
-        throw new Error(passwordError.message);
+      const userId = result.userId as string | undefined;
+      if (!userId) {
+        throw new Error("OTP verified but the server did not return a user ID");
       }
 
       const { normalizedRoomConfig, totalRooms } = getNormalizedRoomConfig();
