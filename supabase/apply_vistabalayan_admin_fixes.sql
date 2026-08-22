@@ -494,7 +494,7 @@ $$;
 grant execute on function public.remove_officer_user(uuid) to authenticated;
 
 
--- ===== 20260822_email_otps_nodemailer.sql =====
+-- ===== 20260822_email_otps_emailjs.sql =====
 
 -- Stores hashed OTPs for Nodemailer-powered staff creation and password reset.
 -- Run this in Supabase SQL Editor before using the Nodemailer OTP APIs.

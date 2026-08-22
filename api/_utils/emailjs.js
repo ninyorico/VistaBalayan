@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
 
 const json = (res, status, body) => {
@@ -150,38 +149,44 @@ export const findAuthUserByEmail = async (supabaseAdmin, email) => {
 };
 
 export const sendOtpEmail = async ({ to, code, purpose }) => {
-  const host = getEnv('SMTP_HOST');
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = getEnv('SMTP_USER');
-  const pass = getEnv('SMTP_PASS');
-  const from = getEnv('SMTP_FROM');
-  const fromName = process.env.SMTP_FROM_NAME || 'VistaBalayan';
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
+  const serviceId = getEnv('EMAILJS_SERVICE_ID');
+  const templateId = getEnv('EMAILJS_TEMPLATE_ID');
+  const publicKey = getEnv('EMAILJS_PUBLIC_KEY');
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY || process.env.EMAILJS_ACCESS_TOKEN || '';
+  const fromName = process.env.EMAILJS_FROM_NAME || 'VistaBalayan';
 
   const isReset = purpose === 'password_reset';
-  const subject = `${code} is your VistaBalayan ${isReset ? 'password reset' : 'verification'} code`;
-  const intro = isReset
+  const message = isReset
     ? 'Use this 6-digit code to reset your VistaBalayan account password.'
     : 'Use this 6-digit code to verify and create the VistaBalayan staff account.';
 
-  await transporter.sendMail({
-    from: `"${fromName}" <${from}>`,
-    to,
-    subject,
-    text: `${intro}\n\n${code}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0b2530">
-        <h2>VistaBalayan Verification Code</h2>
-        <p>${intro}</p>
-        <div style="font-size:32px;letter-spacing:8px;font-weight:700;background:#f1f5f9;border-radius:16px;padding:18px 24px;text-align:center">${code}</div>
-        <p>This code expires in 10 minutes. Do not share it with anyone.</p>
-      </div>
-    `,
+  const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: publicKey,
+      ...(privateKey ? { accessToken: privateKey } : {}),
+      template_params: {
+        to_email: to,
+        email: to,
+        name: fromName,
+        time: new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }),
+        message,
+        otp_code: code,
+        code,
+        expires_in: '10 minutes',
+        purpose: isReset ? 'Password Reset' : 'Staff Account Verification',
+        subject: `${code} is your VistaBalayan ${isReset ? 'password reset' : 'verification'} code`,
+      },
+    }),
   });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`EmailJS failed to send OTP${detail ? `: ${detail}` : ''}`);
+  }
 };
