@@ -8,7 +8,7 @@ import {
   sendJson,
   sendOtpEmail,
   storeOtp,
-} from './_utils/emailOtp.js';
+} from './_utils/nodemailer.js';
 
 export default async function handler(req, res) {
   if (!requireMethod(req, res)) return;
