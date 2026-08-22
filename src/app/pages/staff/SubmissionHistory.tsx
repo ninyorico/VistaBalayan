@@ -653,7 +653,7 @@ export default function SubmissionHistory() {
             <div className="max-h-[65vh] overflow-auto p-6">
               {viewingSubmission.type === "Visitor Report" ? (
                 <div className="overflow-x-auto">
-                  <table className="min-w-[820px] w-full text-left text-sm">
+                  <table className="min-w-[720px] w-full text-left text-sm">
                     <thead className="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
                       <tr>
                         <th className="px-3 py-2">Guest Group</th>
@@ -662,7 +662,6 @@ export default function SubmissionHistory() {
                         <th className="px-3 py-2">Male</th>
                         <th className="px-3 py-2">Female</th>
                         <th className="px-3 py-2">Total visitors</th>
-                        <th className="px-3 py-2">Report ID</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -674,7 +673,6 @@ export default function SubmissionHistory() {
                           <td className="px-3 py-2 text-slate-700">{Number(report.total_male || 0)}</td>
                           <td className="px-3 py-2 text-slate-700">{Number(report.total_female || 0)}</td>
                           <td className="px-3 py-2 font-semibold text-slate-900">{Number(report.total_guests || 0)}</td>
-                          <td className="px-3 py-2 font-mono text-xs text-slate-500">{report.id}</td>
                         </tr>
                       ))}
                     </tbody>

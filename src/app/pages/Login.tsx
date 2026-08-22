@@ -306,7 +306,7 @@ export default function Login() {
                   disabled={forgotLoading}
                   className="w-full rounded-2xl bg-[#0E5A72] px-5 py-3.5 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {forgotLoading ? 'Sending OTP...' : 'Send reset OTP'}
+                  {forgotLoading ? 'Sending...' : 'Reset password'}
                 </button>
               </form>
             ) : (

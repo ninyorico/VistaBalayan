@@ -1158,7 +1158,7 @@ export default function Establishments() {
               <button onClick={() => setShowOnboardingModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700" disabled={onboardingSaving}>Cancel</button>
               <button onClick={onboardingStep === "form" ? handleCreateStaffWithEstablishment : handleVerifyOnboardingOtp} disabled={onboardingSaving} className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg hover:shadow-lg hover:shadow-[#1CA7C9]/30 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed">
                 {onboardingSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {onboardingStep === "form" ? "Send OTP First" : "Confirm OTP and Create Account"}
+                {onboardingStep === "form" ? "Send OTP" : "Confirm OTP and Create Account"}
               </button>
             </div>
           </div>
