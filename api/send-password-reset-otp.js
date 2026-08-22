@@ -1,4 +1,5 @@
 import {
+  describeError,
   findAuthUserByEmail,
   generateOtp,
   getSupabaseAdmin,
@@ -39,6 +40,6 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { ok: true });
   } catch (error) {
     console.error('send-password-reset-otp failed', error);
-    return sendJson(res, 500, { error: error instanceof Error ? error.message : 'Failed to send reset OTP.' });
+    return sendJson(res, 500, { error: describeError(error, 'Failed to send reset OTP.') });
   }
 }

@@ -26,6 +26,15 @@ export const readBody = async (req) => {
 
 export const sendJson = json;
 
+export const describeError = (error, fallback = 'Request failed.') => {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object') {
+    const anyError = error;
+    return anyError.message || anyError.error_description || anyError.error || anyError.details || anyError.hint || JSON.stringify(anyError);
+  }
+  return typeof error === 'string' && error ? error : fallback;
+};
+
 const getEnv = (name, fallbackName) => {
   const value = process.env[name] || (fallbackName ? process.env[fallbackName] : '');
   if (!value) throw new Error(`Missing server environment variable: ${name}`);

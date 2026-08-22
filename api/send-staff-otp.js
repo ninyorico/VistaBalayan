@@ -1,4 +1,5 @@
 import {
+  describeError,
   generateOtp,
   getSupabaseAdmin,
   normalizeEmail,
@@ -56,6 +57,6 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { ok: true });
   } catch (error) {
     console.error('send-staff-otp failed', error);
-    return sendJson(res, 500, { error: error instanceof Error ? error.message : 'Failed to send OTP.' });
+    return sendJson(res, 500, { error: describeError(error, 'Failed to send OTP.') });
   }
 }
