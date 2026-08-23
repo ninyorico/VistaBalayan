@@ -408,14 +408,16 @@ export default function Profile() {
                 <p className={`text-xs font-medium ${gmailVerified ? "text-emerald-600" : "text-amber-600"}`}>
                   {gmailVerified ? "Gmail verified" : "Gmail not verified yet"}
                 </p>
-                <button
-                  type="button"
-                  onClick={handleSendEmailOtp}
-                  disabled={saving || !formData.email.trim()}
-                  className="inline-flex items-center justify-center rounded-lg bg-[#0E5A72] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0B4A5E] disabled:opacity-50"
-                >
-                  {emailVerificationStep === "otp" ? "Resend OTP" : "Verify Gmail"}
-                </button>
+                {!gmailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendEmailOtp}
+                    disabled={saving || !formData.email.trim()}
+                    className="inline-flex items-center justify-center rounded-lg bg-[#0E5A72] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0B4A5E] disabled:opacity-50"
+                  >
+                    {emailVerificationStep === "otp" ? "Resend OTP" : "Verify Gmail"}
+                  </button>
+                )}
               </div>
               {emailVerificationStep === "otp" && (
                 <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
