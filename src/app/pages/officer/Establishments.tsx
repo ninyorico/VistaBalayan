@@ -393,50 +393,15 @@ export default function Establishments() {
         throw new Error("An active VistaBalayan profile already exists for this Gmail address. Delete that user first or use another Gmail.");
       }
 
-      await callOfficerOtpApi('/api/send-staff-otp', {
+      const accountResult = await callOfficerOtpApi('/api/create-staff-account', {
         email: gmail,
-        fullName: newAccountForm.full_name.trim(),
-      });
-
-      setPendingOnboarding({
-        userId: null,
-        email: gmail,
-        fullName: newAccountForm.full_name.trim(),
-      });
-      setOtpCode("");
-      setOnboardingStep("otp");
-      toast.success("OTP sent to Gmail. Enter the 6-digit code here to create the establishment and staff account.");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to send OTP: ${message}`);
-    } finally {
-      setOnboardingSaving(false);
-    }
-  };
-
-  const handleVerifyOnboardingOtp = async () => {
-    if (!pendingOnboarding) {
-      toast.error("Please send the Gmail OTP first");
-      return;
-    }
-
-    if (!/^\d{6}$/.test(otpCode.trim())) {
-      toast.error("Enter the 6-digit OTP sent to Gmail");
-      return;
-    }
-
-    setOnboardingSaving(true);
-    try {
-      const result = await callOfficerOtpApi('/api/verify-staff-otp', {
-        email: pendingOnboarding.email,
-        otp: otpCode.trim(),
         password: newAccountForm.password,
-        fullName: pendingOnboarding.fullName,
+        fullName: newAccountForm.full_name.trim(),
       });
 
-      const userId = result.userId as string | undefined;
+      const userId = accountResult.userId as string | undefined;
       if (!userId) {
-        throw new Error("OTP verified but the server did not return a user ID");
+        throw new Error("The server did not return a staff user ID");
       }
 
       const { normalizedRoomConfig, totalRooms } = getNormalizedRoomConfig();
@@ -447,8 +412,8 @@ export default function Establishments() {
 
         const { error: profileRpcError } = await supabase.rpc('complete_officer_onboarding_staff_profile', {
           p_user_id: userId,
-          p_email: pendingOnboarding.email,
-          p_full_name: pendingOnboarding.fullName,
+          p_email: gmail,
+          p_full_name: newAccountForm.full_name.trim(),
           p_establishment_id: createdEstablishmentId,
           p_status: 'active',
         });
@@ -463,7 +428,7 @@ export default function Establishments() {
         throw profileError;
       }
 
-      toast.success("OTP confirmed. Staff account and establishment are now created.");
+      toast.success("Staff account and establishment created. The staff can verify or update the Gmail address from their Profile page.");
       setShowOnboardingModal(false);
       setOnboardingStep("form");
       setOtpCode("");
@@ -471,10 +436,15 @@ export default function Establishments() {
       fetchEstablishments();
       fetchUsers();
     } catch (error) {
-      toast.error(`Failed to verify OTP: ${error instanceof Error ? error.message : "Unknown error"}`);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to create account: ${message}`);
     } finally {
       setOnboardingSaving(false);
     }
+  };
+
+  const handleVerifyOnboardingOtp = async () => {
+    toast.info("OTP is no longer required during account creation. Click Create Account instead.");
   };
 
   const handleDeleteEstablishment = (id: string) => {
@@ -1110,7 +1080,7 @@ export default function Establishments() {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Add User</h2>
-                <p className="mt-1 text-sm text-gray-500">Send a Gmail OTP first. The establishment and staff profile are created only after the OTP is confirmed here.</p>
+                <p className="mt-1 text-sm text-gray-500">Create the staff login and linked establishment now. The staff can verify the Gmail address later from their Profile page.</p>
               </div>
               <button onClick={() => setShowOnboardingModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" disabled={onboardingSaving}>
                 <X className="w-5 h-5 text-gray-500" />
@@ -1121,7 +1091,7 @@ export default function Establishments() {
                 <>
                   <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
                     <h3 className="font-semibold text-gray-900">Staff account</h3>
-                    <p className="text-sm text-gray-600 mt-1">Only Gmail addresses are accepted. Enter the emailed 6-digit OTP in this system before the staff profile is created.</p>
+                    <p className="text-sm text-gray-600 mt-1">Only Gmail addresses are accepted. No OTP is required to create the account; Gmail validation is available after the staff signs in.</p>
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div><label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label><input type="text" value={newAccountForm.full_name} onChange={(e) => setNewAccountForm({ ...newAccountForm, full_name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Staff full name" /></div>
                       <div><label className="block text-sm font-medium text-gray-700 mb-2">Gmail Address *</label><input type="email" value={newAccountForm.email} onChange={(e) => setNewAccountForm({ ...newAccountForm, email: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="staff@gmail.com" /></div>
@@ -1132,7 +1102,7 @@ export default function Establishments() {
 
                   <div className="rounded-xl border border-gray-200 p-4">
                     <h3 className="font-semibold text-gray-900">Establishment details</h3>
-                    <p className="text-sm text-gray-500 mt-1">This establishment will be created only after the Gmail OTP is confirmed.</p>
+                    <p className="text-sm text-gray-500 mt-1">This establishment will be created immediately with the staff account.</p>
                     <div className="mt-4 space-y-4">
                       <div><label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name *</label><input type="text" value={establishmentForm.name} onChange={(e) => setEstablishmentForm({ ...establishmentForm, name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all" placeholder="Enter establishment name" /></div>
                       <div><label className="block text-sm font-medium text-gray-700 mb-2">Type *</label><select value={establishmentForm.type} onChange={(e) => setEstablishmentForm({ ...establishmentForm, type: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1CA7C9]/50 focus:border-[#1CA7C9] outline-none transition-all"><option value="Resort">Resort</option><option value="Hotel">Hotel</option></select></div>
@@ -1158,7 +1128,7 @@ export default function Establishments() {
               <button onClick={() => setShowOnboardingModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700" disabled={onboardingSaving}>Cancel</button>
               <button onClick={onboardingStep === "form" ? handleCreateStaffWithEstablishment : handleVerifyOnboardingOtp} disabled={onboardingSaving} className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1293B8] to-[#1CA7C9] text-white rounded-lg hover:shadow-lg hover:shadow-[#1CA7C9]/30 transition-all font-medium disabled:opacity-60 disabled:cursor-not-allowed">
                 {onboardingSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {onboardingStep === "form" ? "Send OTP" : "Confirm OTP and Create Account"}
+                {onboardingStep === "form" ? "Create Account" : "Confirm OTP and Create Account"}
               </button>
             </div>
           </div>

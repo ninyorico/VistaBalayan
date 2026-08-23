@@ -502,7 +502,7 @@ grant execute on function public.remove_officer_user(uuid) to authenticated;
 create table if not exists public.email_otps (
   id uuid primary key default gen_random_uuid(),
   email text not null,
-  purpose text not null check (purpose in ('staff_creation', 'password_reset')),
+  purpose text not null check (purpose in ('staff_creation', 'password_reset', 'email_verification')),
   otp_hash text not null,
   attempts integer not null default 0,
   metadata jsonb not null default '{}'::jsonb,
@@ -528,3 +528,12 @@ create policy "No client access to email otps"
   to authenticated, anon
   using (false)
   with check (false);
+
+-- ===== 20260823_staff_email_verification_otp.sql =====
+
+alter table public.email_otps
+  drop constraint if exists email_otps_purpose_check;
+
+alter table public.email_otps
+  add constraint email_otps_purpose_check
+  check (purpose in ('staff_creation', 'password_reset', 'email_verification'));

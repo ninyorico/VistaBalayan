@@ -179,9 +179,12 @@ export const sendOtpEmail = async ({ to, code, purpose }) => {
   const fromName = process.env.EMAILJS_FROM_NAME || 'VistaBalayan';
 
   const isReset = purpose === 'password_reset';
+  const isEmailVerification = purpose === 'email_verification';
   const message = isReset
     ? 'Use this 6-digit code to reset your VistaBalayan account password.'
-    : 'Use this 6-digit code to verify and create the VistaBalayan staff account.';
+    : isEmailVerification
+      ? 'Use this 6-digit code to verify that this Gmail address exists for your VistaBalayan account.'
+      : 'Use this 6-digit code to verify and create the VistaBalayan staff account.';
 
   const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
     method: 'POST',
@@ -202,7 +205,7 @@ export const sendOtpEmail = async ({ to, code, purpose }) => {
         otp_code: code,
         code,
         expires_in: '10 minutes',
-        purpose: isReset ? 'Password Reset' : 'Staff Account Verification',
+        purpose: isReset ? 'Password Reset' : isEmailVerification ? 'Gmail Verification' : 'Staff Account Verification',
         subject: `${code} is your VistaBalayan ${isReset ? 'password reset' : 'verification'} code`,
       },
     }),
