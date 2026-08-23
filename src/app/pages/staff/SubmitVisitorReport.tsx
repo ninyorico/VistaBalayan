@@ -284,102 +284,46 @@ const loadProfile = async () => {
         <div className="p-4 border-b border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Visitor Entries</h3>
-            <p className="mt-1 text-sm text-gray-500 md:hidden">Use the cards below on phone. No side-scroll is needed.</p>
+            <p className="mt-1 text-sm text-gray-500 md:hidden">Compact table for faster phone entry. Swipe only if your screen is very narrow.</p>
           </div>
           <button onClick={addEntry} className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-3 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] text-sm font-medium transition">
             <Plus className="w-4 h-4" /> Add Entry
           </button>
         </div>
 
-        <div className="space-y-4 p-4 md:hidden">
-          {entries.map((entry, index) => (
-            <div key={entry.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-gray-900">Entry {index + 1}</p>
-                <button onClick={() => removeEntry(entry.id)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50">
-                  <Trash2 className="h-4 w-4" /> Remove
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="min-w-0">
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Group Name <span className="text-gray-400">(Optional)</span></label>
-                  <input type="text" value={entry.groupName} onChange={(e) => updateEntry(entry.id, "groupName", e.target.value)} placeholder="Optional" className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="min-w-0">
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Male</label>
-                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.male)} onChange={(e) => updateEntry(entry.id, "male", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="0" />
-                  </div>
-                  <div className="min-w-0">
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Female</label>
-                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.female)} onChange={(e) => updateEntry(entry.id, "female", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="0" />
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-[#BFEAF2] bg-[#EAF9FC] px-3 py-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[#0F4C75]">Total visitors</p>
-                  <p className="text-2xl font-bold text-[#0B2530]">{entry.total}</p>
-                </div>
-
-                <div className="min-w-0">
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Place of Residence</label>
-                  <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                    <option>Within Batangas</option>
-                    <option>Outside of Batangas</option>
-                    <option>Others, specify</option>
-                  </select>
-                  {entry.residenceType === "Others, specify" && (
-                    <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Specify residence" className="mt-3 block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div className="rounded-xl border border-[#BFEAF2] bg-[#EAF9FC] p-4">
-            <p className="text-sm font-medium text-[#0F4C75]">Total Visitors Today</p>
-            <p className="text-3xl font-bold text-[#0B2530]">{calculateTotalVisitors()}</p>
-          </div>
-        </div>
-
-        <div className="hidden overflow-x-auto overscroll-x-contain md:block">
-          <table className="min-w-[720px] w-full">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="min-w-[560px] md:min-w-[720px] w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Group Name <span className="text-gray-400">(Optional)</span></th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Male</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Female</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Total</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Place of Residence</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
+                <th className="px-2 py-2 text-left text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Group & Residence</th>
+                <th className="px-1.5 py-2 text-left text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Male</th>
+                <th className="px-1.5 py-2 text-left text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Female</th>
+                <th className="px-1.5 py-2 text-center text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Total</th>
+                <th className="px-1.5 py-2 text-left text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {entries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2">
-                    <input type="text" value={entry.groupName} onChange={(e) => updateEntry(entry.id, "groupName", e.target.value)} placeholder="Optional" className="w-40 px-2 py-1 border rounded text-sm" />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.male)} onChange={(e) => updateEntry(entry.id, "male", parseNonNegativeInteger(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm" placeholder="0" />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.female)} onChange={(e) => updateEntry(entry.id, "female", parseNonNegativeInteger(e.target.value))} className="w-20 px-2 py-1 border rounded text-sm" placeholder="0" />
-                  </td>
-                  <td className="px-3 py-2 font-medium text-center">{entry.total}</td>
-                  <td className="px-3 py-2">
-                    <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="w-44 px-2 py-1 border rounded text-sm">
+                  <td className="px-2 py-2 md:px-3">
+                    <input type="text" value={entry.groupName} onChange={(e) => updateEntry(entry.id, "groupName", e.target.value)} placeholder="Group optional" className="block w-40 min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:w-44 md:text-sm" />
+                    <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="mt-1 block w-40 min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:w-44 md:text-sm">
                       <option>Within Batangas</option>
                       <option>Outside of Batangas</option>
                       <option>Others, specify</option>
                     </select>
                     {entry.residenceType === "Others, specify" && (
-                      <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Specify residence" className="mt-2 w-44 px-2 py-1 border rounded text-sm" />
+                      <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Specify residence" className="mt-1 block w-40 min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:w-44 md:text-sm" />
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-1.5 py-2 md:px-3">
+                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.male)} onChange={(e) => updateEntry(entry.id, "male", parseNonNegativeInteger(e.target.value))} className="w-14 rounded border border-gray-300 px-2 py-1.5 text-sm md:w-20" placeholder="0" />
+                  </td>
+                  <td className="px-1.5 py-2 md:px-3">
+                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.female)} onChange={(e) => updateEntry(entry.id, "female", parseNonNegativeInteger(e.target.value))} className="w-14 rounded border border-gray-300 px-2 py-1.5 text-sm md:w-20" placeholder="0" />
+                  </td>
+                  <td className="px-1.5 py-2 text-center text-sm font-semibold text-[#0B2530] md:px-3 md:text-base">{entry.total}</td>
+                  <td className="px-1.5 py-2 md:px-3">
                     <button onClick={() => removeEntry(entry.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -389,9 +333,9 @@ const loadProfile = async () => {
             </tbody>
             <tfoot className="bg-gray-50">
               <tr>
-                <td colSpan={3} className="px-3 py-2 text-right font-semibold">Total Visitors Today:</td>
-                <td className="px-3 py-2 font-bold text-blue-600 text-lg">{calculateTotalVisitors()}</td>
-                <td colSpan={2}></td>
+                <td colSpan={3} className="px-2 py-2 text-right text-sm font-semibold md:px-3">Total Visitors Today:</td>
+                <td className="px-1.5 py-2 text-center text-lg font-bold text-[#0F4C75] md:px-3">{calculateTotalVisitors()}</td>
+                <td></td>
               </tr>
             </tfoot>
           </table>

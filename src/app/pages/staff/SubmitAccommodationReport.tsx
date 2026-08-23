@@ -436,94 +436,49 @@ export default function SubmitAccommodationReport() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 sm:p-5 lg:p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Daily Room Occupancy</h3>
-          <p className="mt-1 text-sm text-gray-500 lg:hidden">Use the room cards below on phone and tablet. The table appears on laptop screens.</p>
+          <p className="mt-1 text-sm text-gray-500 lg:hidden">Compact table for faster entry. Swipe only if your screen is very narrow.</p>
         </div>
 
-        <div className="space-y-4 p-4 lg:hidden">
-          {roomData.map((room, index) => (
-            <div key={`${room.roomCode}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-900">{room.roomType}</p>
-                  <p className="mt-1 text-sm text-gray-500">{room.numberOfRooms} room{Number(room.numberOfRooms) === 1 ? "" : "s"} configured</p>
-                </div>
-                <span className="shrink-0 rounded bg-white px-3 py-1 font-mono text-sm font-semibold text-gray-700 ring-1 ring-gray-200">{room.roomCode}</span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="min-w-0">
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Occupied Rooms</label>
-                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0" />
-                </div>
-                <div className="min-w-0">
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Guest Check-ins</label>
-                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0" />
-                </div>
-                <div className="min-w-0">
-                  <label className="mb-2 block text-sm font-medium text-gray-700">Guest Nights</label>
-                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0" />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-[#BFEAF2] bg-[#EAF9FC] p-4 sm:grid-cols-4">
-            <div>
-              <p className="text-xs font-medium text-[#0F4C75]">Rooms</p>
-              <p className="text-2xl font-bold text-[#0B2530]">{totalRooms}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-[#0F4C75]">Occupied</p>
-              <p className="text-2xl font-bold text-[#0B2530]">{totalOccupiedRooms}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-[#0F4C75]">Check-ins</p>
-              <p className="text-2xl font-bold text-[#0B2530]">{totalCheckIns}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-[#0F4C75]">Guest nights</p>
-              <p className="text-2xl font-bold text-[#0B2530]">{totalGuestNights}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="hidden overflow-x-auto overscroll-x-contain lg:block">
-          <table className="min-w-[760px] w-full">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="min-w-[620px] lg:min-w-[760px] w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Room Type</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Room Code</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Number of Rooms</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Occupied Rooms</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Guest Check-ins</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Guest Nights</th>
+                <th className="px-2 py-2 text-left text-[11px] font-semibold text-gray-700 lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Room</th>
+                <th className="px-1.5 py-2 text-left text-[11px] font-semibold text-gray-700 lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Rooms</th>
+                <th className="px-1.5 py-2 text-left text-[11px] font-semibold text-gray-700 lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Occupied</th>
+                <th className="px-1.5 py-2 text-left text-[11px] font-semibold text-gray-700 lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Check-ins</th>
+                <th className="px-1.5 py-2 text-left text-[11px] font-semibold text-gray-700 lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Nights</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {roomData.map((room, index) => {
                 return (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">{room.roomType}</td>
-                    <td className="px-6 py-4"><span className="px-3 py-1 bg-gray-100 rounded font-mono text-sm">{room.roomCode}</span></td>
-                    <td className="px-6 py-4"><div className="w-24 px-3 py-2 bg-gray-50 border rounded-lg text-sm font-semibold">{room.numberOfRooms}</div></td>
-                    <td className="px-6 py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="w-24 px-3 py-2 border rounded-lg" placeholder="0" />
+                    <td className="px-2 py-2 lg:px-6 lg:py-4">
+                      <p className="w-36 text-xs font-semibold text-gray-900 lg:w-auto lg:text-base">{room.roomType}</p>
+                      <span className="mt-1 inline-block rounded bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-700 lg:px-3 lg:py-1 lg:text-sm">{room.roomCode}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="w-24 px-3 py-2 border border-gray-300 rounded-lg" placeholder="0" />
+                    <td className="px-1.5 py-2 lg:px-6 lg:py-4">
+                      <div className="w-14 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-sm font-semibold text-gray-900 lg:w-24 lg:px-3 lg:py-2">{room.numberOfRooms}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="w-24 px-3 py-2 border border-gray-300 rounded-lg" placeholder="0" />
+                    <td className="px-1.5 py-2 lg:px-6 lg:py-4">
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="w-16 rounded border border-gray-300 px-2 py-1.5 text-sm lg:w-24 lg:px-3 lg:py-2" placeholder="0" />
+                    </td>
+                    <td className="px-1.5 py-2 lg:px-6 lg:py-4">
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="w-16 rounded border border-gray-300 px-2 py-1.5 text-sm lg:w-24 lg:px-3 lg:py-2" placeholder="0" />
+                    </td>
+                    <td className="px-1.5 py-2 lg:px-6 lg:py-4">
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="w-16 rounded border border-gray-300 px-2 py-1.5 text-sm lg:w-24 lg:px-3 lg:py-2" placeholder="0" />
                     </td>
                   </tr>
                 );
               })}
               <tr className="bg-gray-50 font-semibold">
-                <td className="px-6 py-4" colSpan={2}>Total</td>
-                <td className="px-6 py-4 text-blue-600">{totalRooms}</td>
-                <td className="px-6 py-4 text-blue-600">{totalOccupiedRooms}</td>
-                <td className="px-6 py-4 text-blue-600">{totalCheckIns}</td>
-                <td className="px-6 py-4 text-blue-600">{totalGuestNights}</td>
+                <td className="px-2 py-2 lg:px-6 lg:py-4">Total</td>
+                <td className="px-1.5 py-2 text-[#0F4C75] lg:px-6 lg:py-4">{totalRooms}</td>
+                <td className="px-1.5 py-2 text-[#0F4C75] lg:px-6 lg:py-4">{totalOccupiedRooms}</td>
+                <td className="px-1.5 py-2 text-[#0F4C75] lg:px-6 lg:py-4">{totalCheckIns}</td>
+                <td className="px-1.5 py-2 text-[#0F4C75] lg:px-6 lg:py-4">{totalGuestNights}</td>
               </tr>
             </tbody>
           </table>
