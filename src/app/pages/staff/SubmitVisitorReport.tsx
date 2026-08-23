@@ -306,7 +306,7 @@ const loadProfile = async () => {
                 <th className="px-1 py-2 text-center text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Male</th>
                 <th className="px-1 py-2 text-center text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Female</th>
                 <th className="px-1.5 py-2 text-center text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Total</th>
-                <th className="px-1 py-2 text-center text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs"><span className="sm:hidden">Del</span><span className="hidden sm:inline">Action</span></th>
+                <th className="px-1 py-2 text-center text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
