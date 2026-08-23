@@ -292,7 +292,7 @@ const loadProfile = async () => {
         </div>
 
         <div className="overflow-x-auto overscroll-x-contain">
-          <table className="w-full min-w-[480px] table-fixed md:min-w-[720px]">
+          <table className="w-full min-w-full table-fixed md:min-w-[720px]">
             <colgroup>
               <col className="w-[44%]" />
               <col className="w-[16%]" />
