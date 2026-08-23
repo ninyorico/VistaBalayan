@@ -440,7 +440,14 @@ export default function SubmitAccommodationReport() {
         </div>
 
         <div className="overflow-x-auto overscroll-x-contain">
-          <table className="min-w-[620px] lg:min-w-[760px] w-full">
+          <table className="w-full min-w-[480px] table-fixed sm:min-w-[620px] lg:min-w-[760px]">
+            <colgroup>
+              <col className="w-[30%]" />
+              <col className="w-[14%]" />
+              <col className="w-[18.666%]" />
+              <col className="w-[18.666%]" />
+              <col className="w-[18.666%]" />
+            </colgroup>
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-2 py-2 text-left text-[11px] font-semibold text-gray-700 lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Room</th>
@@ -455,20 +462,20 @@ export default function SubmitAccommodationReport() {
                 return (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-2 py-2 lg:px-6 lg:py-4">
-                      <p className="w-36 text-xs font-semibold text-gray-900 lg:w-auto lg:text-base">{room.roomType}</p>
+                      <p className="max-w-full truncate text-xs font-semibold text-gray-900 lg:text-base">{room.roomType}</p>
                       <span className="mt-1 inline-block rounded bg-gray-100 px-2 py-0.5 font-mono text-[11px] text-gray-700 lg:px-3 lg:py-1 lg:text-sm">{room.roomCode}</span>
                     </td>
                     <td className="px-1.5 py-2 lg:px-6 lg:py-4">
-                      <div className="w-14 rounded border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-sm font-semibold text-gray-900 lg:w-24 lg:px-3 lg:py-2">{room.numberOfRooms}</div>
+                      <div className="w-full rounded border border-gray-200 bg-gray-50 px-1.5 py-1.5 text-center text-sm font-semibold text-gray-900 lg:px-3 lg:py-2">{room.numberOfRooms}</div>
                     </td>
                     <td className="px-1.5 py-2 lg:px-6 lg:py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="w-16 rounded border border-gray-300 px-2 py-1.5 text-sm lg:w-24 lg:px-3 lg:py-2" placeholder="0" />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm lg:px-3 lg:py-2" placeholder="0" />
                     </td>
                     <td className="px-1.5 py-2 lg:px-6 lg:py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="w-16 rounded border border-gray-300 px-2 py-1.5 text-sm lg:w-24 lg:px-3 lg:py-2" placeholder="0" />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm lg:px-3 lg:py-2" placeholder="0" />
                     </td>
                     <td className="px-1.5 py-2 lg:px-6 lg:py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="w-16 rounded border border-gray-300 px-2 py-1.5 text-sm lg:w-24 lg:px-3 lg:py-2" placeholder="0" />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm lg:px-3 lg:py-2" placeholder="0" />
                     </td>
                   </tr>
                 );

@@ -292,7 +292,14 @@ const loadProfile = async () => {
         </div>
 
         <div className="overflow-x-auto overscroll-x-contain">
-          <table className="min-w-[560px] md:min-w-[720px] w-full">
+          <table className="w-full min-w-[480px] table-fixed md:min-w-[720px]">
+            <colgroup>
+              <col className="w-[44%]" />
+              <col className="w-[16%]" />
+              <col className="w-[16%]" />
+              <col className="w-[12%]" />
+              <col className="w-[12%]" />
+            </colgroup>
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-2 py-2 text-left text-[11px] font-semibold text-gray-700 md:px-3 md:text-xs">Group & Residence</th>
@@ -306,21 +313,21 @@ const loadProfile = async () => {
               {entries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-gray-50">
                   <td className="px-2 py-2 md:px-3">
-                    <input type="text" value={entry.groupName} onChange={(e) => updateEntry(entry.id, "groupName", e.target.value)} placeholder="Group optional" className="block w-40 min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:w-44 md:text-sm" />
-                    <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="mt-1 block w-40 min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:w-44 md:text-sm">
+                    <input type="text" value={entry.groupName} onChange={(e) => updateEntry(entry.id, "groupName", e.target.value)} placeholder="Group optional" className="block w-full min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:text-sm" />
+                    <select value={entry.residenceType} onChange={(e) => updateEntry(entry.id, "residenceType", e.target.value)} className="mt-1 block w-full min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:text-sm">
                       <option>Within Batangas</option>
                       <option>Outside of Batangas</option>
                       <option>Others, specify</option>
                     </select>
                     {entry.residenceType === "Others, specify" && (
-                      <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Specify residence" className="mt-1 block w-40 min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:w-44 md:text-sm" />
+                      <input type="text" value={entry.placeOfResidence} onChange={(e) => updateEntry(entry.id, "placeOfResidence", e.target.value)} placeholder="Specify residence" className="mt-1 block w-full min-w-0 rounded border border-gray-300 px-2 py-1.5 text-xs md:text-sm" />
                     )}
                   </td>
                   <td className="px-1.5 py-2 md:px-3">
-                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.male)} onChange={(e) => updateEntry(entry.id, "male", parseNonNegativeInteger(e.target.value))} className="w-14 rounded border border-gray-300 px-2 py-1.5 text-sm md:w-20" placeholder="0" />
+                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.male)} onChange={(e) => updateEntry(entry.id, "male", parseNonNegativeInteger(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm" placeholder="0" />
                   </td>
                   <td className="px-1.5 py-2 md:px-3">
-                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.female)} onChange={(e) => updateEntry(entry.id, "female", parseNonNegativeInteger(e.target.value))} className="w-14 rounded border border-gray-300 px-2 py-1.5 text-sm md:w-20" placeholder="0" />
+                    <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(entry.female)} onChange={(e) => updateEntry(entry.id, "female", parseNonNegativeInteger(e.target.value))} className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm" placeholder="0" />
                   </td>
                   <td className="px-1.5 py-2 text-center text-sm font-semibold text-[#0B2530] md:px-3 md:text-base">{entry.total}</td>
                   <td className="px-1.5 py-2 md:px-3">
