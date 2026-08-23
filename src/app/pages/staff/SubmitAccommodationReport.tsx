@@ -343,30 +343,30 @@ export default function SubmitAccommodationReport() {
 
       {/* Room Setup Modal */}
       {showRoomSetup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Room Configuration</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-lg shadow-xl max-w-2xl w-full max-h-[92vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Room Configuration</h2>
               <p className="text-gray-600 mt-1">
                 Set the number of rooms for each room type. This will be saved for future reports.
               </p>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="space-y-4">
                 {roomTypes.map((room) => (
-                  <div key={room.code} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-4">
+                  <div key={room.code} className="grid grid-cols-1 gap-4 p-4 border border-gray-200 rounded-lg sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                       <span className="px-3 py-1 bg-gray-100 rounded font-mono text-sm font-semibold">
                         {room.code}
                       </span>
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium text-gray-900">{room.type}</p>
                         <p className="text-sm text-gray-500">Room Type</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-gray-700">Number of Rooms:</label>
+                    <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
+                      <label className="text-sm font-medium text-gray-700">Number of Rooms</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -378,7 +378,7 @@ export default function SubmitAccommodationReport() {
                             [room.code]: parseNonNegativeInteger(e.target.value),
                           })
                         }
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg"
+                        className="block w-full min-w-0 max-w-full sm:w-24 px-3 py-2 border border-gray-300 rounded-lg"
                         placeholder="0"
                       />
                     </div>
@@ -394,7 +394,7 @@ export default function SubmitAccommodationReport() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+            <div className="p-4 sm:p-6 border-t border-gray-200 grid grid-cols-1 gap-3 sm:flex sm:justify-end">
               <button
                 onClick={() => setShowRoomSetup(false)}
                 className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
@@ -403,7 +403,7 @@ export default function SubmitAccommodationReport() {
               </button>
               <button
                 onClick={saveRoomConfiguration}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-6 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75]"
               >
                 Save Configuration
               </button>
@@ -434,10 +434,60 @@ export default function SubmitAccommodationReport() {
 
       {/* Room Occupancy Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-5 lg:p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Daily Room Occupancy</h3>
+        <div className="p-4 sm:p-5 lg:p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Daily Room Occupancy</h3>
+          <p className="mt-1 text-sm text-gray-500 lg:hidden">Use the room cards below on phone and tablet. The table appears on laptop screens.</p>
         </div>
-        <div className="overflow-x-auto overscroll-x-contain">
+
+        <div className="space-y-4 p-4 lg:hidden">
+          {roomData.map((room, index) => (
+            <div key={`${room.roomCode}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900">{room.roomType}</p>
+                  <p className="mt-1 text-sm text-gray-500">{room.numberOfRooms} room{Number(room.numberOfRooms) === 1 ? "" : "s"} configured</p>
+                </div>
+                <span className="shrink-0 rounded bg-white px-3 py-1 font-mono text-sm font-semibold text-gray-700 ring-1 ring-gray-200">{room.roomCode}</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="min-w-0">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Occupied Rooms</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0" />
+                </div>
+                <div className="min-w-0">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Guest Check-ins</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0" />
+                </div>
+                <div className="min-w-0">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Guest Nights</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="block w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0" />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-[#BFEAF2] bg-[#EAF9FC] p-4 sm:grid-cols-4">
+            <div>
+              <p className="text-xs font-medium text-[#0F4C75]">Rooms</p>
+              <p className="text-2xl font-bold text-[#0B2530]">{totalRooms}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-[#0F4C75]">Occupied</p>
+              <p className="text-2xl font-bold text-[#0B2530]">{totalOccupiedRooms}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-[#0F4C75]">Check-ins</p>
+              <p className="text-2xl font-bold text-[#0B2530]">{totalCheckIns}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-[#0F4C75]">Guest nights</p>
+              <p className="text-2xl font-bold text-[#0B2530]">{totalGuestNights}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden overflow-x-auto overscroll-x-contain lg:block">
           <table className="min-w-[760px] w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -481,33 +531,33 @@ export default function SubmitAccommodationReport() {
       </div>
 
       {/* Computed Analytics */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Computed Analytics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <p className="text-sm text-blue-700 font-medium mb-1">Average Guest Night</p>
-            <p className="text-3xl font-bold text-blue-900">{avgGuestNight}</p>
-            <p className="text-xs text-blue-600 mt-1">nights per guest</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+          <div className="bg-[#EAF9FC] rounded-lg p-4 border border-[#BFEAF2]">
+            <p className="text-sm text-[#0F4C75] font-medium mb-1">Average Guest Night</p>
+            <p className="text-3xl font-bold text-[#0B2530]">{avgGuestNight}</p>
+            <p className="text-xs text-[#5D6F73] mt-1">nights per guest</p>
           </div>
-          <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-            <p className="text-sm text-purple-700 font-medium mb-1">Average Room Occupancy Rate</p>
-            <p className="text-3xl font-bold text-purple-900">{avgOccupancyRate}%</p>
-            <p className="text-xs text-purple-600 mt-1">monthly average</p>
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <p className="text-sm text-gray-700 font-medium mb-1">Average Room Occupancy Rate</p>
+            <p className="text-3xl font-bold text-gray-900">{avgOccupancyRate}%</p>
+            <p className="text-xs text-gray-500 mt-1">monthly average</p>
           </div>
-          <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-            <p className="text-sm text-green-700 font-medium mb-1">Average Guest Per Room</p>
-            <p className="text-3xl font-bold text-green-900">{avgGuestPerRoom}</p>
-            <p className="text-xs text-green-600 mt-1">guests per room</p>
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <p className="text-sm text-gray-700 font-medium mb-1">Average Guest Per Room</p>
+            <p className="text-3xl font-bold text-gray-900">{avgGuestPerRoom}</p>
+            <p className="text-xs text-gray-500 mt-1">guests per room</p>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-4">
-        <button onClick={handleSaveDraft} className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+      <div className="grid grid-cols-1 gap-3 sm:flex sm:gap-4">
+        <button onClick={handleSaveDraft} className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
           <Save className="w-5 h-5" /> Save Draft
         </button>
-        <button onClick={handleSubmit} disabled={submitting} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button onClick={handleSubmit} disabled={submitting} className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] disabled:cursor-not-allowed disabled:opacity-60">
           <Send className="w-5 h-5" /> {submitting ? "Submitting..." : "Submit Hotel Report"}
         </button>
       </div>
