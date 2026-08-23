@@ -442,19 +442,19 @@ export default function SubmitAccommodationReport() {
         <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-full table-fixed sm:min-w-[620px] lg:min-w-[760px]">
             <colgroup>
-              <col className="w-[22%]" />
+              <col className="w-[26%]" />
               <col className="w-[13%]" />
-              <col className="w-[21%]" />
-              <col className="w-[23%]" />
+              <col className="w-[20%]" />
+              <col className="w-[20%]" />
               <col className="w-[21%]" />
             </colgroup>
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-700 sm:px-2 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Room</th>
-                <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Rooms</th>
-                <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Occupied</th>
-                <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Check-ins</th>
-                <th className="px-1 py-2 text-left text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Nights</th>
+                <th className="px-1 py-2 text-center text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase"><span className="sm:hidden">No.</span><span className="hidden sm:inline">Rooms</span></th>
+                <th className="px-1 py-2 text-center text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase"><span className="sm:hidden">Occ.</span><span className="hidden sm:inline">Occupied</span></th>
+                <th className="px-1 py-2 text-center text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase"><span className="sm:hidden">In</span><span className="hidden sm:inline">Check-ins</span></th>
+                <th className="px-1 py-2 text-center text-[10px] font-semibold text-gray-700 sm:px-1.5 sm:text-[11px] lg:px-6 lg:py-3 lg:text-xs lg:uppercase">Nights</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -466,16 +466,16 @@ export default function SubmitAccommodationReport() {
                       <span className="mt-1 inline-block max-w-full truncate rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px] text-gray-700 sm:px-2 sm:text-[11px] lg:px-3 lg:py-1 lg:text-sm">{room.roomCode}</span>
                     </td>
                     <td className="px-1 py-2 sm:px-1.5 lg:px-6 lg:py-4">
-                      <div className="w-full min-w-0 rounded border border-gray-200 bg-gray-50 px-1 py-1.5 text-center text-sm font-semibold text-gray-900 lg:px-3 lg:py-2">{room.numberOfRooms}</div>
+                      <div className="w-full min-w-0 rounded-md border border-gray-200 bg-gray-50 px-1 py-1.5 text-center text-sm font-semibold tabular-nums text-gray-900 lg:px-3 lg:py-2">{room.numberOfRooms}</div>
                     </td>
                     <td className="px-1 py-2 sm:px-1.5 lg:px-6 lg:py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="w-full min-w-0 rounded border border-gray-300 px-1.5 py-1.5 text-sm lg:px-3 lg:py-2" placeholder="0" />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.occupied)} onChange={(e) => updateRoomData(index, "occupied", parseNonNegativeInteger(e.target.value))} className="w-full min-w-0 rounded-md border border-gray-300 px-1 py-1.5 text-center text-sm tabular-nums lg:px-3 lg:py-2" placeholder="0" />
                     </td>
                     <td className="px-1 py-2 sm:px-1.5 lg:px-6 lg:py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="w-full min-w-0 rounded border border-gray-300 px-1.5 py-1.5 text-sm lg:px-3 lg:py-2" placeholder="0" />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.checkIns)} onChange={(e) => updateRoomData(index, "checkIns", parseNonNegativeInteger(e.target.value))} className="w-full min-w-0 rounded-md border border-gray-300 px-1 py-1.5 text-center text-sm tabular-nums lg:px-3 lg:py-2" placeholder="0" />
                     </td>
                     <td className="px-1 py-2 sm:px-1.5 lg:px-6 lg:py-4">
-                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="w-full min-w-0 rounded border border-gray-300 px-1.5 py-1.5 text-sm lg:px-3 lg:py-2" placeholder="0" />
+                      <input type="text" inputMode="numeric" pattern="[0-9]*" value={numericInputValue(room.guestNights)} onChange={(e) => updateRoomData(index, "guestNights", parseNonNegativeInteger(e.target.value))} className="w-full min-w-0 rounded-md border border-gray-300 px-1 py-1.5 text-center text-sm tabular-nums lg:px-3 lg:py-2" placeholder="0" />
                     </td>
                   </tr>
                 );
