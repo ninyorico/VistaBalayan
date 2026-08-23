@@ -62,9 +62,10 @@ export default async function handler(req, res) {
     const code = generateOtp();
     await storeOtp(supabaseAdmin, {
       email,
-      purpose: 'email_verification',
+      purpose: 'staff_creation',
       code,
       metadata: {
+        flow: 'email_verification',
         userId: user.id,
         previousEmail: user.email || '',
       },

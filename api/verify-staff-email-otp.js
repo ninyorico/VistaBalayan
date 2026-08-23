@@ -67,8 +67,8 @@ export default async function handler(req, res) {
       throw new Error('Another Supabase auth account already uses this Gmail address.');
     }
 
-    const otpRow = await consumeOtp(supabaseAdmin, { email, purpose: 'email_verification', code });
-    if (otpRow.metadata?.userId && otpRow.metadata.userId !== user.id) {
+    const otpRow = await consumeOtp(supabaseAdmin, { email, purpose: 'staff_creation', code });
+    if (otpRow.metadata?.flow !== 'email_verification' || otpRow.metadata?.userId !== user.id) {
       throw new Error('This OTP was not requested by the signed-in staff account.');
     }
 
