@@ -298,9 +298,9 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                       {isExpanded && (
                         <tr key={`${group.establishment}-details`} className="bg-slate-50/80">
                           <td colSpan={7} className="px-6 py-4">
-                            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                            <div className="max-h-80 overflow-auto overscroll-contain rounded-lg border border-gray-200 bg-white">
                               <table className="w-full min-w-[760px]">
-                                <thead className="bg-white border-b border-gray-200">
+                                <thead className="sticky top-0 z-10 bg-white border-b border-gray-200">
                                   <tr>
                                     <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Date</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Guest/Group</th>
