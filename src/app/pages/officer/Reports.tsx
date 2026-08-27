@@ -741,12 +741,12 @@ export default function Reports() {
           <h3 className="text-lg font-semibold text-gray-900">Submissions</h3>
           <p className="text-sm text-gray-600">Use Auto Check to approve normal pending/on-hold reports and keep only structurally invalid reports on hold, then click Review when manual action is needed.</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="max-h-[28rem] overflow-auto overscroll-contain">
           {loading ? (
             <div className="p-8 text-center">Loading...</div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50">
+            <table className="w-full min-w-[720px]">
+              <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Establishment</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Type</th>
