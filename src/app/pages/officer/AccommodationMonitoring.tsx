@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, Download, TrendingUp } from "lucide-react";
+import { Fragment, useState, useEffect, useMemo } from "react";
+import { ChevronDown, ChevronRight, Download, Search, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
@@ -27,6 +27,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
   const [searchTerm, setSearchTerm] = useState("");
   const [specificMonth, setSpecificMonth] = useState("");
   const [establishmentTotalRooms, setEstablishmentTotalRooms] = useState(0);
+  const [expandedEstablishments, setExpandedEstablishments] = useState<Set<string>>(new Set());
 
   // Summary statistics
   const [summaryStats, setSummaryStats] = useState({
@@ -237,6 +238,73 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
     return matchesSearch && matchesDate;
   });
 
+  const groupedRecords = useMemo(() => {
+    const groups = new Map<string, {
+      key: string;
+      establishment: string;
+      records: AccommodationRecord[];
+      totalRooms: number;
+      totalGuests: number;
+      guestNights: number;
+      occupiedRooms: number;
+      monthNames: Set<string>;
+    }>();
+
+    filteredRecords.forEach((record) => {
+      const key = record.establishmentId || record.establishment;
+      const current = groups.get(key) || {
+        key,
+        establishment: record.establishment,
+        records: [],
+        totalRooms: 0,
+        totalGuests: 0,
+        guestNights: 0,
+        occupiedRooms: 0,
+        monthNames: new Set<string>(),
+      };
+
+      current.records.push(record);
+      current.totalRooms = Math.max(current.totalRooms, record.totalRooms);
+      current.totalGuests += record.totalGuests;
+      current.guestNights += record.guestNights;
+      current.occupiedRooms += record.occupiedRooms;
+      current.monthNames.add(record.month);
+      groups.set(key, current);
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        records: [...group.records].sort((a, b) => b.date.localeCompare(a.date)),
+        avgOccupancy: calculateAverageAccommodationOccupancy(
+          group.records.map((record) => ({
+            id: record.id,
+            report_date: record.date,
+            total_rooms: record.totalRooms,
+            total_occupied_rooms: record.occupiedRooms,
+          }))
+        ),
+        avgGuestsPerRoom: group.occupiedRooms > 0 ? group.guestNights / group.occupiedRooms : 0,
+      }))
+      .sort((a, b) => a.establishment.localeCompare(b.establishment));
+  }, [filteredRecords]);
+
+  const toggleEstablishment = (key: string) => {
+    setExpandedEstablishments((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const monthLabel = specificMonth
+    ? new Date(`${specificMonth}-01T00:00:00`).toLocaleString("default", { month: "long", year: "numeric" })
+    : "all available months";
+
   // Recalculate stats for filtered records
   const filteredStats = {
     totalRooms: searchTerm || specificMonth
@@ -377,14 +445,19 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
         </div>
       </div>
 
-      {/* Accommodation Records Table */}
+      {/* Accommodation Records by Establishment */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+          <h2 className="font-semibold text-gray-900">Accommodation records by establishment</h2>
+          <p className="mt-1 text-sm text-gray-600">Click an establishment to expand and view the full {monthLabel} record.</p>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[920px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Establishment</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Month</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Records</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Month(s)</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Rooms</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Avg Occupancy</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Guests</th>
@@ -394,49 +467,90 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredRecords.length > 0 ? (
-                filteredRecords.map((record) => {
-                  const avgGuestsPerRoom = record.occupiedRooms > 0 
-                    ? record.guestNights / record.occupiedRooms 
-                    : 0;
-                  
+              {groupedRecords.length > 0 ? (
+                groupedRecords.map((group) => {
+                  const isExpanded = expandedEstablishments.has(group.key);
                   return (
-                    <tr key={record.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">{record.establishment}</td>
-                      <td className="px-6 py-4 text-gray-600">{record.month}</td>
-                      <td className="px-6 py-4 text-gray-900">{record.totalRooms}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
-                            <div
-                              className={`h-2 rounded-full ${
-                                record.avgOccupancy >= 90 ? "bg-green-500" :
-                                record.avgOccupancy >= 70 ? "bg-blue-500" :
-                                record.avgOccupancy >= 50 ? "bg-yellow-500" : "bg-red-500"
-                              }`}
-                              style={{ width: `${Math.min(record.avgOccupancy, 100)}%` }}
-                            />
+                    <Fragment key={group.key}>
+                      <tr className="cursor-pointer hover:bg-gray-50" onClick={() => toggleEstablishment(group.key)}>
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
+                            {group.establishment}
                           </div>
-                          <span className="text-sm font-medium text-gray-900">{record.avgOccupancy.toFixed(1)}%</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-blue-600 font-medium">{record.totalGuests}</td>
-                      <td className="px-6 py-4 text-gray-900">{record.guestNights}</td>
-                      <td className="px-6 py-4 text-teal-600 font-medium">{avgGuestsPerRoom.toFixed(2)}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                          record.avgOccupancy >= 90 ? "bg-green-100 text-green-700" :
-                          record.avgOccupancy >= 70 ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
-                        }`}>
-                          {record.avgOccupancy >= 90 ? "Excellent" : record.avgOccupancy >= 70 ? "Good" : "Fair"}
-                        </span>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">{group.records.length}</td>
+                        <td className="px-6 py-4 text-gray-600">{Array.from(group.monthNames).join(", ")}</td>
+                        <td className="px-6 py-4 text-gray-900">{group.totalRooms}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 w-24">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  group.avgOccupancy >= 90 ? "bg-green-500" :
+                                  group.avgOccupancy >= 70 ? "bg-blue-500" :
+                                  group.avgOccupancy >= 50 ? "bg-yellow-500" : "bg-red-500"
+                                }`}
+                                style={{ width: `${Math.min(group.avgOccupancy, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{group.avgOccupancy.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-blue-600 font-medium">{group.totalGuests}</td>
+                        <td className="px-6 py-4 text-gray-900">{group.guestNights}</td>
+                        <td className="px-6 py-4 text-teal-600 font-medium">{group.avgGuestsPerRoom.toFixed(2)}</td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                            group.avgOccupancy >= 90 ? "bg-green-100 text-green-700" :
+                            group.avgOccupancy >= 70 ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
+                          }`}>
+                            {group.avgOccupancy >= 90 ? "Excellent" : group.avgOccupancy >= 70 ? "Good" : "Fair"}
+                          </span>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${group.key}-details`} className="bg-slate-50/80">
+                          <td colSpan={9} className="px-6 py-4">
+                            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                              <table className="w-full min-w-[820px]">
+                                <thead className="bg-white border-b border-gray-200">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Date</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Month</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Total Rooms</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Reported Rooms</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Occupied Rooms</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Avg Occupancy</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Total Guests</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Guest Nights</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {group.records.map((record) => (
+                                    <tr key={record.id}>
+                                      <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-600">{record.month}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-900">{record.totalRooms}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-900">{record.reportedRooms}</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.occupiedRooms}</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-green-700">{record.avgOccupancy.toFixed(1)}%</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{record.totalGuests}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-900">{record.guestNights}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                     No accommodation records found.
                   </td>
                 </tr>

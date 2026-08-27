@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, Download } from "lucide-react";
+import { Fragment, useState, useEffect, useMemo } from "react";
+import { ChevronDown, ChevronRight, Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
@@ -22,6 +22,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
   const [searchTerm, setSearchTerm] = useState("");
   const [filterResidence, setFilterResidence] = useState("all");
   const [specificMonth, setSpecificMonth] = useState("");
+  const [expandedEstablishments, setExpandedEstablishments] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchVisitorRecords();
@@ -84,6 +85,61 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
     
     return matchesSearch && matchesResidence && matchesDate;
   });
+
+  const groupedRecords = useMemo(() => {
+    const groups = new Map<string, {
+      establishment: string;
+      records: VisitorRecord[];
+      male: number;
+      female: number;
+      total: number;
+      locations: Set<string>;
+      residenceTypes: Set<string>;
+    }>();
+
+    filteredRecords.forEach((record) => {
+      const current = groups.get(record.establishment) || {
+        establishment: record.establishment,
+        records: [],
+        male: 0,
+        female: 0,
+        total: 0,
+        locations: new Set<string>(),
+        residenceTypes: new Set<string>(),
+      };
+
+      current.records.push(record);
+      current.male += record.male;
+      current.female += record.female;
+      current.total += record.total;
+      current.locations.add(record.location);
+      current.residenceTypes.add(record.residenceType);
+      groups.set(record.establishment, current);
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        records: [...group.records].sort((a, b) => b.date.localeCompare(a.date)),
+      }))
+      .sort((a, b) => a.establishment.localeCompare(b.establishment));
+  }, [filteredRecords]);
+
+  const toggleEstablishment = (establishment: string) => {
+    setExpandedEstablishments((current) => {
+      const next = new Set(current);
+      if (next.has(establishment)) {
+        next.delete(establishment);
+      } else {
+        next.add(establishment);
+      }
+      return next;
+    });
+  };
+
+  const monthLabel = specificMonth
+    ? new Date(`${specificMonth}-01T00:00:00`).toLocaleString("default", { month: "long", year: "numeric" })
+    : "all available months";
 
   const totalVisitors = filteredRecords.reduce((sum, r) => sum + r.total, 0);
   const totalMale = filteredRecords.reduce((sum, r) => sum + r.male, 0);
@@ -200,49 +256,85 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
         </div>
       </div>
 
-      {/* Visitor Records Table */}
+      {/* Visitor Records by Establishment */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+          <h2 className="font-semibold text-gray-900">Visitor records by establishment</h2>
+          <p className="mt-1 text-sm text-gray-600">Click an establishment to expand and view the full {monthLabel} record.</p>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[860px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Establishment</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Guest/Group</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Records</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Male</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Female</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Place of Residence</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Location<br/><span className="normal-case tracking-normal text-slate-400">If outside Batangas, state municipality</span></th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Visitors</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Places of Residence</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Locations</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredRecords.length > 0 ? (
-                filteredRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-600">{record.date}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{record.establishment}</td>
-                    <td className="px-6 py-4 text-gray-900">{record.guestName}</td>
-                    <td className="px-6 py-4 text-blue-600 font-medium">{record.male}</td>
-                    <td className="px-6 py-4 text-purple-600 font-medium">{record.female}</td>
-                    <td className="px-6 py-4 text-gray-900 font-semibold">{record.total}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                        record.residenceType === "Batangas Resident"
-                          ? "bg-blue-100 text-blue-700"
-                          : record.residenceType === "Outside Batangas"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-green-100 text-green-700"
-                      }`}>
-                        {record.residenceType}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{record.location}</td>
-                  </tr>
-                ))
+              {groupedRecords.length > 0 ? (
+                groupedRecords.map((group) => {
+                  const isExpanded = expandedEstablishments.has(group.establishment);
+                  return (
+                    <Fragment key={group.establishment}>
+                      <tr className="cursor-pointer hover:bg-gray-50" onClick={() => toggleEstablishment(group.establishment)}>
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
+                            {group.establishment}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">{group.records.length}</td>
+                        <td className="px-6 py-4 text-blue-600 font-medium">{group.male}</td>
+                        <td className="px-6 py-4 text-purple-600 font-medium">{group.female}</td>
+                        <td className="px-6 py-4 text-gray-900 font-semibold">{group.total}</td>
+                        <td className="px-6 py-4 text-gray-600">{Array.from(group.residenceTypes).join(", ")}</td>
+                        <td className="px-6 py-4 text-gray-600">{Array.from(group.locations).join(", ")}</td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${group.establishment}-details`} className="bg-slate-50/80">
+                          <td colSpan={7} className="px-6 py-4">
+                            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                              <table className="w-full min-w-[760px]">
+                                <thead className="bg-white border-b border-gray-200">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Date</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Guest/Group</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Male</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Female</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Total</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Place of Residence</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Location</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {group.records.map((record) => (
+                                    <tr key={record.id}>
+                                      <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-900">{record.guestName}</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{record.male}</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-purple-600">{record.female}</td>
+                                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.total}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-600">{record.residenceType}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-600">{record.location}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     No visitor records found.
                   </td>
                 </tr>
