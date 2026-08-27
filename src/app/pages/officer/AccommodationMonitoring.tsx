@@ -451,7 +451,87 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
           <h2 className="font-semibold text-gray-900">Accommodation records by establishment</h2>
           <p className="mt-1 text-sm text-gray-600">Click an establishment to expand and view the full {monthLabel} record.</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="space-y-3 p-4 sm:hidden">
+          {groupedRecords.length > 0 ? (
+            groupedRecords.map((group) => {
+              const isExpanded = expandedEstablishments.has(group.key);
+              return (
+                <div key={group.key} className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                  <button
+                    type="button"
+                    className="w-full p-4 text-left"
+                    onClick={() => toggleEstablishment(group.key)}
+                    aria-expanded={isExpanded}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />}
+                          <p className="truncate font-semibold text-gray-900">{group.establishment}</p>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">{group.records.length} record(s) • {Array.from(group.monthNames).join(", ")}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+                        group.avgOccupancy >= 90 ? "bg-green-100 text-green-700" :
+                        group.avgOccupancy >= 70 ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
+                      }`}>
+                        {group.avgOccupancy.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-xl bg-slate-50 p-3">
+                        <p className="text-xs text-gray-500">Rooms</p>
+                        <p className="font-semibold text-gray-900">{group.totalRooms}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 p-3">
+                        <p className="text-xs text-gray-500">Guests</p>
+                        <p className="font-semibold text-blue-600">{group.totalGuests}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 p-3">
+                        <p className="text-xs text-gray-500">Guest Nights</p>
+                        <p className="font-semibold text-gray-900">{group.guestNights}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 p-3">
+                        <p className="text-xs text-gray-500">Avg Guest/Room</p>
+                        <p className="font-semibold text-teal-600">{group.avgGuestsPerRoom.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-gray-200 bg-slate-50 p-3">
+                      <div className="max-h-72 space-y-3 overflow-y-auto overscroll-contain pr-1">
+                        {group.records.map((record) => (
+                          <div key={record.id} className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-semibold text-gray-900">{record.date}</p>
+                                <p className="text-xs text-gray-500">{record.month}</p>
+                              </div>
+                              <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">{record.avgOccupancy.toFixed(1)}%</span>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                              <p><span className="text-gray-500">Total rooms:</span> <span className="font-medium text-gray-900">{record.totalRooms}</span></p>
+                              <p><span className="text-gray-500">Reported:</span> <span className="font-medium text-gray-900">{record.reportedRooms}</span></p>
+                              <p><span className="text-gray-500">Occupied:</span> <span className="font-medium text-gray-900">{record.occupiedRooms}</span></p>
+                              <p><span className="text-gray-500">Guests:</span> <span className="font-medium text-blue-600">{record.totalGuests}</span></p>
+                              <p className="col-span-2"><span className="text-gray-500">Guest nights:</span> <span className="font-medium text-gray-900">{record.guestNights}</span></p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+              No accommodation records found.
+            </div>
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[920px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
