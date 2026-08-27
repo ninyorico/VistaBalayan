@@ -4,6 +4,8 @@ import { supabase } from '../../../lib/supabase'
 import { geminiService } from '../../../services/geminiService'
 import { cleanAiText, formatConfidence, splitAiRecommendation } from '../../../lib/aiText'
 
+const DEFAULT_AI_ITEMS_VISIBLE = 5
+
 interface Anomaly {
   id: string
   anomaly_type: string
@@ -31,6 +33,12 @@ export default function AIInsights() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [showAllServiceGaps, setShowAllServiceGaps] = useState(false)
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false)
+
+  const activeAnomalies = anomalies.filter(a => !a.is_resolved)
+  const visibleAnomalies = showAllServiceGaps ? activeAnomalies : activeAnomalies.slice(0, DEFAULT_AI_ITEMS_VISIBLE)
+  const visibleInsights = showAllRecommendations ? insights : insights.slice(0, DEFAULT_AI_ITEMS_VISIBLE)
 
   useEffect(() => {
     loadCachedData()
@@ -59,7 +67,6 @@ export default function AIInsights() {
         .select('*')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
-        .limit(10)
 
       setInsights(insightsData || [])
 
@@ -160,12 +167,12 @@ export default function AIInsights() {
             <h3 className="text-lg font-semibold text-gray-900">Service Gaps or Operational Challenges</h3>
           </div>
           <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-            {anomalies.filter(a => !a.is_resolved).length} Active
+            {activeAnomalies.length} Active
           </span>
         </div>
         <div className="space-y-4">
-          {anomalies.filter(a => !a.is_resolved).length > 0 ? (
-            anomalies.filter(a => !a.is_resolved).map((anomaly) => (
+          {activeAnomalies.length > 0 ? (
+            visibleAnomalies.map((anomaly) => (
               <div
                 key={anomaly.id}
                 className={`border-l-4 rounded-lg p-4 ${
@@ -219,6 +226,17 @@ export default function AIInsights() {
             </div>
           )}
         </div>
+        {activeAnomalies.length > DEFAULT_AI_ITEMS_VISIBLE && (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAllServiceGaps((current) => !current)}
+              className="px-4 py-2 text-sm font-medium text-[#0F4C75] border border-[#1CA7C9]/30 rounded-lg hover:bg-[#E8F8FC] transition"
+            >
+              {showAllServiceGaps ? 'Show fewer service gaps' : `See all service gaps (${activeAnomalies.length})`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* AI Recommendations */}
@@ -229,7 +247,7 @@ export default function AIInsights() {
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {insights.length > 0 ? (
-            insights.map((insight) => {
+            visibleInsights.map((insight) => {
               const { summary, action } = splitAiRecommendation(insight.description, insight.recommended_action)
               const confidence = formatConfidence(insight.confidence_score)
 
@@ -263,6 +281,17 @@ export default function AIInsights() {
             </div>
           )}
         </div>
+        {insights.length > DEFAULT_AI_ITEMS_VISIBLE && (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAllRecommendations((current) => !current)}
+              className="px-4 py-2 text-sm font-medium text-[#0F4C75] border border-[#1CA7C9]/30 rounded-lg hover:bg-[#E8F8FC] transition"
+            >
+              {showAllRecommendations ? 'Show fewer recommendations' : `See all recommendations (${insights.length})`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
