@@ -292,18 +292,18 @@ setOccupancyRate(occupancyRate);
         metricValue={`${occupancyRate.toFixed(1)}%`}
       />
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
         {[
           { label: "Total visitors", value: totalVisitors.toLocaleString(), icon: Users, tone: "bg-cyan-50 text-[#0E5A72] ring-cyan-100" },
           { label: "Monthly arrivals", value: monthlyArrivals.toLocaleString(), icon: TrendingUp, tone: "bg-slate-50 text-[#0B2530] ring-slate-200" },
           { label: "Occupancy rate", value: `${occupancyRate.toFixed(1)}%`, icon: Bed, tone: "bg-[#EAF2F1] text-[#0E5A72] ring-[#b8d2cf]" },
           { label: "Establishments", value: totalEstablishments.toString(), icon: Building2, tone: "bg-emerald-50 text-[#2F5F55] ring-emerald-100" },
         ].map((stat) => (
-          <MetricCard key={stat.label} {...stat} />
+          <MetricCard key={stat.label} {...stat} compact />
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
         {[
           { label: "Active reports", value: workflowMetrics.activeReports, helper: "Pending, review, or hold", icon: AlertTriangle, tone: "bg-amber-50 text-amber-700 ring-amber-100" },
           { label: "Pending reports", value: workflowMetrics.pendingReports, helper: "Waiting for officer review", icon: Clock, tone: "bg-[#EAF2F1] text-[#0E5A72] ring-[#b8d2cf]" },
@@ -311,7 +311,7 @@ setOccupancyRate(occupancyRate);
           { label: "Resolved reports", value: workflowMetrics.resolvedReports, helper: "Approved or rejected", icon: CheckCircle, tone: "bg-emerald-50 text-[#2F5F55] ring-emerald-100" },
           { label: "Avg. resolution", value: `${workflowMetrics.averageResolutionHours.toFixed(1)}h`, helper: "Submit to decision", icon: TrendingUp, tone: "bg-slate-50 text-[#0B2530] ring-slate-200" },
         ].map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
+          <MetricCard key={metric.label} {...metric} compact />
         ))}
       </section>
 

@@ -75,20 +75,21 @@ interface MetricCardProps {
   icon: ElementType;
   tone?: string;
   className?: string;
+  compact?: boolean;
 }
 
-export function MetricCard({ label, value, helper, icon: Icon, tone = "bg-cyan-50 text-[#0E5A72] ring-cyan-100", className }: MetricCardProps) {
+export function MetricCard({ label, value, helper, icon: Icon, tone = "bg-cyan-50 text-[#0E5A72] ring-cyan-100", className, compact = false }: MetricCardProps) {
   return (
     <Card className={cn("tourism-card gap-0 rounded-3xl p-0 transition duration-200 hover:-translate-y-0.5 hover:shadow-tourism-hover", className)}>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent className={cn(compact ? "p-3 sm:p-4 lg:p-5" : "p-5")}>
+        <div className={cn("flex items-start justify-between", compact ? "flex-col gap-3 sm:flex-row sm:gap-4" : "gap-4")}>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-[#5D6F73]">{label}</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-[#0B2530] tabular-nums">{value}</p>
-            {helper && <p className="mt-1 text-xs leading-5 text-[#5D6F73]">{helper}</p>}
+            <p className={cn("font-medium text-[#5D6F73]", compact ? "text-[11px] leading-4 sm:text-sm" : "text-sm")}>{label}</p>
+            <p className={cn("mt-2 font-semibold tracking-[-0.035em] text-[#0B2530] tabular-nums", compact ? "text-2xl sm:text-3xl" : "text-3xl")}>{value}</p>
+            {helper && <p className={cn("mt-1 leading-5 text-[#5D6F73]", compact ? "text-[10px] sm:text-xs" : "text-xs")}>{helper}</p>}
           </div>
-          <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1", tone)}>
-            <Icon className="h-5 w-5" strokeWidth={1.8} />
+          <div className={cn("flex shrink-0 items-center justify-center rounded-2xl ring-1", compact ? "h-9 w-9 sm:h-11 sm:w-11" : "h-11 w-11", tone)}>
+            <Icon className={cn(compact ? "h-4 w-4 sm:h-5 sm:w-5" : "h-5 w-5")} strokeWidth={1.8} />
           </div>
         </div>
       </CardContent>
