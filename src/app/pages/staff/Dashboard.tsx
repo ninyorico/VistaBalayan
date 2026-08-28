@@ -17,6 +17,7 @@ import {
 import { supabase } from "../../../lib/supabase";
 import { calculateAccommodationOccupancy, groupStaffSubmissions } from "../../../lib/reportMetrics";
 import { canSubmitAccommodationReport, canSubmitVisitorReport, getPrimaryReportFormLabel } from "../../../lib/establishmentReportForms";
+import { EmptyState, LoadingState, MetricCard, PageHero, PanelCard } from "../../components/vista/PolishedShell";
 
 const statusStyles = {
   approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -140,45 +141,24 @@ export default function StaffDashboard() {
   ];
 
   if (loading) {
-    return (
-      <div className="grid min-h-[60vh] place-items-center">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-b-[#0E5A72]"></div>
-          <p className="mt-4 text-sm font-medium text-[#5D6F73]">Loading establishment dashboard</p>
-        </div>
-      </div>
-    );
+    return <LoadingState label="Loading establishment dashboard" />;
   }
 
   return (
     <div className="space-y-7">
-      <section className="overflow-hidden rounded-[2rem] border border-white/20 tourism-panel-dark shadow-[0_28px_90px_rgba(7,59,76,0.22)]">
-        <div className="relative p-6 sm:p-8 lg:p-10">
-          <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl" />
-          <div className="absolute bottom-0 left-1/2 h-40 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-200">Establishment portal</p>
-              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.035em] text-white sm:text-4xl">
-                Submit your assigned {reportFormLabel.toLowerCase()} for Balayan tourism monitoring.
-              </h1>
-            </div>
-            <button
-              onClick={() => navigate("/staff/submission-history")}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-[#0B2530] transition hover:bg-cyan-50 active:scale-[0.98]"
-            >
-              View history
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Establishment portal"
+        title={`Submit your assigned ${reportFormLabel.toLowerCase()} for Balayan tourism monitoring.`}
+        description="Keep reports, listing updates, and performance signals in one calm workspace."
+        actionLabel="View history"
+        onAction={() => navigate("/staff/submission-history")}
+      />
 
       <section className={`grid grid-cols-1 gap-4 ${showVisitorForm && showAccommodationForm ? "md:grid-cols-2" : ""}`}>
         {showVisitorForm && (
           <button
             onClick={() => navigate("/staff/submit-visitor-report")}
-            className="group min-h-32 rounded-3xl border border-slate-200 bg-white p-7 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99] lg:min-h-40 lg:p-10"
+            className="group min-h-32 rounded-3xl border border-[#d7e5e2] bg-white/90 p-7 text-left shadow-tourism backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-tourism-hover active:scale-[0.99] lg:min-h-40 lg:p-10"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -198,7 +178,7 @@ export default function StaffDashboard() {
         {showAccommodationForm && (
           <button
             onClick={() => navigate("/staff/submit-accommodation-report")}
-            className="group min-h-32 rounded-3xl border border-slate-200 bg-white p-7 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-lg active:scale-[0.99] lg:min-h-40 lg:p-10"
+            className="group min-h-32 rounded-3xl border border-[#d7e5e2] bg-white/90 p-7 text-left shadow-tourism backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#0E5A72]/30 hover:shadow-tourism-hover active:scale-[0.99] lg:min-h-40 lg:p-10"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -216,51 +196,24 @@ export default function StaffDashboard() {
         )}
 
         {!showVisitorForm && !showAccommodationForm && (
-          <div className="rounded-3xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] bg-white p-6 text-sm text-[#5D6F73]">
-            No report form is assigned to this establishment yet. Please ask the municipal tourism officer to update the establishment type or room count.
-          </div>
+          <EmptyState>No report form is assigned to this establishment yet. Please ask the municipal tourism officer to update the establishment type or room count.</EmptyState>
         )}
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {submissionStats.map((stat) => (
-          <div key={stat.title} className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-tourism-hover">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-[#5D6F73]">{stat.title}</p>
-                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#0B2530]">{stat.value}</p>
-              </div>
-              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
-                <stat.icon className="h-5 w-5" />
-              </div>
-            </div>
-          </div>
+          <MetricCard key={stat.title} label={stat.title} value={stat.value} icon={stat.icon} tone={stat.tone} />
         ))}
       </section>
 
       {showAccommodationForm && (
-        <section className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-7 shadow-tourism backdrop-blur-xl lg:p-10">
-          <div>
-            <h3 className="text-lg font-bold text-[#0B2530]">Hotel analytics</h3>
-            <p className="mt-1 text-sm text-[#5D6F73]">Computed from your submitted hotel accommodation reports.</p>
-          </div>
-          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <PanelCard title="Hotel analytics" description="Computed from your submitted hotel accommodation reports." className="p-0">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {hotelPerformanceStats.map((stat) => (
-              <div key={stat.title} className="rounded-3xl border border-[#d7e5e2]/80 bg-[#f8fbf8] p-6 lg:p-8">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-[#5D6F73]">{stat.title}</p>
-                    <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#0B2530]">{stat.value}</p>
-                    <p className="mt-1 text-xs font-medium text-[#5D6F73]">{stat.subtitle}</p>
-                  </div>
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                </div>
-              </div>
+              <MetricCard key={stat.title} label={stat.title} value={stat.value} helper={stat.subtitle} icon={stat.icon} tone={stat.tone} className="bg-[#f8fbf8] shadow-none" />
             ))}
           </div>
-        </section>
+        </PanelCard>
       )}
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">

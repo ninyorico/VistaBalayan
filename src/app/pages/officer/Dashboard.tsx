@@ -26,6 +26,8 @@ import {
 import { supabase } from "../../../lib/supabase";
 import { calculateAccommodationOccupancy } from "../../../lib/reportMetrics";
 import { calculateAverageResolutionHours, normalizeReportStatus } from "../../../lib/governance";
+import { Button } from "../../components/ui/button";
+import { EmptyState, LoadingState, MetricCard, PageHero, PanelCard } from "../../components/vista/PolishedShell";
 
 interface RecentSubmission {
   id: string;
@@ -266,104 +268,55 @@ setOccupancyRate(occupancyRate);
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#34A0A4] mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading dashboard data...</p>
-      </div>
-    );
+    return <LoadingState label="Loading tourism dashboard" />;
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <p className="text-red-600">{error}</p>
-          <button 
-            onClick={fetchAllDashboardData}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <EmptyState className="mx-auto max-w-md border-rose-200 bg-rose-50 text-rose-700">
+        <p>{error}</p>
+        <Button type="button" onClick={fetchAllDashboardData} className="mt-4 rounded-2xl bg-[#0E5A72] text-white hover:bg-[#073B4C]">
+          Retry
+        </Button>
+      </EmptyState>
     );
   }
 
   return (
     <div className="space-y-7">
-      <section className="overflow-hidden rounded-[2rem] border border-white/20 tourism-panel-dark shadow-[0_28px_90px_rgba(7,59,76,0.22)]">
-        <div className="relative p-6 sm:p-8 lg:p-10">
-          <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-cyan-400/20 blur-3xl" />
-          <div className="absolute bottom-0 left-1/3 h-44 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-200">Officer command center</p>
-              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.035em] text-white sm:text-4xl">
-                Tourism activity, submissions, and AI alerts in one workspace.
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                Monitor approved and pending tourism records, inspect establishment performance, and act on anomalies before report generation.
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Current occupancy</p>
-              <p className="mt-2 text-3xl font-bold text-white">{occupancyRate.toFixed(1)}%</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Officer workspace"
+        title="Tourism activity, submissions, and AI alerts in one workspace."
+        description="Monitor records, inspect establishment performance, and act on anomalies before report generation."
+        metricLabel="Current occupancy"
+        metricValue={`${occupancyRate.toFixed(1)}%`}
+      />
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Total visitors", value: totalVisitors.toLocaleString(), icon: Users, tone: "bg-sky-50 text-sky-700 ring-sky-100" },
-          { label: "Monthly arrivals", value: monthlyArrivals.toLocaleString(), icon: TrendingUp, tone: "bg-cyan-50 text-cyan-700 ring-cyan-100" },
-          { label: "Occupancy rate", value: `${occupancyRate.toFixed(1)}%`, icon: Bed, tone: "bg-amber-50 text-amber-700 ring-amber-100" },
-          { label: "Establishments", value: totalEstablishments.toString(), icon: Building2, tone: "bg-emerald-50 text-emerald-700 ring-emerald-100" },
+          { label: "Total visitors", value: totalVisitors.toLocaleString(), icon: Users, tone: "bg-cyan-50 text-[#0E5A72] ring-cyan-100" },
+          { label: "Monthly arrivals", value: monthlyArrivals.toLocaleString(), icon: TrendingUp, tone: "bg-slate-50 text-[#0B2530] ring-slate-200" },
+          { label: "Occupancy rate", value: `${occupancyRate.toFixed(1)}%`, icon: Bed, tone: "bg-[#EAF2F1] text-[#0E5A72] ring-[#b8d2cf]" },
+          { label: "Establishments", value: totalEstablishments.toString(), icon: Building2, tone: "bg-emerald-50 text-[#2F5F55] ring-emerald-100" },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-tourism-hover">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-[#5D6F73]">{stat.label}</p>
-                <p className="mt-2 text-3xl font-bold tracking-[-0.03em] text-[#0B2530]">{stat.value}</p>
-              </div>
-              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
-                <stat.icon className="h-5 w-5" />
-              </div>
-            </div>
-          </div>
+          <MetricCard key={stat.label} {...stat} />
         ))}
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         {[
-          { label: "Active reports", value: workflowMetrics.activeReports, helper: "Pending, under review, or on hold", icon: AlertTriangle, tone: "bg-orange-50 text-orange-700 ring-orange-100" },
-          { label: "Pending reports", value: workflowMetrics.pendingReports, helper: "Waiting for officer review", icon: Clock, tone: "bg-yellow-50 text-yellow-700 ring-yellow-100" },
-          { label: "On-hold reports", value: workflowMetrics.onHoldReports, helper: "Needs manual verification", icon: AlertTriangle, tone: "bg-red-50 text-red-700 ring-red-100" },
-          { label: "Resolved reports", value: workflowMetrics.resolvedReports, helper: "Approved or rejected", icon: CheckCircle, tone: "bg-green-50 text-green-700 ring-green-100" },
-          { label: "Avg. resolution", value: `${workflowMetrics.averageResolutionHours.toFixed(1)}h`, helper: "From submit to decision", icon: TrendingUp, tone: "bg-blue-50 text-blue-700 ring-blue-100" },
+          { label: "Active reports", value: workflowMetrics.activeReports, helper: "Pending, review, or hold", icon: AlertTriangle, tone: "bg-amber-50 text-amber-700 ring-amber-100" },
+          { label: "Pending reports", value: workflowMetrics.pendingReports, helper: "Waiting for officer review", icon: Clock, tone: "bg-[#EAF2F1] text-[#0E5A72] ring-[#b8d2cf]" },
+          { label: "On hold", value: workflowMetrics.onHoldReports, helper: "Needs manual verification", icon: AlertTriangle, tone: "bg-rose-50 text-rose-700 ring-rose-100" },
+          { label: "Resolved reports", value: workflowMetrics.resolvedReports, helper: "Approved or rejected", icon: CheckCircle, tone: "bg-emerald-50 text-[#2F5F55] ring-emerald-100" },
+          { label: "Avg. resolution", value: `${workflowMetrics.averageResolutionHours.toFixed(1)}h`, helper: "Submit to decision", icon: TrendingUp, tone: "bg-slate-50 text-[#0B2530] ring-slate-200" },
         ].map((metric) => (
-          <div key={metric.label} className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-5 shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-tourism-hover">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-[#5D6F73]">{metric.label}</p>
-                <p className="mt-2 text-2xl font-bold tracking-[-0.03em] text-[#0B2530]">{metric.value}</p>
-                <p className="mt-1 text-xs text-[#5D6F73]">{metric.helper}</p>
-              </div>
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${metric.tone}`}>
-                <metric.icon className="h-5 w-5" />
-              </div>
-            </div>
-          </div>
+          <MetricCard key={metric.label} {...metric} />
         ))}
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
-          <div className="mb-5">
-            <h3 className="text-lg font-bold text-[#0B2530]">Monthly visitor trends</h3>
-            <p className="mt-1 text-sm text-[#5D6F73]">Aggregated visitor counts by report month.</p>
-          </div>
+        <PanelCard title="Monthly visitor trends" description="Aggregated visitor counts by report month.">
           {visitorTrends.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={visitorTrends}>
@@ -381,15 +334,11 @@ setOccupancyRate(occupancyRate);
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-12 text-center text-sm text-[#5D6F73]">No visitor data available</div>
+            <EmptyState>No visitor data available</EmptyState>
           )}
-        </div>
+        </PanelCard>
 
-        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
-          <div className="mb-5">
-            <h3 className="text-lg font-bold text-[#0B2530]">Visitor demographics</h3>
-            <p className="mt-1 text-sm text-[#5D6F73]">Share of visitors by residence category.</p>
-          </div>
+        <PanelCard title="Visitor demographics" description="Share of visitors by residence category.">
           {demographics.length > 0 && demographics.some((d) => d.value > 0) ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -400,16 +349,12 @@ setOccupancyRate(occupancyRate);
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-12 text-center text-sm text-[#5D6F73]">No demographic data available</div>
+            <EmptyState>No demographic data available</EmptyState>
           )}
-        </div>
+        </PanelCard>
       </section>
 
-      <section className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
-        <div className="mb-5">
-          <h3 className="text-lg font-bold text-[#0B2530]">Top performing establishments</h3>
-          <p className="mt-1 text-sm text-[#5D6F73]">Ranked by submitted visitor volume.</p>
-        </div>
+      <PanelCard title="Top performing establishments" description="Ranked by submitted visitor volume.">
         {topEstablishments.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={topEstablishments}>
@@ -421,14 +366,13 @@ setOccupancyRate(occupancyRate);
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-12 text-center text-sm text-[#5D6F73]">No establishment data available</div>
+          <EmptyState>No establishment data available</EmptyState>
         )}
-      </section>
+      </PanelCard>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
-          <h3 className="text-lg font-bold text-[#0B2530]">Recent submissions</h3>
-          <div className="mt-5 space-y-3">
+        <PanelCard title="Recent submissions">
+          <div className="space-y-3">
             {recentSubmissions.length > 0 ? (
               recentSubmissions.map((sub) => (
                 <div key={sub.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4">
@@ -450,14 +394,13 @@ setOccupancyRate(occupancyRate);
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-10 text-center text-sm text-[#5D6F73]">No submissions yet</div>
+              <EmptyState>No submissions yet</EmptyState>
             )}
           </div>
-        </div>
+        </PanelCard>
 
-        <div className="rounded-3xl border border-[#d7e5e2] bg-white/88 p-6 shadow-tourism backdrop-blur-xl">
-          <h3 className="text-lg font-bold text-[#0B2530]">Service Gaps or Operational Challenges</h3>
-          <div className="mt-5 space-y-3">
+        <PanelCard title="Service gaps or operational challenges">
+          <div className="space-y-3">
             {anomalies.length > 0 ? (
               anomalies.map((anomaly) => (
                 <div key={anomaly.id} className={`flex items-start gap-3 rounded-2xl border p-4 ${
@@ -478,10 +421,10 @@ setOccupancyRate(occupancyRate);
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-[#b8d2cf] bg-[#f8fbf8] py-10 text-center text-sm text-[#5D6F73]">No service gaps or operational challenges detected</div>
+              <EmptyState>No service gaps or operational challenges detected</EmptyState>
             )}
           </div>
-        </div>
+        </PanelCard>
       </section>
     </div>
   );
