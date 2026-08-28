@@ -115,7 +115,7 @@ export default function AIInsights() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#0E5A72] mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-[#1CA7C9] mx-auto mb-4" />
           <p className="text-gray-600">Loading AI insights...</p>
         </div>
       </div>
@@ -125,9 +125,9 @@ export default function AIInsights() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div className="vista-page-heading">
-          <h1 className="vista-title">AI Insights</h1>
-          <p className="vista-subtitle">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">AI Insights</h1>
+          <p className="text-gray-600 mt-1">
             AI-powered service gap tracking and intelligent recommendations
           </p>
           {lastUpdated && (
@@ -137,7 +137,7 @@ export default function AIInsights() {
         <button
           onClick={refreshData}
           disabled={refreshing}
-          className="px-4 py-2 vista-button-primary flex items-center gap-2"
+          className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition flex items-center gap-2"
         >
           {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           {refreshing ? 'Refreshing...' : 'Refresh Analysis'}
@@ -145,14 +145,14 @@ export default function AIInsights() {
       </div>
 
       {/* AI Status Card */}
-      <div className="tourism-panel-dark text-white rounded-3xl shadow-tourism p-6">
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg shadow-sm p-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
             <Brain className="w-8 h-8" />
           </div>
           <div>
             <h2 className="text-2xl font-bold mb-1">AI Analysis Active</h2>
-            <p className="text-cyan-100">
+            <p className="text-purple-100">
               Powered by Google Gemini AI 
             </p>
           </div>
@@ -160,7 +160,7 @@ export default function AIInsights() {
       </div>
 
       {/* Service Gaps / Operational Challenges */}
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
@@ -187,14 +187,14 @@ export default function AIInsights() {
                   <div className="flex items-start gap-3 flex-1">
                     <AlertTriangle className={`w-5 h-5 mt-0.5 ${
                       anomaly.severity === 'high' ? 'text-red-600' : 
-                      anomaly.severity === 'medium' ? 'text-yellow-600' : 'text-[#0E5A72]'
+                      anomaly.severity === 'medium' ? 'text-yellow-600' : 'text-blue-600'
                     }`} />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-semibold text-gray-900">{anomaly.anomaly_type}</h4>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                           anomaly.severity === 'high' ? 'bg-red-200 text-red-800' :
-                          anomaly.severity === 'medium' ? 'bg-yellow-200 text-yellow-800' : 'bg-blue-200 text-[#0B2530]'
+                          anomaly.severity === 'medium' ? 'bg-yellow-200 text-yellow-800' : 'bg-blue-200 text-blue-800'
                         }`}>
                           {anomaly.severity}
                         </span>
@@ -231,7 +231,7 @@ export default function AIInsights() {
             <button
               type="button"
               onClick={() => setShowAllServiceGaps((current) => !current)}
-              className="px-4 py-2 text-sm font-medium text-[#0E5A72] border border-[#1CA7C9]/30 rounded-lg hover:bg-[#E8F8FC] transition"
+              className="px-4 py-2 text-sm font-medium text-[#0F4C75] border border-[#1CA7C9]/30 rounded-lg hover:bg-[#E8F8FC] transition"
             >
               {showAllServiceGaps ? 'Show fewer service gaps' : `See all service gaps (${activeAnomalies.length})`}
             </button>
@@ -240,9 +240,9 @@ export default function AIInsights() {
       </div>
 
       {/* AI Recommendations */}
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-[#0E5A72]" />
+          <TrendingUp className="w-5 h-5 text-purple-600" />
           AI-Powered Recommendations
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -256,7 +256,7 @@ export default function AIInsights() {
                 <div className="flex items-start justify-between mb-2">
                   <h4 className="font-semibold text-gray-900">{cleanAiText(insight.title)}</h4>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    insight.impact === 'high' ? 'bg-[#EAF2F1] text-[#0E5A72]' : 'bg-[#EAF2F1] text-[#0E5A72]'
+                    insight.impact === 'high' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
                   }`}>
                     {insight.impact} impact
                   </span>
@@ -286,7 +286,7 @@ export default function AIInsights() {
             <button
               type="button"
               onClick={() => setShowAllRecommendations((current) => !current)}
-              className="px-4 py-2 text-sm font-medium text-[#0E5A72] border border-[#1CA7C9]/30 rounded-lg hover:bg-[#E8F8FC] transition"
+              className="px-4 py-2 text-sm font-medium text-[#0F4C75] border border-[#1CA7C9]/30 rounded-lg hover:bg-[#E8F8FC] transition"
             >
               {showAllRecommendations ? 'Show fewer recommendations' : `See all recommendations (${insights.length})`}
             </button>

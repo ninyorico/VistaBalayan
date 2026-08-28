@@ -491,13 +491,13 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="vista-page-heading">
-        <h1 className="vista-title">Reports</h1>
-        <p className="vista-subtitle">Generate and export tourism data reports</p>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
+        <p className="text-gray-600 mt-1">Generate and export tourism data reports</p>
       </div>
 
       {/* Simplified Filters */}
-      <div className="vista-card p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex flex-wrap items-center gap-4">
           {/* Filter Type Toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
@@ -512,7 +512,7 @@ export default function Reports() {
                 }}
                 className={`px-3 py-1.5 text-sm rounded-lg transition ${
                   filterType === type
-                    ? "bg-[#0E5A72] text-white"
+                    ? "bg-blue-600 text-white"
                     : "text-gray-600 hover:bg-gray-200"
                 }`}
               >
@@ -604,7 +604,7 @@ export default function Reports() {
           <button
             onClick={handleAutoCheckReports}
             disabled={autoChecking || autoCheckCount === 0}
-            className="flex items-center gap-2 px-4 py-1.5 bg-[#0E5A72] text-white rounded-lg hover:bg-[#0B2530] disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+            className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-sm"
             title="Automatically approve normal pending/on-hold reports and keep structurally invalid reports on hold"
           >
             {autoChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
@@ -622,7 +622,7 @@ export default function Reports() {
       </div>
 
       {/* Report Chart */}
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Visitor Trends ({getFilterLabel()})
         </h3>
@@ -643,13 +643,13 @@ export default function Reports() {
       </div>
 
       {/* Administrative Summary Output */}
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Administrative Report Summary</h3>
             <p className="text-sm text-gray-600">Summarized output for review and reference: {getFilterLabel()}</p>
           </div>
-          <span className="px-3 py-1 rounded-full bg-blue-50 text-[#0E5A72] text-xs font-medium uppercase">
+          <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium uppercase">
             {filterType} report
           </span>
         </div>
@@ -680,21 +680,21 @@ export default function Reports() {
 
       {/* Visitor Count Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-2">
-            <Users className="w-5 h-5 text-[#0E5A72]" />
+            <Users className="w-5 h-5 text-blue-600" />
             <p className="text-sm text-gray-600">Current Period</p>
           </div>
-          <p className="vista-title">{visitorStats.currentTotal.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-gray-900">{visitorStats.currentTotal.toLocaleString()}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-2">
-            <Users className="w-5 h-5 text-[#0E5A72]" />
+            <Users className="w-5 h-5 text-purple-600" />
             <p className="text-sm text-gray-600">Previous Period</p>
           </div>
-          <p className="vista-title">{visitorStats.previousTotal.toLocaleString()}</p>
+          <p className="text-3xl font-bold text-gray-900">{visitorStats.previousTotal.toLocaleString()}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-2">
             {visitorStats.isIncrease ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
             <p className="text-sm text-gray-600">Change</p>
@@ -713,30 +713,30 @@ export default function Reports() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Total Submissions</p>
-          <p className="vista-title">{totalSubmissions}</p>
+          <p className="text-3xl font-bold text-gray-900">{totalSubmissions}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Pending Review</p>
           <p className="text-3xl font-bold text-yellow-600">{pendingCount}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">On Hold</p>
           <p className="text-3xl font-bold text-orange-600">{onHoldCount}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Approved</p>
           <p className="text-3xl font-bold text-green-600">{approvedCount}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Rejected</p>
           <p className="text-3xl font-bold text-red-600">{rejectedCount}</p>
         </div>
       </div>
 
       {/* Submissions Table */}
-      <div className="vista-card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Submissions</h3>
           <p className="text-sm text-gray-600">Use Auto Check to approve normal pending/on-hold reports and keep only structurally invalid reports on hold, then click Review when manual action is needed.</p>
@@ -769,7 +769,7 @@ export default function Reports() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => handleViewDetails(report)} className="text-[#0E5A72] hover:text-[#0B2530] text-sm font-medium">
+                      <button onClick={() => handleViewDetails(report)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                         Review
                       </button>
                     </td>

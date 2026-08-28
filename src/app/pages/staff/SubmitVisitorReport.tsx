@@ -247,11 +247,11 @@ const loadProfile = async () => {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load Form</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Form</h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={loadProfile}
-            className="px-4 py-2 vista-button-primary"
+            className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition"
           >
             Try Again
           </button>
@@ -262,12 +262,12 @@ const loadProfile = async () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="vista-page-heading">
-        <h1 className="vista-title">Submit Resort Report</h1>
-        <p className="vista-subtitle">Record daily resort visitor arrivals at your establishment</p>
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Submit Resort Report</h1>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">Record daily resort visitor arrivals at your establishment</p>
       </div>
 
-      <div className="vista-card p-4 sm:p-6 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-2">Establishment</label>
@@ -280,7 +280,7 @@ const loadProfile = async () => {
         </div>
       </div>
 
-      <div className="vista-card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Visitor Entries</h3>
@@ -341,7 +341,7 @@ const loadProfile = async () => {
             <tfoot className="bg-gray-50">
               <tr>
                 <td colSpan={3} className="px-2 py-2 text-right text-sm font-semibold md:px-3">Total Visitors Today:</td>
-                <td className="px-1.5 py-2 text-center text-lg font-bold text-[#0E5A72] md:px-3">{calculateTotalVisitors()}</td>
+                <td className="px-1.5 py-2 text-center text-lg font-bold text-[#0F4C75] md:px-3">{calculateTotalVisitors()}</td>
                 <td></td>
               </tr>
             </tfoot>

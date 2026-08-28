@@ -307,11 +307,11 @@ export default function SubmitAccommodationReport() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load Form</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Form</h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={loadProfile}
-            className="px-4 py-2 vista-button-primary"
+            className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition"
           >
             Try Again
           </button>
@@ -323,11 +323,11 @@ export default function SubmitAccommodationReport() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="vista-page-heading">
-          <h1 className="vista-title">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Submit Hotels Report
           </h1>
-          <p className="vista-subtitle">
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">
             For hotel establishments with accommodation rooms
           </p>
         </div>
@@ -347,7 +347,7 @@ export default function SubmitAccommodationReport() {
           <div className="bg-white rounded-t-2xl sm:rounded-lg shadow-xl max-w-2xl w-full max-h-[92vh] overflow-y-auto">
             <div className="p-4 sm:p-6 border-b border-gray-200">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Room Configuration</h2>
-              <p className="vista-subtitle">
+              <p className="text-gray-600 mt-1">
                 Set the number of rooms for each room type. This will be saved for future reports.
               </p>
             </div>
@@ -387,7 +387,7 @@ export default function SubmitAccommodationReport() {
               </div>
 
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-[#0B2530]">
+                <p className="text-sm text-blue-800">
                   <strong>Total Rooms:</strong>{" "}
                   {Object.values(tempRoomCounts).reduce((sum, count) => sum + Number(count || 0), 0)}
                 </p>
@@ -413,7 +413,7 @@ export default function SubmitAccommodationReport() {
       )}
 
       {/* Report Header */}
-      <div className="vista-card p-5 sm:p-6 lg:p-8 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6 lg:p-8 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-2">Establishment Name</label>
@@ -433,7 +433,7 @@ export default function SubmitAccommodationReport() {
       </div>
 
       {/* Room Occupancy Table */}
-      <div className="vista-card overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 sm:p-5 lg:p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Daily Room Occupancy</h3>
           <p className="mt-1 text-sm text-gray-500 lg:hidden">Compact full-width table for faster phone entry.</p>
@@ -482,10 +482,10 @@ export default function SubmitAccommodationReport() {
               })}
               <tr className="bg-gray-50 font-semibold">
                 <td className="px-1 py-2 sm:px-2 lg:px-6 lg:py-4">Total</td>
-                <td className="px-1 py-2 text-[#0E5A72] sm:px-1.5 lg:px-6 lg:py-4">{totalRooms}</td>
-                <td className="px-1 py-2 text-[#0E5A72] sm:px-1.5 lg:px-6 lg:py-4">{totalOccupiedRooms}</td>
-                <td className="px-1 py-2 text-[#0E5A72] sm:px-1.5 lg:px-6 lg:py-4">{totalCheckIns}</td>
-                <td className="px-1 py-2 text-[#0E5A72] sm:px-1.5 lg:px-6 lg:py-4">{totalGuestNights}</td>
+                <td className="px-1 py-2 text-[#0F4C75] sm:px-1.5 lg:px-6 lg:py-4">{totalRooms}</td>
+                <td className="px-1 py-2 text-[#0F4C75] sm:px-1.5 lg:px-6 lg:py-4">{totalOccupiedRooms}</td>
+                <td className="px-1 py-2 text-[#0F4C75] sm:px-1.5 lg:px-6 lg:py-4">{totalCheckIns}</td>
+                <td className="px-1 py-2 text-[#0F4C75] sm:px-1.5 lg:px-6 lg:py-4">{totalGuestNights}</td>
               </tr>
             </tbody>
           </table>
@@ -493,22 +493,22 @@ export default function SubmitAccommodationReport() {
       </div>
 
       {/* Computed Analytics */}
-      <div className="vista-card p-4 sm:p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Computed Analytics</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
           <div className="bg-[#EAF9FC] rounded-lg p-4 border border-[#BFEAF2]">
-            <p className="text-sm text-[#0E5A72] font-medium mb-1">Average Guest Night</p>
+            <p className="text-sm text-[#0F4C75] font-medium mb-1">Average Guest Night</p>
             <p className="text-3xl font-bold text-[#0B2530]">{avgGuestNight}</p>
             <p className="text-xs text-[#5D6F73] mt-1">nights per guest</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <p className="text-sm text-gray-700 font-medium mb-1">Average Room Occupancy Rate</p>
-            <p className="vista-title">{avgOccupancyRate}%</p>
+            <p className="text-3xl font-bold text-gray-900">{avgOccupancyRate}%</p>
             <p className="text-xs text-gray-500 mt-1">monthly average</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <p className="text-sm text-gray-700 font-medium mb-1">Average Guest Per Room</p>
-            <p className="vista-title">{avgGuestPerRoom}</p>
+            <p className="text-3xl font-bold text-gray-900">{avgGuestPerRoom}</p>
             <p className="text-xs text-gray-500 mt-1">guests per room</p>
           </div>
         </div>

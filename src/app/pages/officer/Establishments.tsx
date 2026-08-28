@@ -656,7 +656,7 @@ export default function Establishments() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-[#0E5A72]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#1CA7C9]" />
       </div>
     );
   }
@@ -664,22 +664,22 @@ export default function Establishments() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="vista-page-heading">
-          <h1 className="vista-title">Establishments</h1>
-          <p className="vista-subtitle">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Establishments</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">
             Manage tourism establishments, staff assignments, and public listing records
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={activeTab === "establishments" ? handleExportEstablishments : handleExportUsers}
-            className="flex items-center justify-center gap-2 px-4 py-2 vista-button-soft text-sm sm:text-base whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
           >
             Export {activeTab === "establishments" ? "Establishments" : "Users"}
           </button>
           <button
             onClick={handleAddStaffEstablishment}
-            className="flex items-center justify-center gap-2 px-4 py-2 vista-button-primary text-sm sm:text-base whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base whitespace-nowrap"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Add User</span>
@@ -688,13 +688,13 @@ export default function Establishments() {
       </div>
 
       {/* Tabs */}
-      <div className="vista-card">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex border-b border-gray-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab("establishments")}
             className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 font-medium border-b-2 transition whitespace-nowrap ${
               activeTab === "establishments"
-                ? "border-blue-600 text-[#0E5A72]"
+                ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-600 hover:text-gray-900"
             }`}
           >
@@ -705,7 +705,7 @@ export default function Establishments() {
             onClick={() => setActiveTab("users")}
             className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 font-medium border-b-2 transition whitespace-nowrap ${
               activeTab === "users"
-                ? "border-blue-600 text-[#0E5A72]"
+                ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-600 hover:text-gray-900"
             }`}
           >
@@ -718,7 +718,7 @@ export default function Establishments() {
       {activeTab === "establishments" ? (
         <>
           {/* Filters */}
-          <div className="vista-card p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -729,7 +729,7 @@ export default function Establishments() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search establishments..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
               </div>
@@ -762,38 +762,38 @@ export default function Establishments() {
 
           {/* Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
-                <Building2 className="w-5 h-5 text-[#0E5A72]" />
+                <Building2 className="w-5 h-5 text-blue-600" />
                 <p className="text-sm text-gray-600">Total Establishments</p>
               </div>
-              <p className="vista-title">{establishments.length}</p>
+              <p className="text-3xl font-bold text-gray-900">{establishments.length}</p>
             </div>
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
                 <Building2 className="w-5 h-5 text-green-600" />
                 <p className="text-sm text-gray-600">Active</p>
               </div>
-              <p className="vista-title">{establishments.filter((e) => e.status === "active").length}</p>
+              <p className="text-3xl font-bold text-gray-900">{establishments.filter((e) => e.status === "active").length}</p>
             </div>
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
-                <Building2 className="w-5 h-5 text-[#0E5A72]" />
+                <Building2 className="w-5 h-5 text-purple-600" />
                 <p className="text-sm text-gray-600">With Rooms</p>
               </div>
-              <p className="vista-title">{establishments.filter((e) => e.total_rooms > 0).length}</p>
+              <p className="text-3xl font-bold text-gray-900">{establishments.filter((e) => e.total_rooms > 0).length}</p>
             </div>
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
                 <Building2 className="w-5 h-5 text-orange-600" />
                 <p className="text-sm text-gray-600">Total Rooms</p>
               </div>
-              <p className="vista-title">{establishments.reduce((sum, e) => sum + (e.total_rooms || 0), 0)}</p>
+              <p className="text-3xl font-bold text-gray-900">{establishments.reduce((sum, e) => sum + (e.total_rooms || 0), 0)}</p>
             </div>
           </div>
 
           {/* Establishments Table */}
-          <div className="vista-card overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -815,8 +815,8 @@ export default function Establishments() {
                       <tr key={establishment.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-[#EAF2F1] rounded-lg flex items-center justify-center">
-                              <Building2 className="w-5 h-5 text-[#0E5A72]" />
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Building2 className="w-5 h-5 text-blue-600" />
                             </div>
                             <p className="font-medium text-gray-900">{establishment.name}</p>
                           </div>
@@ -886,7 +886,7 @@ export default function Establishments() {
       ) : (
         <>
           {/* Users Filters */}
-          <div className="vista-card p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -897,7 +897,7 @@ export default function Establishments() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search by name or email..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
               </div>
@@ -930,38 +930,38 @@ export default function Establishments() {
 
           {/* Users Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
-                <UserCog className="w-5 h-5 text-[#0E5A72]" />
+                <UserCog className="w-5 h-5 text-blue-600" />
                 <p className="text-sm text-gray-600">Total Users</p>
               </div>
-              <p className="vista-title">{users.length}</p>
+              <p className="text-3xl font-bold text-gray-900">{users.length}</p>
             </div>
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
                 <UserCog className="w-5 h-5 text-green-600" />
                 <p className="text-sm text-gray-600">Active Users</p>
               </div>
-              <p className="vista-title">{users.filter((u) => u.status === "active").length}</p>
+              <p className="text-3xl font-bold text-gray-900">{users.filter((u) => u.status === "active").length}</p>
             </div>
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
-                <Shield className="w-5 h-5 text-[#0E5A72]" />
+                <Shield className="w-5 h-5 text-purple-600" />
                 <p className="text-sm text-gray-600">Officers</p>
               </div>
-              <p className="vista-title">{users.filter((u) => u.role === "municipal_officer").length}</p>
+              <p className="text-3xl font-bold text-gray-900">{users.filter((u) => u.role === "municipal_officer").length}</p>
             </div>
-            <div className="vista-card p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-2">
                 <UserCog className="w-5 h-5 text-orange-600" />
                 <p className="text-sm text-gray-600">Staff</p>
               </div>
-              <p className="vista-title">{users.filter((u) => u.role === "establishment_staff").length}</p>
+              <p className="text-3xl font-bold text-gray-900">{users.filter((u) => u.role === "establishment_staff").length}</p>
             </div>
           </div>
 
           {/* Users Table */}
-          <div className="vista-card overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -981,8 +981,8 @@ export default function Establishments() {
                         <tr key={user.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-[#EAF2F1] rounded-full flex items-center justify-center">
-                                <span className="text-[#0E5A72] font-medium">{user.full_name?.charAt(0) || "?"}</span>
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-medium">{user.full_name?.charAt(0) || "?"}</span>
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900">{user.full_name || "Unknown"}</p>
@@ -995,7 +995,7 @@ export default function Establishments() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
-                              <Shield className="w-4 h-4 text-[#0E5A72]" />
+                              <Shield className="w-4 h-4 text-purple-600" />
                               <span className="text-sm text-gray-700">{user.role === "municipal_officer" ? "Municipal Tourism Officer" : "Establishment Staff"}</span>
                             </div>
                           </td>
@@ -1056,7 +1056,7 @@ export default function Establishments() {
                       <a href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg bg-white">
                         <img src={imageUrl} alt={`${viewingPermitEstablishment.name} business permit ${index + 1}`} className="max-h-[60vh] w-full object-contain" />
                       </a>
-                      <a href={imageUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[#0E5A72] hover:text-[#0E5A72]">
+                      <a href={imageUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
                         <ExternalLink className="w-4 h-4" />
                         Open full-size permit image {index + 1}
                       </a>
@@ -1181,7 +1181,7 @@ export default function Establishments() {
                     <label className="block text-sm font-medium text-gray-700">Room Names</label>
                     <p className="text-xs text-gray-500">These room names/codes appear in the establishment staff hotel report form.</p>
                   </div>
-                  <button type="button" onClick={addRoomConfigRow} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-[#0E5A72] hover:bg-[#EAF2F1]">
+                  <button type="button" onClick={addRoomConfigRow} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100">
                     <Plus className="h-4 w-4" /> Add Room
                   </button>
                 </div>

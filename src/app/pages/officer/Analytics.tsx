@@ -263,13 +263,13 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <div className="vista-page-heading">
-        <h1 className="vista-title">Analytics Dashboard</h1>
-        <p className="vista-subtitle">Data-driven tourism analytics and decision support</p>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+        <p className="text-gray-600 mt-1">Data-driven tourism analytics and decision support</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-gray-600">Peak Season</p>
             <TrendingUp className="w-5 h-5 text-green-600" />
@@ -279,15 +279,15 @@ export default function Analytics() {
             {data.peakSeason.visitors.toLocaleString()} visitors ({data.peakSeason.growth.toFixed(1)}% vs previous month)
           </p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-gray-600">Top Origin</p>
-            <MapPin className="w-5 h-5 text-[#0E5A72]" />
+            <MapPin className="w-5 h-5 text-purple-600" />
           </div>
           <p className="text-2xl font-bold text-gray-900">{data.topOrigin.location || "N/A"}</p>
-          <p className="text-sm text-[#0E5A72] mt-1">{data.topOrigin.percentage}% of visitors</p>
+          <p className="text-sm text-purple-600 mt-1">{data.topOrigin.percentage}% of visitors</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-gray-600">Latest Monthly Growth</p>
             {data.growthRate >= 0 ? (
@@ -301,7 +301,7 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Tourism Trends and Seasonal Patterns</h3>
         {data.seasonalData.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
@@ -320,7 +320,7 @@ export default function Analytics() {
         )}
       </div>
 
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">High-Performing Establishments</h3>
         {data.performanceData.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
@@ -337,7 +337,7 @@ export default function Analytics() {
         )}
       </div>
 
-      <div className="vista-card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Visitor Origins & Actual Growth</h3>
         </div>
@@ -380,7 +380,7 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="vista-card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Underperforming Establishments</h3>
           <p className="text-sm text-gray-600 mt-1">

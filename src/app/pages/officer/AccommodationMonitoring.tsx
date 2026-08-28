@@ -368,45 +368,45 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
   return (
     <div className="space-y-6">
       {!embedded && (
-        <div className="vista-page-heading">
-          <h1 className="vista-title">Accommodation Monitoring</h1>
-          <p className="vista-subtitle">Monitor room occupancy and guest accommodation data</p>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Accommodation Monitoring</h1>
+          <p className="text-gray-600 mt-1">Monitor room occupancy and guest accommodation data</p>
         </div>
       )}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Total Rooms</p>
-          <p className="vista-title">{filteredStats.totalRooms}</p>
+          <p className="text-3xl font-bold text-gray-900">{filteredStats.totalRooms}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Total Guests (Check-ins)</p>
-          <p className="text-3xl font-bold text-[#0E5A72]">{filteredStats.totalGuests}</p>
+          <p className="text-3xl font-bold text-blue-600">{filteredStats.totalGuests}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Total Guest Nights</p>
-          <p className="text-3xl font-bold text-[#0E5A72]">{filteredStats.totalGuestNights}</p>
+          <p className="text-3xl font-bold text-purple-600">{filteredStats.totalGuestNights}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Avg Guest-Night</p>
           <p className="text-3xl font-bold text-orange-600">{filteredStats.avgGuestNight.toFixed(2)}</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-1">
             <p className="text-sm text-gray-600">Avg Room Occupancy Rate</p>
             <TrendingUp className="w-4 h-4 text-green-600" />
           </div>
           <p className="text-3xl font-bold text-green-600">{filteredStats.avgOccupancyRate.toFixed(1)}%</p>
         </div>
-        <div className="vista-card p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Avg Guests per Room</p>
           <p className="text-3xl font-bold text-teal-600">{filteredStats.avgGuestsPerRoom.toFixed(2)}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-64">
             <div className="relative">
@@ -416,14 +416,14 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by establishment..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
           </div>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             <button
               type="button"
-              className="px-3 py-1.5 text-sm rounded-lg bg-[#0E5A72] text-white transition"
+              className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white transition"
               aria-pressed="true"
             >
               Month
@@ -433,11 +433,11 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
             type="month"
             value={specificMonth}
             onChange={(e) => setSpecificMonth(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             title="Select report month"
           />
           <button 
-            className="flex items-center gap-2 px-4 py-2 vista-button-primary"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             onClick={handleExport}
           >
             <Download className="w-4 h-4" /> Export
@@ -446,7 +446,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
       </div>
 
       {/* Accommodation Records by Establishment */}
-      <div className="vista-card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
           <h2 className="font-semibold text-gray-900">Accommodation records by establishment</h2>
           <p className="mt-1 text-sm text-gray-600">Click an establishment to expand and view the full {monthLabel} record.</p>
@@ -473,7 +473,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
                       </div>
                       <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
                         group.avgOccupancy >= 90 ? "bg-green-100 text-green-700" :
-                        group.avgOccupancy >= 70 ? "bg-[#EAF2F1] text-[#0E5A72]" : "bg-yellow-100 text-yellow-700"
+                        group.avgOccupancy >= 70 ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
                       }`}>
                         {group.avgOccupancy.toFixed(1)}%
                       </span>
@@ -485,7 +485,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
                       </div>
                       <div className="rounded-xl bg-slate-50 p-3">
                         <p className="text-xs text-gray-500">Guests</p>
-                        <p className="font-semibold text-[#0E5A72]">{group.totalGuests}</p>
+                        <p className="font-semibold text-blue-600">{group.totalGuests}</p>
                       </div>
                       <div className="rounded-xl bg-slate-50 p-3">
                         <p className="text-xs text-gray-500">Guest Nights</p>
@@ -513,7 +513,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
                               <p><span className="text-gray-500">Total rooms:</span> <span className="font-medium text-gray-900">{record.totalRooms}</span></p>
                               <p><span className="text-gray-500">Reported:</span> <span className="font-medium text-gray-900">{record.reportedRooms}</span></p>
                               <p><span className="text-gray-500">Occupied:</span> <span className="font-medium text-gray-900">{record.occupiedRooms}</span></p>
-                              <p><span className="text-gray-500">Guests:</span> <span className="font-medium text-[#0E5A72]">{record.totalGuests}</span></p>
+                              <p><span className="text-gray-500">Guests:</span> <span className="font-medium text-blue-600">{record.totalGuests}</span></p>
                               <p className="col-span-2"><span className="text-gray-500">Guest nights:</span> <span className="font-medium text-gray-900">{record.guestNights}</span></p>
                             </div>
                           </div>
@@ -577,13 +577,13 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
                             <span className="text-sm font-medium text-gray-900">{group.avgOccupancy.toFixed(1)}%</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-[#0E5A72] font-medium">{group.totalGuests}</td>
+                        <td className="px-6 py-4 text-blue-600 font-medium">{group.totalGuests}</td>
                         <td className="px-6 py-4 text-gray-900">{group.guestNights}</td>
                         <td className="px-6 py-4 text-teal-600 font-medium">{group.avgGuestsPerRoom.toFixed(2)}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
                             group.avgOccupancy >= 90 ? "bg-green-100 text-green-700" :
-                            group.avgOccupancy >= 70 ? "bg-[#EAF2F1] text-[#0E5A72]" : "bg-yellow-100 text-yellow-700"
+                            group.avgOccupancy >= 70 ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"
                           }`}>
                             {group.avgOccupancy >= 90 ? "Excellent" : group.avgOccupancy >= 70 ? "Good" : "Fair"}
                           </span>
@@ -615,7 +615,7 @@ export default function AccommodationMonitoring({ embedded = false }: { embedded
                                       <td className="px-4 py-3 text-sm text-gray-900">{record.reportedRooms}</td>
                                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.occupiedRooms}</td>
                                       <td className="px-4 py-3 text-sm font-medium text-green-700">{record.avgOccupancy.toFixed(1)}%</td>
-                                      <td className="px-4 py-3 text-sm font-medium text-[#0E5A72]">{record.totalGuests}</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{record.totalGuests}</td>
                                       <td className="px-4 py-3 text-sm text-gray-900">{record.guestNights}</td>
                                     </tr>
                                   ))}

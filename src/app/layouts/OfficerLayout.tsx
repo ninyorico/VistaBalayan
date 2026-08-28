@@ -169,7 +169,7 @@ const handleLogout = async () => {
                       </div>
                     </div>
                     <div className="p-3 border-t border-[#D9E2EC]">
-                      <button className="w-full text-center text-sm font-medium text-[#0E5A72] hover:text-[#0E5A72] transition-colors">
+                      <button className="w-full text-center text-sm font-medium text-[#1CA7C9] hover:text-[#0F4C75] transition-colors">
                         View All Notifications
                       </button>
                     </div>

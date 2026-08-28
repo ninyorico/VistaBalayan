@@ -442,7 +442,7 @@ export default function TourismHome() {
       setRatingMessage('Database setup is still pending, so this rating was saved on this device only and will not appear on other browsers yet.')
       await fetchRatingReviews(selectedEstablishment.id)
     } else {
-      setRatingMessage('Thanks, your review was saved with your name.')
+      setRatingMessage('Thanks — your review was saved with your name.')
       setReviewerName('')
       setReviewComment('')
       await fetchRatingSummaries(establishments.map((est) => est.id), visitorToken)

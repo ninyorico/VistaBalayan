@@ -228,7 +228,7 @@ const loadCachedData = async (estId: string) => {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#0E5A72] mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-[#1CA7C9] mx-auto mb-4" />
           <p className="text-gray-600">Loading AI insights for your establishment...</p>
         </div>
       </div>
@@ -242,11 +242,11 @@ const loadCachedData = async (estId: string) => {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load AI Insights</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load AI Insights</h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={loadUserAndData}
-            className="px-4 py-2 vista-button-primary"
+            className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition"
           >
             Try Again
           </button>
@@ -258,16 +258,16 @@ const loadCachedData = async (estId: string) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div className="vista-page-heading">
-          <h1 className="vista-title">AI Insights</h1>
-          <p className="vista-subtitle">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">AI Insights</h1>
+          <p className="text-gray-600 mt-1">
             AI-powered recommendations and service gap tracking for {establishmentName || 'your establishment'}
           </p>
         </div>
         <button
           onClick={refreshData}
           disabled={refreshing}
-          className="px-4 py-2 vista-button-primary flex items-center gap-2"
+          className="px-4 py-2 bg-[#1CA7C9] text-white rounded-lg hover:bg-[#0F4C75] transition flex items-center gap-2"
         >
           {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           {refreshing ? 'Refreshing...' : 'Refresh Analysis'}
@@ -275,14 +275,14 @@ const loadCachedData = async (estId: string) => {
       </div>
 
       {/* AI Status Card */}
-      <div className="tourism-panel-dark text-white rounded-3xl shadow-tourism p-6">
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg shadow-sm p-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
             <Brain className="w-8 h-8" />
           </div>
           <div>
             <h2 className="text-2xl font-bold mb-1">AI Analysis Active</h2>
-            <p className="text-cyan-100">
+            <p className="text-purple-100">
               Monitoring {establishmentName} data for insights, service gaps, and operational challenges
             </p>
           </div>
@@ -290,7 +290,7 @@ const loadCachedData = async (estId: string) => {
       </div>
 
       {/* Service Gaps / Operational Challenges */}
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
@@ -321,7 +321,7 @@ const loadCachedData = async (estId: string) => {
                           ? "text-red-600"
                           : anomaly.severity === "medium"
                           ? "text-yellow-600"
-                          : "text-[#0E5A72]"
+                          : "text-blue-600"
                       }`}
                     />
                     <div className="flex-1">
@@ -335,7 +335,7 @@ const loadCachedData = async (estId: string) => {
                               ? "bg-red-200 text-red-800"
                               : anomaly.severity === "medium"
                               ? "bg-yellow-200 text-yellow-800"
-                              : "bg-blue-200 text-[#0B2530]"
+                              : "bg-blue-200 text-blue-800"
                           }`}
                         >
                           {anomaly.severity}
@@ -374,9 +374,9 @@ const loadCachedData = async (estId: string) => {
       </div>
 
       {/* AI-Powered Recommendations */}
-      <div className="vista-card p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Info className="w-5 h-5 text-[#0E5A72]" />
+          <Info className="w-5 h-5 text-purple-600" />
           <h3 className="text-lg font-semibold text-gray-900">
             AI-Powered Recommendations
           </h3>
@@ -397,8 +397,8 @@ const loadCachedData = async (estId: string) => {
                   <span
                     className={`px-2 py-0.5 rounded text-xs font-medium ${
                       insight.impact === "high"
-                        ? "bg-[#EAF2F1] text-[#0E5A72]"
-                        : "bg-[#EAF2F1] text-[#0E5A72]"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-blue-100 text-blue-700"
                     }`}
                   >
                     {insight.impact} impact
