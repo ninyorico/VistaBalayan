@@ -36,11 +36,11 @@ const monthlyData = [
 export default function Analytics() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
+      <div className="vista-page-heading">
+        <h1 className="vista-title">
           Establishment Analytics
         </h1>
-        <p className="text-gray-600 mt-1">
+        <p className="vista-subtitle">
           Track your establishment's performance and trends
         </p>
       </div>
@@ -50,11 +50,11 @@ export default function Analytics() {
         {performanceMetrics.map((metric, index) => (
           <div
             key={index}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+            className="vista-card p-6"
           >
             <p className="text-sm text-gray-600 mb-1">{metric.metric}</p>
             <div className="flex items-center justify-between">
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="vista-title">
                 {metric.value}
                 {metric.metric.includes("Rate") || metric.metric.includes("Visitors")
                   ? "%"
@@ -77,9 +77,9 @@ export default function Analytics() {
       </div>
 
       {/* Visitor & Occupancy Trends */}
-      <div key="visitor-occupancy-card" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div key="visitor-occupancy-card" className="vista-card p-6">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="w-5 h-5 text-blue-600" />
+          <BarChart3 className="w-5 h-5 text-[#0E5A72]" />
           <h3 className="text-lg font-semibold text-gray-900">
             Visitor & Occupancy Trends
           </h3>
@@ -115,7 +115,7 @@ export default function Analytics() {
       </div>
 
       {/* Guest Analysis */}
-      <div key="monthly-performance-card" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div key="monthly-performance-card" className="vista-card p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Monthly Guest Overview
         </h3>
@@ -146,7 +146,7 @@ export default function Analytics() {
       <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 p-6">
         <h4 className="font-semibold text-blue-900 mb-2">Best Performing Month</h4>
         <p className="text-3xl font-bold text-blue-900 mb-1">May 2026</p>
-        <p className="text-sm text-blue-700">695 visitors, 91% occupancy</p>
+        <p className="text-sm text-[#0E5A72]">695 visitors, 91% occupancy</p>
       </div>
     </div>
   );

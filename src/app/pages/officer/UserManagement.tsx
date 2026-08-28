@@ -79,13 +79,13 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600 mt-1">Manage system users and permissions</p>
+        <div className="vista-page-heading">
+          <h1 className="vista-title">User Management</h1>
+          <p className="vista-subtitle">Manage system users and permissions</p>
         </div>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+          className="flex items-center gap-2 px-4 py-2 vista-button-primary"
         >
           <Plus className="w-5 h-5" />
           Add User
@@ -93,7 +93,7 @@ export default function UserManagement() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="vista-card p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -106,7 +106,7 @@ export default function UserManagement() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by name or email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
               />
             </div>
           </div>
@@ -117,7 +117,7 @@ export default function UserManagement() {
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
             >
               <option value="all">All Roles</option>
               <option value="Municipal Tourism Officer">Municipal Tourism Officer</option>
@@ -131,7 +131,7 @@ export default function UserManagement() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
             >
               <option value="all">All Status</option>
               <option value="Active">Active</option>
@@ -143,47 +143,47 @@ export default function UserManagement() {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <div className="flex items-center gap-3 mb-2">
-            <UserCog className="w-5 h-5 text-blue-600" />
+            <UserCog className="w-5 h-5 text-[#0E5A72]" />
             <p className="text-sm text-gray-600">Total Users</p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{users.length}</p>
+          <p className="vista-title">{users.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <div className="flex items-center gap-3 mb-2">
             <UserCog className="w-5 h-5 text-green-600" />
             <p className="text-sm text-gray-600">Active Users</p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="vista-title">
             {users.filter((u) => u.status === "Active").length}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <div className="flex items-center gap-3 mb-2">
-            <Shield className="w-5 h-5 text-purple-600" />
+            <Shield className="w-5 h-5 text-[#0E5A72]" />
             <p className="text-sm text-gray-600">Officers</p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="vista-title">
             {
               users.filter((u) => u.role === "Municipal Tourism Officer")
                 .length
             }
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <div className="flex items-center gap-3 mb-2">
             <UserCog className="w-5 h-5 text-orange-600" />
             <p className="text-sm text-gray-600">Staff</p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="vista-title">
             {users.filter((u) => u.role === "Establishment Staff").length}
           </p>
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="vista-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -213,8 +213,8 @@ export default function UserManagement() {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-medium">
+                      <div className="w-10 h-10 bg-[#EAF2F1] rounded-full flex items-center justify-center">
+                        <span className="text-[#0E5A72] font-medium">
                           {user.name.charAt(0)}
                         </span>
                       </div>
@@ -229,7 +229,7 @@ export default function UserManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-purple-600" />
+                      <Shield className="w-4 h-4 text-[#0E5A72]" />
                       <span className="text-sm text-gray-700">{user.role}</span>
                     </div>
                   </td>

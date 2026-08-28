@@ -42,7 +42,7 @@ export default function ReportMonitoring() {
               <ClipboardCheck className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-[-0.025em] text-slate-950 sm:text-3xl">
+              <h1 className="vista-title">
                 Report Monitoring
               </h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
@@ -62,7 +62,7 @@ export default function ReportMonitoring() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition sm:px-4 ${
                     isActive
-                      ? "bg-white text-[#0F4C75] shadow-sm"
+                      ? "bg-white text-[#0E5A72] shadow-sm"
                       : "text-slate-600 hover:text-slate-950"
                   }`}
                   aria-pressed={isActive}

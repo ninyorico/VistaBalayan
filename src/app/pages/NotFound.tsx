@@ -1,39 +1,42 @@
 import { useNavigate } from "react-router";
-import { Home, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 
 export default function NotFound() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="text-center">
-        <div className="mb-8">
-          <h1 className="text-9xl font-bold text-blue-600">404</h1>
-          <h2 className="text-3xl font-semibold text-gray-900 mt-4">
-            Page Not Found
-          </h2>
-          <p className="text-gray-600 mt-2">
-            The page you're looking for doesn't exist or has been moved.
-          </p>
+    <main className="grid min-h-[100dvh] place-items-center tourism-shell p-6 text-[#0B2530]">
+      <section className="vista-card max-w-xl p-8 text-center sm:p-10">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#EAF2F1] text-[#0E5A72] ring-1 ring-[#b8d2cf]">
+          <Home className="h-7 w-7" strokeWidth={1.8} />
         </div>
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#0E5A72]">404</p>
+        <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] text-[#0B2530] sm:text-5xl">
+          Page not found
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#5D6F73]">
+          The page you're looking for does not exist or may have moved to another VistaBalayan workspace.
+        </p>
 
-        <div className="flex items-center justify-center gap-4">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+            className="vista-button-soft px-5 py-3"
           >
-            <ArrowLeft className="w-5 h-5" />
-            Go Back
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />
+            Go back
           </button>
           <button
+            type="button"
             onClick={() => navigate("/")}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            className="vista-button-primary px-5 py-3"
           >
-            <Home className="w-5 h-5" />
+            <Home className="h-4 w-4" strokeWidth={1.8} />
             Home
           </button>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

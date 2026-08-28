@@ -175,9 +175,9 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
   return (
     <div className="space-y-6">
       {!embedded && (
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Visitor Monitoring</h1>
-          <p className="text-gray-600 mt-1">
+        <div className="vista-page-heading">
+          <h1 className="vista-title">Visitor Monitoring</h1>
+          <p className="vista-subtitle">
             Monitor and review visitor data from all establishments
           </p>
         </div>
@@ -185,26 +185,26 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <p className="text-sm text-gray-600 mb-1">Total Visitors</p>
-          <p className="text-3xl font-bold text-gray-900">{totalVisitors}</p>
+          <p className="vista-title">{totalVisitors}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <p className="text-sm text-gray-600 mb-1">Male</p>
-          <p className="text-3xl font-bold text-blue-600">{totalMale}</p>
+          <p className="text-3xl font-bold text-[#0E5A72]">{totalMale}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <p className="text-sm text-gray-600 mb-1">Female</p>
-          <p className="text-3xl font-bold text-purple-600">{totalFemale}</p>
+          <p className="text-3xl font-bold text-[#0E5A72]">{totalFemale}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <p className="text-sm text-gray-600 mb-1">Total Records</p>
-          <p className="text-3xl font-bold text-gray-900">{filteredRecords.length}</p>
+          <p className="vista-title">{filteredRecords.length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="vista-card p-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-64">
             <div className="relative">
@@ -214,7 +214,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by establishment or location..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
               />
             </div>
           </div>
@@ -222,7 +222,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
             <select
               value={filterResidence}
               onChange={(e) => setFilterResidence(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
             >
               <option value="all">All Places of Residence</option>
               <option value="Batangas Resident">Batangas Resident</option>
@@ -233,7 +233,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             <button
               type="button"
-              className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white transition"
+              className="px-3 py-1.5 text-sm rounded-lg bg-[#0E5A72] text-white transition"
               aria-pressed="true"
             >
               Month
@@ -243,11 +243,11 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
             type="month"
             value={specificMonth}
             onChange={(e) => setSpecificMonth(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
             title="Select report month"
           />
           <button 
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="flex items-center gap-2 px-4 py-2 vista-button-primary"
             onClick={handleExport}
           >
             <Download className="w-4 h-4" />
@@ -257,7 +257,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
       </div>
 
       {/* Visitor Records by Establishment */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="vista-card overflow-hidden">
         <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
           <h2 className="font-semibold text-gray-900">Visitor records by establishment</h2>
           <p className="mt-1 text-sm text-gray-600">Click an establishment to expand and view the full {monthLabel} record.</p>
@@ -289,8 +289,8 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                           </div>
                         </td>
                         <td className="px-6 py-4 text-gray-600">{group.records.length}</td>
-                        <td className="px-6 py-4 text-blue-600 font-medium">{group.male}</td>
-                        <td className="px-6 py-4 text-purple-600 font-medium">{group.female}</td>
+                        <td className="px-6 py-4 text-[#0E5A72] font-medium">{group.male}</td>
+                        <td className="px-6 py-4 text-[#0E5A72] font-medium">{group.female}</td>
                         <td className="px-6 py-4 text-gray-900 font-semibold">{group.total}</td>
                         <td className="px-6 py-4 text-gray-600">{Array.from(group.residenceTypes).join(", ")}</td>
                         <td className="px-6 py-4 text-gray-600">{Array.from(group.locations).join(", ")}</td>
@@ -316,8 +316,8 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                                     <tr key={record.id}>
                                       <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
                                       <td className="px-4 py-3 text-sm text-gray-900">{record.guestName}</td>
-                                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{record.male}</td>
-                                      <td className="px-4 py-3 text-sm font-medium text-purple-600">{record.female}</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-[#0E5A72]">{record.male}</td>
+                                      <td className="px-4 py-3 text-sm font-medium text-[#0E5A72]">{record.female}</td>
                                       <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.total}</td>
                                       <td className="px-4 py-3 text-sm text-gray-600">{record.residenceType}</td>
                                       <td className="px-4 py-3 text-sm text-gray-600">{record.location}</td>

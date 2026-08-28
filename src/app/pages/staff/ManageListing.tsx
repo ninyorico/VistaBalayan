@@ -155,9 +155,9 @@ export default function ManageListing() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h2 className="font-semibold text-blue-800">🏢 Manage Your Public Listing</h2>
-        <p className="text-sm text-blue-700 mt-1">
+      <div className="vista-card p-5">
+        <h2 className="font-semibold text-[#0B2530]">Manage Your Public Listing</h2>
+        <p className="text-sm text-[#0E5A72] mt-1">
           Information you enter here will be displayed on the public tourism website where visitors can discover your establishment.
         </p>
       </div>
@@ -166,7 +166,7 @@ export default function ManageListing() {
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Info */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="vista-card p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
             <div className="space-y-4">
               <div>
@@ -175,7 +175,7 @@ export default function ManageListing() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#168AAD]"
                 />
               </div>
               <div>
@@ -183,7 +183,7 @@ export default function ManageListing() {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#168AAD]"
                 >
                   <option value="Resort">Resort</option>
                   <option value="Hotel">Hotel</option>
@@ -272,7 +272,7 @@ export default function ManageListing() {
 
         {/* Images Section */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="vista-card p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Photos</h3>
             <div className="grid grid-cols-2 gap-3 mb-4">
               {images.map((img, index) => (
@@ -311,7 +311,7 @@ export default function ManageListing() {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 vista-button-primary"
           >
             <Save className="w-5 h-5" />
             {saving ? 'Publishing...' : 'Publish to Public Website'}

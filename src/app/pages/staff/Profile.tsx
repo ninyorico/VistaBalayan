@@ -373,17 +373,17 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
-        <p className="text-gray-600 mt-1">
+      <div className="vista-page-heading">
+        <h1 className="vista-title">Profile</h1>
+        <p className="vista-subtitle">
           Manage your account and profile information
         </p>
       </div>
 
       {/* Profile Information */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="vista-card p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <User className="w-5 h-5 text-blue-600" />
+          <User className="w-5 h-5 text-[#0E5A72]" />
           Profile Information
         </h3>
         <div className="space-y-4">
@@ -401,7 +401,7 @@ export default function Profile() {
                   setEmailVerificationStep("idle");
                   setEmailOtp("");
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
                 placeholder="establishment@gmail.com"
               />
               <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -453,7 +453,7 @@ export default function Profile() {
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
               />
             </div>
           </div>
@@ -467,7 +467,7 @@ export default function Profile() {
                 value={formData.contact_number}
                 onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
                 placeholder="+63 912 345 6789"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
               />
             </div>
             <div>
@@ -478,7 +478,7 @@ export default function Profile() {
                 type="text"
                 value={formData.position}
                 onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
               />
             </div>
           </div>
@@ -487,7 +487,7 @@ export default function Profile() {
 
       {/* Establishment Information (for staff users) */}
       {profile?.establishment_name !== "N/A" && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="vista-card p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-green-600" />
             Establishment Information
@@ -564,7 +564,7 @@ export default function Profile() {
                       <img src={imageUrl} alt={`Business permit ${index + 1}`} className="h-40 w-full object-cover" />
                     </a>
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      <a href={imageUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700">
+                      <a href={imageUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-[#0E5A72] hover:text-[#0E5A72]">
                         <ExternalLink className="w-4 h-4" />
                         View full image
                       </a>
@@ -590,7 +590,7 @@ export default function Profile() {
       )}
 
       {/* Change Password */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="vista-card p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Mail className="w-5 h-5 text-orange-600" />
           Change Password
@@ -606,7 +606,7 @@ export default function Profile() {
                 value={formData.new_password}
                 onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
                 placeholder="Enter new password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
               />
             </div>
             <div>
@@ -618,7 +618,7 @@ export default function Profile() {
                 value={formData.confirm_password}
                 onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
                 placeholder="Confirm new password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#e5f1f2] focus:border-[#0E5A72] outline-none"
               />
             </div>
           </div>
@@ -646,7 +646,7 @@ export default function Profile() {
         <button
           onClick={handleUpdateProfile}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-3 vista-button-primary disabled:opacity-50"
         >
           <Save className="w-5 h-5" />
           {saving ? "Saving..." : "Save Profile Changes"}

@@ -126,15 +126,15 @@ export default function OfficerProfile() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
-        <p className="text-gray-600 mt-1">Manage your account and profile information</p>
+      <div className="vista-page-heading">
+        <h1 className="vista-title">Profile</h1>
+        <p className="vista-subtitle">Manage your account and profile information</p>
       </div>
 
       {/* Profile Information */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="vista-card p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <User className="w-5 h-5 text-blue-600" />
+          <User className="w-5 h-5 text-[#0E5A72]" />
           Profile Information
         </h3>
         <div className="space-y-4">
@@ -146,17 +146,17 @@ export default function OfficerProfile() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-              <input type="text" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="text" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#168AAD]" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
-              <input type="tel" value={formData.contact_number} onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })} placeholder="+63 912 345 6789" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="tel" value={formData.contact_number} onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })} placeholder="+63 912 345 6789" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#168AAD]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
-              <input type="text" value={formData.position} onChange={(e) => setFormData({ ...formData, position: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="text" value={formData.position} onChange={(e) => setFormData({ ...formData, position: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#168AAD]" />
             </div>
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function OfficerProfile() {
 
 
       {/* Change Password */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="vista-card p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Mail className="w-5 h-5 text-orange-600" />
           Change Password
@@ -190,7 +190,7 @@ export default function OfficerProfile() {
 
       {/* Save Profile Button */}
       <div className="flex justify-end">
-        <button onClick={handleUpdateProfile} disabled={saving} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+        <button onClick={handleUpdateProfile} disabled={saving} className="flex items-center gap-2 px-6 py-3 bg-[#0E5A72] text-white rounded-lg hover:bg-[#0B2530] disabled:opacity-50">
           <Save className="w-5 h-5" /> {saving ? "Saving..." : "Save Profile Changes"}
         </button>
       </div>
