@@ -38,4 +38,4 @@ Required environment variables:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_GEMINI_API_KEY`
-- `VITE_GEOAPIFY_API_KEY` — used by staff Manage Public Listing location search
+- `GEOAPIFY_API_KEY` — private Vercel Config variable used by `/api/geoapify-search` for staff Manage Public Listing location search

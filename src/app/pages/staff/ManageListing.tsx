@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 
 const BALAYAN_CENTER = { latitude: 13.9385, longitude: 120.7332 }
 const LEAFLET_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY || ''
 
 const listingPinIcon = L.divIcon({
   className: '',
@@ -78,29 +77,28 @@ type MapSearchResult = {
 }
 
 const searchGeoapify = async (searchQuery: string): Promise<MapSearchResult | null> => {
-  if (!GEOAPIFY_API_KEY) return null
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) throw new Error('Missing session. Please sign in again.')
 
-  const url = new URL('https://api.geoapify.com/v1/geocode/search')
-  url.searchParams.set('text', searchQuery)
-  url.searchParams.set('filter', 'countrycode:ph')
-  url.searchParams.set('bias', `proximity:${BALAYAN_CENTER.longitude},${BALAYAN_CENTER.latitude}`)
-  url.searchParams.set('limit', '1')
-  url.searchParams.set('apiKey', GEOAPIFY_API_KEY)
+  const response = await fetch(`/api/geoapify-search?q=${encodeURIComponent(searchQuery)}`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(data?.error || `Geoapify search failed (${response.status}).`)
 
-  const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } })
-  if (!response.ok) throw new Error(`Geoapify search failed (${response.status}).`)
-
-  const data = await response.json()
-  const feature = Array.isArray(data?.features) ? data.features[0] : null
-  const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates : []
-  const longitude = parseCoordinate(String(coordinates[0]), -180, 180)
-  const latitude = parseCoordinate(String(coordinates[1]), -90, 90)
+  const result = data?.result
+  const latitude = result ? parseCoordinate(String(result.latitude), -90, 90) : null
+  const longitude = result ? parseCoordinate(String(result.longitude), -180, 180) : null
   if (latitude === null || longitude === null) return null
 
   return {
     latitude,
     longitude,
-    displayName: feature?.properties?.formatted || feature?.properties?.address_line1,
+    displayName: result.displayName,
     provider: 'Geoapify',
   }
 }
@@ -382,10 +380,18 @@ export default function ManageListing() {
     try {
       let foundResult: MapSearchResult | null = null
       let matchedQuery = ''
+      let geoapifyConfigMissing = false
 
       for (const searchQuery of candidates) {
-        foundResult = await searchGeoapify(searchQuery)
-        if (!foundResult && !GEOAPIFY_API_KEY) {
+        try {
+          foundResult = await searchGeoapify(searchQuery)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (!/not configured/i.test(message)) throw error
+          geoapifyConfigMissing = true
+        }
+
+        if (!foundResult && geoapifyConfigMissing) {
           foundResult = await searchOpenStreetMap(searchQuery)
         }
         if (foundResult) {
@@ -395,9 +401,9 @@ export default function ManageListing() {
       }
 
       if (!foundResult) {
-        toast.error(GEOAPIFY_API_KEY
-          ? 'No Geoapify location found. Try the barangay, nearby landmark, or paste coordinates manually.'
-          : 'Geoapify API key is not configured yet. OpenStreetMap could not find it, so try a nearby landmark or paste coordinates manually.')
+        toast.error(geoapifyConfigMissing
+          ? 'Private Geoapify API key is not configured yet. OpenStreetMap could not find it, so try a nearby landmark or paste coordinates manually.'
+          : 'No Geoapify location found. Try the barangay, nearby landmark, or paste coordinates manually.')
         setMapStatus('ready')
         return
       }
@@ -413,9 +419,7 @@ export default function ManageListing() {
       setMapStatus('ready')
     } catch (error) {
       console.error('Map search failed:', error)
-      toast.error(GEOAPIFY_API_KEY
-        ? 'Geoapify search is unavailable. You can still click the map or paste coordinates.'
-        : 'Map search is unavailable. Add a Geoapify API key, or click the map/paste coordinates manually.')
+      toast.error('Geoapify search is unavailable. You can still click the map or paste coordinates.')
       setMapStatus('error')
     }
   }
