@@ -37,6 +37,7 @@ interface Establishment {
   opening_hours: string
   website_url: string
   email: string
+  amenities?: string
   featured?: boolean
   total_rooms?: number
   latitude?: number
@@ -118,6 +119,35 @@ const getPublicCategory = (type = '') => {
 const getCategoryIcon = (type: string) => {
   return getPublicCategory(type) === 'Hotel' ? Building2 : Hotel
 }
+
+const readLocationPinFromAmenities = (amenities = '') => {
+  const match = amenities.match(/\[LOCATION_PIN:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\]/)
+  if (!match) return null
+  const latitude = Number(match[1])
+  const longitude = Number(match[2])
+  return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : null
+}
+
+const getStoredLocation = (establishment: Establishment) => {
+  if (typeof establishment.latitude === 'number' &&
+    Number.isFinite(establishment.latitude) &&
+    typeof establishment.longitude === 'number' &&
+    Number.isFinite(establishment.longitude)) {
+    return { latitude: establishment.latitude, longitude: establishment.longitude }
+  }
+  return readLocationPinFromAmenities(establishment.amenities || '')
+}
+
+const hasExactLocation = (establishment: Establishment) => Boolean(getStoredLocation(establishment))
+
+const getLocationQuery = (establishment: Establishment) => {
+  const storedLocation = getStoredLocation(establishment)
+  if (storedLocation) return `${storedLocation.latitude},${storedLocation.longitude}`
+  return establishment.address || establishment.name
+}
+
+const getGoogleMapsEmbedUrl = (establishment: Establishment) => `https://maps.google.com/maps?q=${encodeURIComponent(getLocationQuery(establishment))}&z=17&output=embed`
+const getGoogleMapsUrl = (establishment: Establishment) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getLocationQuery(establishment))}`
 
 const readBehavior = (): BehaviorProfile => {
   if (typeof window === 'undefined') return emptyBehavior
@@ -276,9 +306,8 @@ const applyLocalVisitorRatings = (summaries: Record<string, RatingSummary>, esta
 }
 
 const getEstimatedCoordinates = (establishment: Establishment): UserLocation => {
-  if (typeof establishment.latitude === 'number' && typeof establishment.longitude === 'number') {
-    return { latitude: establishment.latitude, longitude: establishment.longitude }
-  }
+  const storedLocation = getStoredLocation(establishment)
+  if (storedLocation) return storedLocation
 
   let hash = 0
   for (const char of establishment.id || establishment.name) {
@@ -858,6 +887,30 @@ export default function TourismHome() {
                     Visit website
                   </a>
                 )}
+              </div>
+
+              <div className="mt-5 overflow-hidden rounded-2xl border border-[#d7e5e2] bg-[#f8fbf8]">
+                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-950">Location on Google Maps</h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {hasExactLocation(selectedEstablishment) ? 'Open the exact pinned establishment location.' : 'Open the mapped address for this establishment.'}
+                    </p>
+                  </div>
+                  <Button asChild className="rounded-2xl bg-[#0E5A72] px-4 py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#073B4C]">
+                    <a href={getGoogleMapsUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
+                      <Navigation className="h-4 w-4" strokeWidth={1.8} />
+                      View location
+                    </a>
+                  </Button>
+                </div>
+                <iframe
+                  title={`${selectedEstablishment.name} Google Maps location`}
+                  src={getGoogleMapsEmbedUrl(selectedEstablishment)}
+                  className="h-64 w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               </div>
 
               <Separator className="my-6 bg-[#d7e5e2]" />

@@ -1,8 +1,43 @@
 import { useState, useEffect } from 'react'
-import { Save, Upload, Trash2, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X } from 'lucide-react'
+import { Save, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X, Navigation, Crosshair } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { compressListingImage } from '../../../lib/listingImages'
 import { toast } from 'sonner'
+
+const BALAYAN_CENTER = { latitude: 13.9385, longitude: 120.7332 }
+
+const toCoordinateInput = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? String(value) : '')
+
+const parseCoordinate = (value: string, min: number, max: number) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null
+}
+
+const getMapQuery = (latitude?: string | number | null, longitude?: string | number | null, fallbackAddress = '') => {
+  const lat = typeof latitude === 'number' ? latitude : parseCoordinate(String(latitude || ''), -90, 90)
+  const lng = typeof longitude === 'number' ? longitude : parseCoordinate(String(longitude || ''), -180, 180)
+  if (lat !== null && lng !== null) return `${lat},${lng}`
+  return fallbackAddress || `${BALAYAN_CENTER.latitude},${BALAYAN_CENTER.longitude}`
+}
+
+const getGoogleMapsEmbedUrl = (query: string) => `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=17&output=embed`
+const getGoogleMapsUrl = (query: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+const LOCATION_PIN_PATTERN = /\n?\[LOCATION_PIN:-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?\]/
+
+const readLocationPinFromAmenities = (amenities = '') => {
+  const match = amenities.match(/\[LOCATION_PIN:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\]/)
+  if (!match) return null
+  const latitude = parseCoordinate(match[1], -90, 90)
+  const longitude = parseCoordinate(match[2], -180, 180)
+  return latitude !== null && longitude !== null ? { latitude, longitude } : null
+}
+
+const stripLocationPin = (amenities = '') => amenities.replace(LOCATION_PIN_PATTERN, '').trim()
+const writeLocationPin = (amenities: string, latitude: number | null, longitude: number | null) => {
+  const cleanAmenities = stripLocationPin(amenities)
+  if (latitude === null || longitude === null) return cleanAmenities
+  return `${cleanAmenities}${cleanAmenities ? '\n' : ''}[LOCATION_PIN:${latitude},${longitude}]`
+}
 
 export default function ManageListing() {
   const [establishment, setEstablishment] = useState<any>(null)
@@ -20,6 +55,8 @@ export default function ManageListing() {
     website_url: '',
     email: '',
     amenities: '',
+    latitude: '',
+    longitude: '',
   })
 
   useEffect(() => {
@@ -47,6 +84,7 @@ export default function ManageListing() {
         .single()
       
       if (est) {
+        const storedPin = readLocationPinFromAmenities(est.amenities || '')
         setEstablishment(est)
         setFormData({
           name: est.name || '',
@@ -57,7 +95,9 @@ export default function ManageListing() {
           opening_hours: est.opening_hours || '',
           website_url: est.website_url || '',
           email: est.email || '',
-          amenities: est.amenities || '',
+          amenities: stripLocationPin(est.amenities || ''),
+          latitude: toCoordinateInput(est.latitude ?? storedPin?.latitude),
+          longitude: toCoordinateInput(est.longitude ?? storedPin?.longitude),
         })
         setImages(est.images || [])
       }
@@ -158,27 +198,71 @@ export default function ManageListing() {
     if (published) toast.success('Photo removed from the public website.')
   }
 
+  const currentMapQuery = getMapQuery(formData.latitude, formData.longitude, formData.address)
+  const hasExactCoordinates = parseCoordinate(formData.latitude, -90, 90) !== null && parseCoordinate(formData.longitude, -180, 180) !== null
+
+  const useCurrentLocationAsPin = () => {
+    if (!navigator.geolocation) {
+      toast.error('Location access is not available in this browser.')
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((current) => ({
+          ...current,
+          latitude: position.coords.latitude.toFixed(7),
+          longitude: position.coords.longitude.toFixed(7),
+        }))
+        toast.success('Map pin set from your current location. Review the preview before publishing.')
+      },
+      () => toast.error('Unable to get your location. You can still paste the coordinates from Google Maps.'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
   const handleSubmit = async () => {
     if (!establishment) return
+
+    const latitude = parseCoordinate(formData.latitude, -90, 90)
+    const longitude = parseCoordinate(formData.longitude, -180, 180)
+    if ((formData.latitude.trim() || formData.longitude.trim()) && (latitude === null || longitude === null)) {
+      toast.error('Please enter valid latitude and longitude coordinates before publishing.')
+      return
+    }
     
     setSaving(true)
-    
-    const { error } = await supabase
+
+    const listingUpdates = {
+      name: formData.name,
+      type: formData.type,
+      address: formData.address,
+      contact_number: formData.contact_number,
+      description: formData.description,
+      opening_hours: formData.opening_hours,
+      website_url: formData.website_url,
+      email: formData.email,
+      amenities: writeLocationPin(formData.amenities, latitude, longitude),
+      images: images,
+      updated_at: new Date(),
+    }
+
+    let { error } = await supabase
       .from('establishments')
       .update({
-        name: formData.name,
-        type: formData.type,
-        address: formData.address,
-        contact_number: formData.contact_number,
-        description: formData.description,
-        opening_hours: formData.opening_hours,
-        website_url: formData.website_url,
-        email: formData.email,
-        amenities: formData.amenities,
-        images: images,
-        updated_at: new Date(),
+        ...listingUpdates,
+        latitude,
+        longitude,
       })
       .eq('id', establishment.id)
+
+    if (error && /latitude|longitude|schema cache|column/i.test(error.message)) {
+      const retry = await supabase
+        .from('establishments')
+        .update(listingUpdates)
+        .eq('id', establishment.id)
+      error = retry.error
+    }
     
     if (error) {
       toast.error('Failed to update: ' + error.message)
@@ -259,6 +343,76 @@ export default function ManageListing() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   placeholder="Brgy. Sampaga, Balayan, Batangas"
                 />
+              </div>
+
+              <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
+                      <MapPin className="w-4 h-4 text-[#0E5A72]" /> Exact Google Maps Pin
+                    </label>
+                    <p className="text-xs leading-5 text-gray-600">
+                      Set the establishment coordinates so visitors can open the exact pinned location from the public website.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={useCurrentLocationAsPin}
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#0E5A72] px-3 py-2 text-xs font-semibold text-white hover:bg-[#073B4C]"
+                    >
+                      <Crosshair className="w-4 h-4" /> Use my location
+                    </button>
+                    <a
+                      href={getGoogleMapsUrl(currentMapQuery)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-white px-3 py-2 text-xs font-semibold text-[#0E5A72] hover:bg-teal-50"
+                    >
+                      <Navigation className="w-4 h-4" /> Open Google Maps
+                    </a>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Latitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="-90"
+                      max="90"
+                      value={formData.latitude}
+                      onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="13.9385000"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Longitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="-180"
+                      max="180"
+                      value={formData.longitude}
+                      onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="120.7332000"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 overflow-hidden rounded-xl border border-teal-100 bg-white">
+                  <iframe
+                    title="Google Maps listing pin preview"
+                    src={getGoogleMapsEmbedUrl(currentMapQuery)}
+                    className="h-56 w-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  {hasExactCoordinates ? 'Exact coordinates are ready to publish.' : 'Tip: open Google Maps, right-click the exact pin, then paste the copied latitude and longitude here.'}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -361,6 +515,7 @@ export default function ManageListing() {
               {formData.description && <li>✓ Your description</li>}
               {images.length > 0 && <li>✓ {images.length} photo(s)</li>}
               {formData.contact_number && <li>✓ Contact information</li>}
+              {hasExactCoordinates && <li>✓ Exact Google Maps location pin</li>}
             </ul>
           </div>
 
