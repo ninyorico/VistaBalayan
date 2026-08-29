@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Save, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X, Navigation, Crosshair, Search } from 'lucide-react'
+import { Save, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X, Crosshair, Search } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { compressListingImage } from '../../../lib/listingImages'
 import { toast } from 'sonner'
@@ -23,14 +23,6 @@ const parseCoordinate = (value: string, min: number, max: number) => {
   return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null
 }
 
-const getMapQuery = (latitude?: string | number | null, longitude?: string | number | null, fallbackAddress = '') => {
-  const lat = typeof latitude === 'number' ? latitude : parseCoordinate(String(latitude || ''), -90, 90)
-  const lng = typeof longitude === 'number' ? longitude : parseCoordinate(String(longitude || ''), -180, 180)
-  if (lat !== null && lng !== null) return `${lat},${lng}`
-  return fallbackAddress || `${BALAYAN_CENTER.latitude},${BALAYAN_CENTER.longitude}`
-}
-
-const getOpenStreetMapUrl = (query: string) => `https://www.openstreetmap.org/search?query=${encodeURIComponent(query)}`
 const LOCATION_PIN_PATTERN = /\n?\[LOCATION_PIN:-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?\]/
 
 const readLocationPinFromAmenities = (amenities = '') => {
@@ -287,7 +279,6 @@ export default function ManageListing() {
     if (published) toast.success('Photo removed from the public website.')
   }
 
-  const currentMapQuery = getMapQuery(formData.latitude, formData.longitude, formData.address)
   const hasExactCoordinates = parseCoordinate(formData.latitude, -90, 90) !== null && parseCoordinate(formData.longitude, -180, 180) !== null
 
   const setExactPin = (latitude: number, longitude: number) => {
@@ -580,7 +571,7 @@ export default function ManageListing() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
-                      <MapPin className="w-4 h-4 text-[#0E5A72]" /> Exact OpenStreetMap Pin
+                      <MapPin className="w-4 h-4 text-[#0E5A72]" /> Exact Location Pin
                     </label>
                     <p className="text-xs leading-5 text-gray-600">
                       Set the establishment coordinates so visitors can open the exact pinned location from the public website.
@@ -594,42 +585,6 @@ export default function ManageListing() {
                     >
                       <Crosshair className="w-4 h-4" /> Use my location
                     </button>
-                    <a
-                      href={getOpenStreetMapUrl(currentMapQuery)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-white px-3 py-2 text-xs font-semibold text-[#0E5A72] hover:bg-teal-50"
-                    >
-                      <Navigation className="w-4 h-4" /> Open OpenStreetMap
-                    </a>
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Latitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
-                      value={formData.latitude}
-                      onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                      placeholder="13.9385000"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Longitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
-                      value={formData.longitude}
-                      onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                      placeholder="120.7332000"
-                    />
                   </div>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -671,7 +626,7 @@ export default function ManageListing() {
                 <p className="mt-2 text-xs text-gray-500">
                   {hasExactCoordinates
                     ? 'Exact coordinates are ready to publish. You can still drag the marker or click the map to adjust the pin.'
-                    : 'Search OpenStreetMap, click the map, drag the marker, use your location, or paste coordinates manually.'}
+                    : 'Search Geoapify, click the map, drag the marker, use your location, or paste coordinates manually.'}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -763,20 +718,6 @@ export default function ManageListing() {
               </label>
             </div>
             <p className="text-xs text-gray-500">Showcase your establishment with photos</p>
-          </div>
-
-          {/* Preview Card */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
-            <h3 className="font-semibold text-gray-900 mb-3">📱 Public Preview</h3>
-            <p className="text-sm text-gray-600">Visitors will see:</p>
-            <ul className="mt-2 space-y-1 text-sm text-gray-600">
-              <li>✓ {formData.name || 'Your business name'}</li>
-              <li>✓ {formData.type || 'Category'}</li>
-              {formData.description && <li>✓ Your description</li>}
-              {images.length > 0 && <li>✓ {images.length} photo(s)</li>}
-              {formData.contact_number && <li>✓ Contact information</li>}
-              {hasExactCoordinates && <li>✓ Exact OpenStreetMap location pin</li>}
-            </ul>
           </div>
 
           <button
