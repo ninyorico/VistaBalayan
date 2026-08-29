@@ -340,14 +340,40 @@ setOccupancyRate(occupancyRate);
 
         <PanelCard title="Visitor demographics" description="Share of visitors by residence category.">
           {demographics.length > 0 && demographics.some((d) => d.value > 0) ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={demographics} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name}: ${value}%`} outerRadius={100} dataKey="value">
-                  {demographics.map((entry, idx) => <Cell key={idx} fill={entry.color} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="space-y-4">
+              <div className="h-56 w-full sm:h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                    <Pie
+                      data={demographics}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="52%"
+                      outerRadius="82%"
+                      paddingAngle={2}
+                      dataKey="value"
+                      nameKey="name"
+                      label={false}
+                      labelLine={false}
+                    >
+                      {demographics.map((entry, idx) => <Cell key={idx} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(value: number, name: string) => [`${value}%`, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid gap-2 text-sm text-[#0B2530] sm:grid-cols-2">
+                {demographics.map((entry) => (
+                  <div key={entry.name} className="flex items-center justify-between gap-3 rounded-xl border border-[#d7e5e2]/70 bg-white/80 px-3 py-2">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
+                      <span className="truncate">{entry.name}</span>
+                    </span>
+                    <span className="shrink-0 font-semibold text-[#0E5A72]">{entry.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <EmptyState>No demographic data available</EmptyState>
           )}
