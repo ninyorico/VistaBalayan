@@ -53,6 +53,15 @@ const monthKey = (date: string) => date.slice(0, 7);
 const percentChange = (current: number, previous: number) =>
   previous > 0 ? ((current - previous) / previous) * 100 : current > 0 ? 100 : 0;
 
+const getCurrentYearRange = () => {
+  const year = new Date().getFullYear();
+  return {
+    year,
+    start: `${year}-01-01`,
+    end: `${year}-12-31`,
+  };
+};
+
 export default function Analytics() {
   const [data, setData] = useState<AnalyticsData>({
     seasonalData: [],
@@ -71,6 +80,7 @@ export default function Analytics() {
 
   const fetchAnalytics = async () => {
     setLoading(true);
+    const currentYear = getCurrentYearRange();
 
     const { data: visitorData, error: visitorError } = await supabase
       .from("visitor_reports")
@@ -82,6 +92,8 @@ export default function Analytics() {
         establishments (name)
       `)
       .eq("status", "approved")
+      .gte("report_date", currentYear.start)
+      .lte("report_date", currentYear.end)
       .order("report_date", { ascending: true });
 
     if (visitorError) console.error("Error fetching visitor data:", visitorError);
@@ -95,6 +107,8 @@ export default function Analytics() {
         establishments (name)
       `)
       .eq("status", "approved")
+      .gte("report_date", currentYear.start)
+      .lte("report_date", currentYear.end)
       .order("report_date", { ascending: true });
 
     if (accError) console.error("Error fetching accommodation data:", accError);
@@ -265,7 +279,7 @@ export default function Analytics() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-        <p className="text-gray-600 mt-1">Data-driven tourism analytics and decision support</p>
+        <p className="text-gray-600 mt-1">Data-driven tourism analytics and decision support for {getCurrentYearRange().year}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -302,7 +316,7 @@ export default function Analytics() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tourism Trends and Seasonal Patterns</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tourism Trends and Seasonal Patterns ({getCurrentYearRange().year})</h3>
         {data.seasonalData.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart data={data.seasonalData}>
