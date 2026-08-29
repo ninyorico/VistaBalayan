@@ -573,19 +573,40 @@ export default function TourismHome() {
     saveBehavior(next)
   }
 
-  const requestLocation = () => {
+  const getMobileFriendlyLocation = (
+    onSuccess: (location: UserLocation) => void,
+    onError: () => void,
+  ) => {
     if (!navigator.geolocation) {
-      setLocationStatus('blocked')
+      onError()
       return
     }
-    setLocationStatus('loading')
+
+    const handleSuccess = (position: GeolocationPosition) => {
+      onSuccess({ latitude: position.coords.latitude, longitude: position.coords.longitude })
+    }
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude })
+      handleSuccess,
+      () => {
+        navigator.geolocation.getCurrentPosition(
+          handleSuccess,
+          onError,
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+        )
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    )
+  }
+
+  const requestLocation = () => {
+    setLocationStatus('loading')
+    getMobileFriendlyLocation(
+      (location) => {
+        setUserLocation(location)
         setLocationStatus('ready')
       },
-      () => setLocationStatus('blocked'),
-      { enableHighAccuracy: true, timeout: 10000 }
+      () => setLocationStatus('blocked')
     )
   }
 
@@ -629,27 +650,43 @@ export default function TourismHome() {
   const selectedPhoto = selectedPhotos[selectedPhotoIndex] || selectedPhotos[0]
 
   const openDirectionsToEstablishment = (establishment: Establishment, provider: 'google' | 'openstreetmap') => {
-    const openDirections = (origin?: UserLocation | null) => {
-      const directionsUrl = provider === 'google'
-        ? getGoogleMapsDirectionsUrl(establishment, origin)
-        : getOpenStreetMapDirectionsUrl(establishment, origin)
-      window.open(directionsUrl, '_blank', 'noopener,noreferrer')
-    }
-
-    if (!navigator.geolocation) {
-      openDirections(null)
+    if (userLocation) {
+      window.open(
+        provider === 'google'
+          ? getGoogleMapsDirectionsUrl(establishment, userLocation)
+          : getOpenStreetMapDirectionsUrl(establishment, userLocation),
+        '_blank'
+      )
       return
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        openDirections({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        })
+    const fallbackUrl = provider === 'google'
+      ? getGoogleMapsDirectionsUrl(establishment, null)
+      : getOpenStreetMapDirectionsUrl(establishment, null)
+    const directionsWindow = window.open(fallbackUrl, '_blank')
+
+    const navigateToDirections = (origin?: UserLocation | null) => {
+      const directionsUrl = provider === 'google'
+        ? getGoogleMapsDirectionsUrl(establishment, origin)
+        : getOpenStreetMapDirectionsUrl(establishment, origin)
+
+      if (directionsWindow) {
+        directionsWindow.location.href = directionsUrl
+      } else {
+        window.location.href = directionsUrl
+      }
+    }
+
+    getMobileFriendlyLocation(
+      (location) => {
+        setUserLocation(location)
+        setLocationStatus('ready')
+        navigateToDirections(location)
       },
-      () => openDirections(null),
-      { enableHighAccuracy: true, timeout: 8000 }
+      () => {
+        setLocationStatus('blocked')
+        navigateToDirections(null)
+      }
     )
   }
 
@@ -854,9 +891,16 @@ export default function TourismHome() {
               ))}
             </div>
             {locationStatus !== 'ready' && (
-              <Button onClick={requestLocation} variant="outline" className="mt-5 w-full rounded-2xl border-slate-200 py-3 text-sm font-semibold text-slate-700 shadow-none hover:bg-[#f8fbf8]">
-                Improve with my location
-              </Button>
+              <>
+                <Button onClick={requestLocation} variant="outline" className="mt-5 w-full rounded-2xl border-slate-200 py-3 text-sm font-semibold text-slate-700 shadow-none hover:bg-[#f8fbf8]">
+                  Improve with my location
+                </Button>
+                {locationStatus === 'blocked' && (
+                  <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                    Phone location is blocked or unavailable. Turn on GPS/location services, allow Location for this browser, then tap again. Directions still work using the establishment pin.
+                  </p>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

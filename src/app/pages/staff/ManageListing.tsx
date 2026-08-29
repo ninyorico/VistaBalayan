@@ -335,21 +335,29 @@ export default function ManageListing() {
 
   const useCurrentLocationAsPin = () => {
     if (!navigator.geolocation) {
-      toast.error('Location access is not available in this browser.')
+      toast.error('Location access is not available in this browser. Open the site in Chrome/Safari and allow Location permission, or paste coordinates manually.')
       return
     }
 
+    const setPinFromPosition = (position: GeolocationPosition) => {
+      setFormData((current) => ({
+        ...current,
+        latitude: position.coords.latitude.toFixed(7),
+        longitude: position.coords.longitude.toFixed(7),
+      }))
+      toast.success('Map pin set from your current location. Review the preview before publishing.')
+    }
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setFormData((current) => ({
-          ...current,
-          latitude: position.coords.latitude.toFixed(7),
-          longitude: position.coords.longitude.toFixed(7),
-        }))
-        toast.success('Map pin set from your current location. Review the preview before publishing.')
+      setPinFromPosition,
+      () => {
+        navigator.geolocation.getCurrentPosition(
+          setPinFromPosition,
+          () => toast.error('Unable to get your phone location. Please turn on GPS/location services, allow location permission for this browser, or paste coordinates manually.'),
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+        )
       },
-      () => toast.error('Unable to get your location. You can still paste coordinates manually.'),
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
     )
   }
 
