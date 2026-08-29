@@ -49,6 +49,19 @@ interface Demographic {
   color: string;
 }
 
+const DEMOGRAPHIC_COLORS = ["#0E7490", "#7C3AED", "#F97316", "#16A34A", "#DC2626", "#2563EB"];
+
+const getDemographicColor = (name: string, index: number) => {
+  const normalized = name.toLowerCase();
+
+  if (normalized.includes("within") || normalized.includes("batangas resident")) return "#0E7490";
+  if (normalized.includes("outside")) return "#7C3AED";
+  if (normalized.includes("other")) return "#F97316";
+  if (normalized.includes("unknown")) return "#64748B";
+
+  return DEMOGRAPHIC_COLORS[index % DEMOGRAPHIC_COLORS.length];
+};
+
 export default function OfficerDashboard() {
   const [totalVisitors, setTotalVisitors] = useState(0);
   const [monthlyArrivals, setMonthlyArrivals] = useState(0);
@@ -174,10 +187,10 @@ setOccupancyRate(occupancyRate);
           dist[type] = (dist[type] || 0) + (item.total_guests || 0);
         });
         const totalDemo = Object.values(dist).reduce((a, b) => a + b, 0);
-        const chartData = Object.entries(dist).map(([name, value]) => ({
+        const chartData = Object.entries(dist).map(([name, value], index) => ({
           name,
           value: totalDemo > 0 ? Math.round((value / totalDemo) * 100) : 0,
-          color: name === "Batangas Resident" ? "#3b82f6" : name === "Outside Batangas" ? "#8b5cf6" : "#10b981",
+          color: getDemographicColor(name, index),
         }));
         setDemographics(chartData);
         console.log('Demographics set:', chartData);
