@@ -19,6 +19,11 @@ import {
   Star,
 } from 'lucide-react'
 import React from 'react'
+import { Button } from '../../components/ui/button'
+import { Card, CardContent } from '../../components/ui/card'
+import { Badge } from '../../components/ui/badge'
+import { Input } from '../../components/ui/input'
+import { Separator } from '../../components/ui/separator'
 import { supabase } from '../../../lib/supabase'
 
 interface Establishment {
@@ -443,7 +448,7 @@ export default function TourismHome() {
       setRatingMessage('Database setup is still pending, so this rating was saved on this device only and will not appear on other browsers yet.')
       await fetchRatingReviews(selectedEstablishment.id)
     } else {
-      setRatingMessage('Thanks — your review was saved with your name.')
+      setRatingMessage('Thanks, your review was saved with your name.')
       setReviewerName('')
       setReviewComment('')
       await fetchRatingSummaries(establishments.map((est) => est.id), visitorToken)
@@ -569,116 +574,128 @@ export default function TourismHome() {
   const selectedPhoto = selectedPhotos[selectedPhotoIndex] || selectedPhotos[0]
 
   return (
-    <main className="min-h-[100dvh] tourism-shell text-[#0B2530]">
-      <section className="relative overflow-hidden tourism-panel-dark text-white">
+    <main className="min-h-[100dvh] bg-[#f5faf8] text-[#0B2530]">
+      <section className="relative overflow-hidden border-b border-[#d7e5e2] bg-[#0B2530] text-white">
         {featuredImage && (
           <img
             src={featuredImage}
             alt="Balayan resort and hotel destination"
-            className="absolute inset-0 h-full w-full object-cover opacity-50"
+            className="absolute inset-0 h-full w-full object-cover opacity-42"
           />
         )}
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(7,59,76,0.88),rgba(11,37,48,0.64)_48%,rgba(14,90,114,0.78))]" />
-        <div className="relative mx-auto grid min-h-[78dvh] max-w-7xl grid-cols-1 items-center gap-10 px-5 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(52,160,164,0.34),transparent_34%),linear-gradient(135deg,rgba(7,59,76,0.94),rgba(11,37,48,0.74)_46%,rgba(14,90,114,0.76))]" />
+        <div className="relative mx-auto grid min-h-[76dvh] max-w-7xl grid-cols-1 items-center gap-8 px-5 py-10 sm:px-6 lg:grid-cols-[1.02fr_0.98fr] lg:px-8">
           <div className="max-w-2xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-4 py-2 text-sm text-white/82 backdrop-blur-xl">
+            <Badge className="mb-5 rounded-full border-white/15 bg-white/12 px-4 py-2 text-sm font-medium text-white shadow-none backdrop-blur-xl hover:bg-white/12">
               <Sparkles className="h-4 w-4" strokeWidth={1.8} />
               VistaBalayan travel guide
-            </div>
-            <h1 className="text-4xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-5xl lg:text-6xl">
-              Discover coastal stays and local escapes in Balayan.
+            </Badge>
+            <h1 className="text-4xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+              Find stays that fit your Balayan trip.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-white/78 sm:text-lg">
-              Browse resorts and hotels, compare visitor ratings, and receive quick recommendations shaped around your location and travel style.
+              Browse verified resorts and hotels, compare ratings, and view every uploaded listing photo.
             </p>
-            <div className="mt-8 max-w-xl rounded-[1.5rem] border border-white/16 bg-white/12 p-2 shadow-2xl shadow-slate-950/30 backdrop-blur-xl">
+            <Card className="mt-8 overflow-hidden rounded-[1.5rem] border-white/15 bg-white/12 p-2 text-white shadow-2xl shadow-slate-950/30 backdrop-blur-xl">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                <input
+                <Search className="absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                <Input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search resort, hotel, address, pool, beach, or amenity"
-                  className="w-full rounded-[1.1rem] border border-white/16 bg-white px-12 py-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:ring-4 focus:ring-[#34A0A4]/25"
+                  className="h-14 rounded-[1.1rem] border-white/20 bg-white pl-12 pr-4 text-base text-slate-950 shadow-none placeholder:text-slate-400 focus-visible:ring-[#34A0A4]/30"
                 />
               </div>
-            </div>
+            </Card>
           </div>
 
-          <aside className="rounded-[2rem] border border-white/16 bg-white/12 p-5 shadow-2xl shadow-slate-950/30 backdrop-blur-2xl">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-white/66">Personalized picks</p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-[-0.025em]">Where to stay next</h2>
-              </div>
-              <button
-                onClick={requestLocation}
-                className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 active:translate-y-[1px]"
-              >
-                {locationStatus === 'loading' ? 'Locating' : locationStatus === 'ready' ? 'Location on' : 'Use location'}
-              </button>
-            </div>
-            <div className="space-y-3">
-              {recommendations.map((est) => (
-                <button
-                  key={est.id}
-                  onClick={() => openDetails(est)}
-                  className="w-full rounded-2xl border border-white/12 bg-white/10 p-4 text-left transition hover:bg-white/16 active:translate-y-[1px]"
+          <Card className="rounded-[2rem] border-white/16 bg-white/14 text-white shadow-2xl shadow-slate-950/30 backdrop-blur-2xl">
+            <CardContent className="p-5 sm:p-6">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-white/66">Personalized picks</p>
+                  <h2 className="mt-1 text-2xl font-semibold tracking-[-0.025em]">Where to stay next</h2>
+                </div>
+                <Button
+                  type="button"
+                  onClick={requestLocation}
+                  className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 shadow-none hover:bg-cyan-50 active:translate-y-[1px]"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#0E5A72]">
-                      {React.createElement(getCategoryIcon(est.type), { className: 'h-5 w-5', strokeWidth: 1.8 })}
+                  {locationStatus === 'loading' ? 'Locating' : locationStatus === 'ready' ? 'Location on' : 'Use location'}
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {recommendations.map((est) => (
+                  <button
+                    key={est.id}
+                    onClick={() => openDetails(est)}
+                    className="w-full rounded-2xl border border-white/12 bg-white/10 p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/16 active:translate-y-[1px]"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#0E5A72]">
+                        {React.createElement(getCategoryIcon(est.type), { className: 'h-5 w-5', strokeWidth: 1.8 })}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-white">{est.name}</p>
+                        <p className="mt-1 text-sm leading-5 text-white/68">{est.reason}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-white">{est.name}</p>
-                      <p className="mt-1 text-sm leading-5 text-white/68">{est.reason}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </aside>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 rounded-[2rem] border border-[#d7e5e2] bg-white/88 p-4 shadow-tourism backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => {
-              const Icon = cat.icon
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryChange(cat.id)}
-                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition active:translate-y-[1px] ${
-                    selectedType === cat.id
-                      ? 'bg-[#0E5A72] text-white shadow-lg shadow-teal-950/15'
-                      : 'bg-[#e5f1f2] text-[#0B2530] hover:bg-[#d7e5e2]'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" strokeWidth={1.8} />
-                  {cat.name}
-                </button>
-              )
-            })}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Filter className="h-4 w-4" strokeWidth={1.8} />
-            Showing {filtered.length} resorts and hotels
-          </div>
-        </div>
+        <Card className="rounded-[1.75rem] border-[#d7e5e2] bg-white/92 shadow-[0_24px_80px_rgba(14,90,114,0.10)] backdrop-blur-xl">
+          <CardContent className="flex flex-col gap-5 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => {
+                const Icon = cat.icon
+                return (
+                  <Button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => handleCategoryChange(cat.id)}
+                    variant={selectedType === cat.id ? 'default' : 'secondary'}
+                    className={`rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-none active:translate-y-[1px] ${
+                      selectedType === cat.id
+                        ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]'
+                        : 'bg-[#e5f1f2] text-[#0B2530] hover:bg-[#d7e5e2]'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" strokeWidth={1.8} />
+                    {cat.name}
+                  </Button>
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              <Filter className="h-4 w-4" strokeWidth={1.8} />
+              Showing {filtered.length} resorts and hotels
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-5 pb-16 sm:px-6 lg:grid-cols-[1fr_360px] lg:px-8">
         <div>
           {loading ? (
-            <div className="flex justify-center rounded-[2rem] bg-white py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-[#0E5A72]" />
-            </div>
+            <Card className="rounded-[2rem] border-[#d7e5e2] bg-white/90 py-14 shadow-[0_24px_80px_rgba(14,90,114,0.08)]">
+              <CardContent className="flex flex-col items-center justify-center gap-4 p-6">
+                <div className="h-12 w-44 animate-pulse rounded-full bg-[#e5f1f2]" />
+                <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+                  {[1, 2, 3].map((item) => <div key={item} className="h-32 animate-pulse rounded-3xl bg-[#f0f7f5]" />)}
+                </div>
+              </CardContent>
+            </Card>
           ) : filtered.length === 0 ? (
-            <div className="rounded-[2rem] border border-[#d7e5e2] bg-white/90 p-12 text-center shadow-tourism">
+            <Card className="rounded-[2rem] border-[#d7e5e2] bg-white/90 p-12 text-center shadow-[0_24px_80px_rgba(14,90,114,0.08)]">
               <p className="text-slate-500">No resorts or hotels found. Try a different search.</p>
-            </div>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
               {filtered.map((est) => {
@@ -686,78 +703,83 @@ export default function TourismHome() {
                 const displayImage = est.images && est.images.length > 0 ? est.images[0] : null
                 const publicCategory = getPublicCategory(est.type)
                 return (
-                  <button
+                  <Card
                     key={est.id}
-                    onClick={() => openDetails(est)}
-                    className="group overflow-hidden rounded-[1.7rem] border border-[#d7e5e2] bg-white/90 text-left shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:shadow-tourism-hover active:translate-y-[1px]"
+                    className="group overflow-hidden rounded-[1.7rem] border-[#d7e5e2] bg-white/95 py-0 shadow-[0_22px_70px_rgba(14,90,114,0.10)] backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:shadow-[0_32px_90px_rgba(14,90,114,0.16)]"
                   >
-                    {displayImage ? (
-                      <div className="relative h-56 overflow-hidden">
-                        <img src={displayImage} alt={est.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                        {est.images.length > 1 && (
-                          <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/75 px-3 py-1 text-xs font-semibold text-white shadow-lg">
-                            {est.images.length} photos
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex h-56 items-center justify-center bg-gradient-to-br from-[#0E5A72] via-[#168AAD] to-[#D96C4E]">
-                        <Icon className="h-14 w-14 text-white/70" strokeWidth={1.8} />
-                      </div>
-                    )}
-                    <div className="p-5">
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <h3 className="text-lg font-semibold leading-6 tracking-[-0.02em] text-slate-950">{est.name}</h3>
-                        <span className="shrink-0 rounded-full bg-[#e5f1f2] px-3 py-1 text-xs font-semibold text-[#0E5A72]">
-                          {publicCategory}
+                    <button onClick={() => openDetails(est)} className="w-full text-left active:translate-y-[1px]">
+                      {displayImage ? (
+                        <div className="relative h-56 overflow-hidden">
+                          <img src={displayImage} alt={est.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                          {est.images.length > 1 && (
+                            <Badge className="absolute bottom-3 right-3 rounded-full border-white/10 bg-slate-950/75 px-3 py-1 text-xs font-semibold text-white shadow-lg hover:bg-slate-950/75">
+                              {est.images.length} photos
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex h-56 items-center justify-center bg-gradient-to-br from-[#0E5A72] via-[#168AAD] to-[#83c5be]">
+                          <Icon className="h-14 w-14 text-white/70" strokeWidth={1.8} />
+                        </div>
+                      )}
+                      <CardContent className="p-5">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <h3 className="text-lg font-semibold leading-6 tracking-[-0.02em] text-slate-950">{est.name}</h3>
+                          <Badge className="shrink-0 rounded-full bg-[#e5f1f2] px-3 py-1 text-xs font-semibold text-[#0E5A72] shadow-none hover:bg-[#e5f1f2]">
+                            {publicCategory}
+                          </Badge>
+                        </div>
+                        <RatingDisplay summary={ratingSummaries[est.id]} className="mb-3" />
+                        <div className="flex items-start gap-2 text-sm leading-5 text-slate-600">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.8} />
+                          <span>{est.address}</span>
+                        </div>
+                        {est.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{est.description}</p>}
+                        <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#0E5A72]">
+                          View details <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" strokeWidth={1.8} />
                         </span>
-                      </div>
-                      <RatingDisplay summary={ratingSummaries[est.id]} className="mb-3" />
-                      <div className="flex items-start gap-2 text-sm leading-5 text-slate-600">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.8} />
-                        <span>{est.address}</span>
-                      </div>
-                      {est.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{est.description}</p>}
-                      <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#0E5A72]">
-                        View details <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" strokeWidth={1.8} />
-                      </span>
-                    </div>
-                  </button>
+                      </CardContent>
+                    </button>
+                  </Card>
                 )
               })}
             </div>
           )}
         </div>
 
-        <aside className="h-fit rounded-[2rem] border border-[#d7e5e2] bg-white/90 p-5 shadow-tourism backdrop-blur-xl lg:sticky lg:top-6">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Nearest picks</p>
-              <h2 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">Close to you</h2>
+        <Card className="h-fit rounded-[2rem] border-[#d7e5e2] bg-white/92 shadow-[0_24px_80px_rgba(14,90,114,0.10)] backdrop-blur-xl lg:sticky lg:top-6">
+          <CardContent className="p-5">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500">Nearest picks</p>
+                <h2 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">Close to you</h2>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#e5f1f2] text-[#0E5A72]">
+                <Navigation className="h-5 w-5" strokeWidth={1.8} />
+              </div>
             </div>
-            <Navigation className="h-5 w-5 text-[#0E5A72]" strokeWidth={1.8} />
-          </div>
-          <div className="space-y-3">
-            {nearestStays.map((est) => (
-              <button key={est.id} onClick={() => openDetails(est)} className="w-full rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4 text-left transition hover:bg-[#e5f1f2]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold leading-5 text-slate-950">{est.name}</p>
-                    <p className="mt-1 text-sm text-slate-500">{getPublicCategory(est.type)}</p>
+            <div className="space-y-3">
+              {nearestStays.map((est) => (
+                <button key={est.id} onClick={() => openDetails(est)} className="w-full rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4 text-left transition hover:bg-[#e5f1f2] active:translate-y-[1px]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold leading-5 text-slate-950">{est.name}</p>
+                      <p className="mt-1 text-sm text-slate-500">{getPublicCategory(est.type)}</p>
+                    </div>
+                    <Badge variant="outline" className="rounded-full border-[#d7e5e2] bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                      {est.distance.toFixed(1)} km
+                    </Badge>
                   </div>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-                    {est.distance.toFixed(1)} km
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-          {locationStatus !== 'ready' && (
-            <button onClick={requestLocation} className="mt-5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#f8fbf8]">
-              Improve with my location
-            </button>
-          )}
-        </aside>
+                </button>
+              ))}
+            </div>
+            {locationStatus !== 'ready' && (
+              <Button onClick={requestLocation} variant="outline" className="mt-5 w-full rounded-2xl border-slate-200 py-3 text-sm font-semibold text-slate-700 shadow-none hover:bg-[#f8fbf8]">
+                Improve with my location
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       {selectedEstablishment && (
@@ -815,9 +837,9 @@ export default function TourismHome() {
             <div className="p-6 sm:p-8">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <span className="mb-3 inline-flex rounded-full bg-[#e5f1f2] px-3 py-1 text-xs font-semibold text-[#0E5A72]">
+                  <Badge className="mb-3 rounded-full bg-[#e5f1f2] px-3 py-1 text-xs font-semibold text-[#0E5A72] shadow-none hover:bg-[#e5f1f2]">
                     {getPublicCategory(selectedEstablishment.type)}
-                  </span>
+                  </Badge>
                   <h2 className="text-3xl font-semibold tracking-[-0.035em] text-slate-950">{selectedEstablishment.name}</h2>
                 </div>
                 <div className="rounded-full bg-[#f8fbf8] px-3 py-2">
@@ -838,7 +860,9 @@ export default function TourismHome() {
                 )}
               </div>
 
-              <div className="mt-6 rounded-2xl border border-cyan-100 bg-cyan-50/70 p-5">
+              <Separator className="my-6 bg-[#d7e5e2]" />
+
+              <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="font-semibold text-slate-950">Rate this establishment</h3>
@@ -880,14 +904,14 @@ export default function TourismHome() {
                   />
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-slate-500">Name required · {reviewComment.length}/500 comment characters</p>
-                    <button
+                    <Button
                       type="button"
                       onClick={submitRating}
                       disabled={submittingRating || selectedReviewRating < 1 || !reviewerName.trim()}
-                      className="rounded-2xl bg-[#0E5A72] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:opacity-55"
+                      className="rounded-2xl bg-[#0E5A72] px-5 py-2.5 text-sm font-semibold text-white shadow-none transition hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       {submittingRating ? 'Saving...' : 'Submit rating'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {ratingMessage && <p className="mt-3 text-sm font-medium text-[#0E5A72]">{ratingMessage}</p>}
@@ -902,12 +926,12 @@ export default function TourismHome() {
                 </div>
               )}
 
-              <button
+              <Button
                 onClick={() => setSelectedEstablishment(null)}
-                className="mt-6 w-full rounded-2xl bg-[#0E5A72] py-3.5 font-semibold text-white transition hover:bg-[#073B4C] active:translate-y-[1px]"
+                className="mt-6 w-full rounded-2xl bg-[#0E5A72] py-3.5 font-semibold text-white shadow-none transition hover:bg-[#073B4C] active:translate-y-[1px]"
               >
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         </div>
