@@ -154,6 +154,14 @@ const getOpenStreetMapEmbedUrl = (establishment: Establishment) => {
   const delta = 0.006
   return `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - delta}%2C${latitude - delta}%2C${longitude + delta}%2C${latitude + delta}&layer=mapnik&marker=${latitude}%2C${longitude}`
 }
+const getGoogleMapsDirectionsUrl = (establishment: Establishment, origin?: UserLocation | null) => {
+  const storedLocation = getStoredLocation(establishment)
+  const destination = storedLocation
+    ? `${storedLocation.latitude},${storedLocation.longitude}`
+    : getLocationQuery(establishment)
+  const originParam = origin ? `&origin=${origin.latitude},${origin.longitude}` : ''
+  return `https://www.google.com/maps/dir/?api=1${originParam}&destination=${encodeURIComponent(destination)}&travelmode=driving`
+}
 const getOpenStreetMapDirectionsUrl = (establishment: Establishment, origin?: UserLocation | null) => {
   const storedLocation = getStoredLocation(establishment)
   const destination = storedLocation
@@ -620,9 +628,12 @@ export default function TourismHome() {
   const selectedPhotos = selectedEstablishment?.images?.filter((image) => typeof image === 'string' && image.trim().length > 0) || []
   const selectedPhoto = selectedPhotos[selectedPhotoIndex] || selectedPhotos[0]
 
-  const openDirectionsToEstablishment = (establishment: Establishment) => {
+  const openDirectionsToEstablishment = (establishment: Establishment, provider: 'google' | 'openstreetmap') => {
     const openDirections = (origin?: UserLocation | null) => {
-      window.open(getOpenStreetMapDirectionsUrl(establishment, origin), '_blank', 'noopener,noreferrer')
+      const directionsUrl = provider === 'google'
+        ? getGoogleMapsDirectionsUrl(establishment, origin)
+        : getOpenStreetMapDirectionsUrl(establishment, origin)
+      window.open(directionsUrl, '_blank', 'noopener,noreferrer')
     }
 
     if (!navigator.geolocation) {
@@ -934,17 +945,26 @@ export default function TourismHome() {
                   <div>
                     <h3 className="font-semibold text-slate-950">Location on OpenStreetMap</h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      {hasExactLocation(selectedEstablishment) ? 'Get directions to the exact pinned establishment location.' : 'Get directions to the mapped address for this establishment.'}
+                      {hasExactLocation(selectedEstablishment) ? 'Get directions with Google Maps or OpenStreetMap.' : 'Get directions with Google Maps or OpenStreetMap.'}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
-                      onClick={() => openDirectionsToEstablishment(selectedEstablishment)}
+                      onClick={() => openDirectionsToEstablishment(selectedEstablishment, 'google')}
                       className="rounded-2xl bg-[#0E5A72] px-4 py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#073B4C]"
                     >
                       <Navigation className="h-4 w-4" strokeWidth={1.8} />
-                      Get directions
+                      Google directions
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => openDirectionsToEstablishment(selectedEstablishment, 'openstreetmap')}
+                      variant="outline"
+                      className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]"
+                    >
+                      <Navigation className="h-4 w-4" strokeWidth={1.8} />
+                      OSM directions
                     </Button>
                     <Button asChild variant="outline" className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]">
                       <a href={getOpenStreetMapUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
