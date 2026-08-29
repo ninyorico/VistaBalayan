@@ -968,6 +968,13 @@ export default function TourismHome() {
                 </div>
               </div>
 
+              {selectedEstablishment.description && (
+                <div className="mb-5 rounded-2xl bg-[#f8fbf8] p-5">
+                  <h3 className="font-semibold text-slate-950">Establishment overview</h3>
+                  <p className="mt-2 leading-7 text-slate-600">{selectedEstablishment.description}</p>
+                </div>
+              )}
+
               <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
                 <InfoRow icon={MapPin} text={selectedEstablishment.address} />
                 {selectedEstablishment.contact_number && <InfoRow icon={Phone} text={selectedEstablishment.contact_number} />}
@@ -980,13 +987,6 @@ export default function TourismHome() {
                   </a>
                 )}
               </div>
-
-              {selectedEstablishment.description && (
-                <div className="mt-5 rounded-2xl bg-[#f8fbf8] p-5">
-                  <h3 className="font-semibold text-slate-950">Establishment overview</h3>
-                  <p className="mt-2 leading-7 text-slate-600">{selectedEstablishment.description}</p>
-                </div>
-              )}
 
               <div className="mt-5 overflow-hidden rounded-2xl border border-[#d7e5e2] bg-[#f8fbf8]">
                 <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
