@@ -653,23 +653,23 @@ export default function Reports() {
             {filterType} report
           </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="text-xs font-medium text-slate-500 uppercase">Total Visitors / Check-ins</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{totalVisitors.toLocaleString()}</p>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="min-w-0 rounded-lg bg-slate-50 p-3 sm:p-4">
+            <p className="text-[10px] font-medium uppercase leading-tight text-slate-500 sm:text-xs">Total Visitors / Check-ins</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{totalVisitors.toLocaleString()}</p>
           </div>
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="text-xs font-medium text-slate-500 uppercase">Reports Included</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{totalSubmissions}</p>
+          <div className="min-w-0 rounded-lg bg-slate-50 p-3 sm:p-4">
+            <p className="text-[10px] font-medium uppercase leading-tight text-slate-500 sm:text-xs">Reports Included</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{totalSubmissions}</p>
           </div>
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="text-xs font-medium text-slate-500 uppercase">Establishments Covered</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{establishmentsCovered}</p>
+          <div className="min-w-0 rounded-lg bg-slate-50 p-3 sm:p-4">
+            <p className="text-[10px] font-medium uppercase leading-tight text-slate-500 sm:text-xs">Establishments Covered</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{establishmentsCovered}</p>
           </div>
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="text-xs font-medium text-slate-500 uppercase">Top Establishment</p>
-            <p className="mt-2 text-base font-bold text-slate-900">{topEstablishment ? topEstablishment[0] : "N/A"}</p>
-            {topEstablishment && <p className="text-sm text-slate-500">{topEstablishment[1].toLocaleString()} visitors/check-ins</p>}
+          <div className="min-w-0 rounded-lg bg-slate-50 p-3 sm:p-4">
+            <p className="text-[10px] font-medium uppercase leading-tight text-slate-500 sm:text-xs">Top Establishment</p>
+            <p className="mt-2 truncate text-sm font-bold text-slate-900 sm:text-base">{topEstablishment ? topEstablishment[0] : "N/A"}</p>
+            {topEstablishment && <p className="text-xs text-slate-500 sm:text-sm">{topEstablishment[1].toLocaleString()} visitors/check-ins</p>}
           </div>
         </div>
         <p className="mt-4 text-sm text-slate-600">
@@ -679,55 +679,55 @@ export default function Reports() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Users className="w-5 h-5 text-blue-600" />
-            <p className="text-sm text-gray-600">Current Period</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <div className="mb-2 flex min-w-0 items-center gap-1.5 sm:gap-3">
+            <Users className="h-4 w-4 shrink-0 text-blue-600 sm:h-5 sm:w-5" />
+            <p className="truncate text-[11px] text-gray-600 sm:text-sm">Current Period</p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{visitorStats.currentTotal.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{visitorStats.currentTotal.toLocaleString()}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Users className="w-5 h-5 text-purple-600" />
-            <p className="text-sm text-gray-600">Previous Period</p>
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <div className="mb-2 flex min-w-0 items-center gap-1.5 sm:gap-3">
+            <Users className="h-4 w-4 shrink-0 text-purple-600 sm:h-5 sm:w-5" />
+            <p className="truncate text-[11px] text-gray-600 sm:text-sm">Previous Period</p>
           </div>
-          <p className="text-3xl font-bold text-gray-900">{visitorStats.previousTotal.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{visitorStats.previousTotal.toLocaleString()}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-2">
-            {visitorStats.isIncrease ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
-            <p className="text-sm text-gray-600">Change</p>
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <div className="mb-2 flex min-w-0 items-center gap-1.5 sm:gap-3">
+            {visitorStats.isIncrease ? <TrendingUp className="h-4 w-4 shrink-0 text-green-600 sm:h-5 sm:w-5" /> : <TrendingDown className="h-4 w-4 shrink-0 text-red-600 sm:h-5 sm:w-5" />}
+            <p className="truncate text-[11px] text-gray-600 sm:text-sm">Change</p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <p className={`text-3xl font-bold ${visitorStats.isIncrease ? "text-green-600" : "text-red-600"}`}>
+          <div className="flex flex-wrap items-baseline gap-x-1 sm:gap-x-2">
+            <p className={`text-2xl font-bold sm:text-3xl ${visitorStats.isIncrease ? "text-green-600" : "text-red-600"}`}>
               {visitorStats.isIncrease ? "+" : ""}
               {visitorStats.difference.toLocaleString()}
             </p>
-            <span className={`text-sm font-medium ${visitorStats.isIncrease ? "text-green-600" : "text-red-600"}`}>
+            <span className={`text-[11px] font-medium sm:text-sm ${visitorStats.isIncrease ? "text-green-600" : "text-red-600"}`}>
               ({visitorStats.isIncrease ? "+" : ""}{visitorStats.percentageChange}%)
             </span>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Submissions</p>
-          <p className="text-3xl font-bold text-gray-900">{totalSubmissions}</p>
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <p className="mb-1 text-[11px] text-gray-600 sm:text-sm">Total Submissions</p>
+          <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{totalSubmissions}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Pending Review</p>
-          <p className="text-3xl font-bold text-yellow-600">{pendingCount}</p>
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <p className="mb-1 text-[11px] text-gray-600 sm:text-sm">Pending Review</p>
+          <p className="text-2xl font-bold text-yellow-600 sm:text-3xl">{pendingCount}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">On Hold</p>
-          <p className="text-3xl font-bold text-orange-600">{onHoldCount}</p>
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <p className="mb-1 text-[11px] text-gray-600 sm:text-sm">On Hold</p>
+          <p className="text-2xl font-bold text-orange-600 sm:text-3xl">{onHoldCount}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Approved</p>
-          <p className="text-3xl font-bold text-green-600">{approvedCount}</p>
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <p className="mb-1 text-[11px] text-gray-600 sm:text-sm">Approved</p>
+          <p className="text-2xl font-bold text-green-600 sm:text-3xl">{approvedCount}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Rejected</p>
-          <p className="text-3xl font-bold text-red-600">{rejectedCount}</p>
+        <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:p-6">
+          <p className="mb-1 text-[11px] text-gray-600 sm:text-sm">Rejected</p>
+          <p className="text-2xl font-bold text-red-600 sm:text-3xl">{rejectedCount}</p>
         </div>
       </div>
 
