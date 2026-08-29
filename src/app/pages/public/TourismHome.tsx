@@ -260,6 +260,15 @@ const getReviewDisplay = (review: RatingReview) => {
   return { reviewerName: 'Anonymous visitor', comment }
 }
 
+const sortReviewsForDisplay = (reviews: RatingReview[]) => {
+  return [...reviews].sort((a, b) => {
+    const aHasComment = getReviewDisplay(a).comment.length > 0
+    const bHasComment = getReviewDisplay(b).comment.length > 0
+    if (aHasComment !== bHasComment) return aHasComment ? -1 : 1
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+}
+
 const getLocalRatingSummaries = (establishmentIds: string[]) => {
   const localRatings = readLocalRatings()
   return establishmentIds.reduce<Record<string, RatingSummary>>((acc, id) => {
@@ -427,13 +436,13 @@ export default function TourismHome() {
     }
 
     if (!error && data) {
-      setRatingReviews((current) => ({ ...current, [establishmentId]: data }))
+      setRatingReviews((current) => ({ ...current, [establishmentId]: sortReviewsForDisplay(data) }))
     } else {
       const localReview = readLocalRatings()[establishmentId]
       if (localReview) {
         setRatingReviews((current) => ({
           ...current,
-          [establishmentId]: [{ establishment_id: establishmentId, rating: localReview.rating, comment: localReview.comment || null, reviewer_name: localReview.reviewerName || null, created_at: localReview.createdAt || new Date().toISOString() }],
+          [establishmentId]: sortReviewsForDisplay([{ establishment_id: establishmentId, rating: localReview.rating, comment: localReview.comment || null, reviewer_name: localReview.reviewerName || null, created_at: localReview.createdAt || new Date().toISOString() }]),
         }))
       }
     }
@@ -1094,6 +1103,7 @@ export default function TourismHome() {
 
 function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: RatingReview[] }) {
   const maxCount = Math.max(1, ...[1, 2, 3, 4, 5].map((star) => summary.breakdown[star as keyof RatingBreakdown] || 0))
+  const sortedReviews = sortReviewsForDisplay(reviews)
 
   return (
     <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
@@ -1122,10 +1132,10 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
       </div>
 
       <div className="mt-5 space-y-3">
-        {reviews.length === 0 ? (
+        {sortedReviews.length === 0 ? (
           <p className="rounded-2xl bg-[#f8fbf8] p-4 text-sm text-slate-500">No public review comments yet.</p>
         ) : (
-          reviews.map((review, index) => {
+          sortedReviews.map((review, index) => {
             const display = getReviewDisplay(review)
             return (
               <div key={`${review.establishment_id}-${review.created_at}-${index}`} className="rounded-2xl bg-[#f8fbf8] p-4">
@@ -1134,7 +1144,7 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
                   <span className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString()}</span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-slate-800">{display.reviewerName}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{display.comment || 'No comment provided.'}</p>
+                {display.comment && <p className="mt-2 text-sm leading-6 text-slate-600">{display.comment}</p>}
               </div>
             )
           })
