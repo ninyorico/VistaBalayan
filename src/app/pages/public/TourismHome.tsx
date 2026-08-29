@@ -147,7 +147,6 @@ const getLocationQuery = (establishment: Establishment) => {
   return establishment.address || establishment.name
 }
 
-const getOpenStreetMapUrl = (establishment: Establishment) => `https://www.openstreetmap.org/search?query=${encodeURIComponent(getLocationQuery(establishment))}`
 const getOpenStreetMapEmbedUrl = (establishment: Establishment) => {
   const storedLocation = getStoredLocation(establishment)
   if (!storedLocation) return `https://www.openstreetmap.org/export/embed.html?bbox=120.7132%2C13.9185%2C120.7532%2C13.9585&layer=mapnik`
@@ -367,6 +366,7 @@ export default function TourismHome() {
   const [ratingReviews, setRatingReviews] = useState<Record<string, RatingReview[]>>({})
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
+  const [showSelectedMap, setShowSelectedMap] = useState(false)
 
   useEffect(() => {
     setBehavior(readBehavior())
@@ -547,6 +547,7 @@ export default function TourismHome() {
   const openDetails = (establishment: Establishment) => {
     setSelectedEstablishment(establishment)
     setSelectedPhotoIndex(0)
+    setShowSelectedMap(false)
     setRatingMessage('')
     const localReview = readLocalRatings()[establishment.id]
     setSelectedReviewRating(localReview?.rating || ratingSummaries[establishment.id]?.visitorRating || 0)
@@ -971,6 +972,13 @@ export default function TourismHome() {
                 )}
               </div>
 
+              {selectedEstablishment.description && (
+                <div className="mt-5 rounded-2xl bg-[#f8fbf8] p-5">
+                  <h3 className="font-semibold text-slate-950">About this stay</h3>
+                  <p className="mt-2 leading-7 text-slate-600">{selectedEstablishment.description}</p>
+                </div>
+              )}
+
               <div className="mt-5 overflow-hidden rounded-2xl border border-[#d7e5e2] bg-[#f8fbf8]">
                 <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -988,21 +996,26 @@ export default function TourismHome() {
                       <Navigation className="h-4 w-4" strokeWidth={1.8} />
                       Google directions
                     </Button>
-                    <Button asChild variant="outline" className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]">
-                      <a href={getOpenStreetMapUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
-                        <MapPin className="h-4 w-4" strokeWidth={1.8} />
-                        View map
-                      </a>
+                    <Button
+                      type="button"
+                      onClick={() => setShowSelectedMap(true)}
+                      variant="outline"
+                      className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]"
+                    >
+                      <MapPin className="h-4 w-4" strokeWidth={1.8} />
+                      View map
                     </Button>
                   </div>
                 </div>
-                <iframe
-                  title={`${selectedEstablishment.name} OpenStreetMap location`}
-                  src={getOpenStreetMapEmbedUrl(selectedEstablishment)}
-                  className="h-64 w-full border-0"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+                {showSelectedMap && (
+                  <iframe
+                    title={`${selectedEstablishment.name} OpenStreetMap location`}
+                    src={getOpenStreetMapEmbedUrl(selectedEstablishment)}
+                    className="h-64 w-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                )}
               </div>
 
               <Separator className="my-6 bg-[#d7e5e2]" />
@@ -1064,12 +1077,6 @@ export default function TourismHome() {
 
               <ReviewSummary summary={selectedRating} reviews={selectedReviews} />
 
-              {selectedEstablishment.description && (
-                <div className="mt-6 rounded-2xl bg-[#f8fbf8] p-5">
-                  <h3 className="font-semibold text-slate-950">Establishment overview</h3>
-                  <p className="mt-2 leading-7 text-slate-600">{selectedEstablishment.description}</p>
-                </div>
-              )}
 
               <Button
                 onClick={() => setSelectedEstablishment(null)}
