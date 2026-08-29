@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, Upload, Trash2, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
+import { compressListingImage } from '../../../lib/listingImages'
 import { toast } from 'sonner'
 
 export default function ManageListing() {
@@ -92,10 +93,16 @@ export default function ManageListing() {
 
     setUploading(true)
     const uploadedImages: string[] = []
-    let failedUploads = 0
+    const fallbackImages: string[] = []
+    const failedFiles: string[] = []
 
     try {
       for (const file of Array.from(files)) {
+        if (!file.type.startsWith('image/')) {
+          failedFiles.push(`${file.name} is not an image file`)
+          continue
+        }
+
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
         const filePath = `public/${establishment.id}/${fileName}`
@@ -104,32 +111,40 @@ export default function ManageListing() {
           .from('establishment-images')
           .upload(filePath, file)
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError)
-          failedUploads += 1
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('establishment-images')
+            .getPublicUrl(filePath)
+
+          uploadedImages.push(publicUrl)
           continue
         }
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('establishment-images')
-          .getPublicUrl(filePath)
-
-        uploadedImages.push(publicUrl)
+        console.warn('Storage upload failed; saving compressed listing image directly:', uploadError)
+        try {
+          const compressedImage = await compressListingImage(file)
+          if (compressedImage.length > 900_000) {
+            failedFiles.push(`${file.name} is too large. Please use a smaller or cropped photo.`)
+            continue
+          }
+          fallbackImages.push(compressedImage)
+        } catch (error) {
+          failedFiles.push(error instanceof Error ? error.message : `Unable to process ${file.name}`)
+        }
       }
 
-      if (uploadedImages.length === 0) {
-        toast.error('No photos were uploaded. Please try again.')
+      const nextUploads = [...uploadedImages, ...fallbackImages]
+      if (nextUploads.length === 0) {
+        toast.error(failedFiles[0] || 'No photos were uploaded. Please try again.')
         return
       }
 
-      const nextImages = [...images, ...uploadedImages]
+      const nextImages = [...images, ...nextUploads]
       const published = await saveListingImages(nextImages)
       if (published) {
-        toast.success(
-          failedUploads > 0
-            ? `${uploadedImages.length} photo(s) uploaded and published. ${failedUploads} failed.`
-            : 'Photos uploaded and published to the public website.'
-        )
+        const fallbackNote = fallbackImages.length > 0 ? ' Storage was unavailable, so compressed photos were saved directly.' : ''
+        const failedNote = failedFiles.length > 0 ? ` ${failedFiles.length} file(s) were skipped.` : ''
+        toast.success(`Photos uploaded and published to the public website.${fallbackNote}${failedNote}`)
       }
     } finally {
       setUploading(false)
