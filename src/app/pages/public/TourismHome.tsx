@@ -307,6 +307,7 @@ export default function TourismHome() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null)
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0)
   const [behavior, setBehavior] = useState<BehaviorProfile>(emptyBehavior)
   const [ratingSummaries, setRatingSummaries] = useState<Record<string, RatingSummary>>({})
   const [ratingVisitorToken, setRatingVisitorToken] = useState('')
@@ -497,6 +498,7 @@ export default function TourismHome() {
 
   const openDetails = (establishment: Establishment) => {
     setSelectedEstablishment(establishment)
+    setSelectedPhotoIndex(0)
     setRatingMessage('')
     const localReview = readLocalRatings()[establishment.id]
     setSelectedReviewRating(localReview?.rating || ratingSummaries[establishment.id]?.visitorRating || 0)
@@ -563,6 +565,8 @@ export default function TourismHome() {
   const featuredImage = establishments.find((est) => est.images?.length)?.images?.[0]
   const selectedRating = selectedEstablishment ? ratingSummaries[selectedEstablishment.id] || emptyRatingSummary : emptyRatingSummary
   const selectedReviews = selectedEstablishment ? ratingReviews[selectedEstablishment.id] || [] : []
+  const selectedPhotos = selectedEstablishment?.images?.filter((image) => typeof image === 'string' && image.trim().length > 0) || []
+  const selectedPhoto = selectedPhotos[selectedPhotoIndex] || selectedPhotos[0]
 
   return (
     <main className="min-h-[100dvh] tourism-shell text-[#0B2530]">
@@ -688,7 +692,14 @@ export default function TourismHome() {
                     className="group overflow-hidden rounded-[1.7rem] border border-[#d7e5e2] bg-white/90 text-left shadow-tourism backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:shadow-tourism-hover active:translate-y-[1px]"
                   >
                     {displayImage ? (
-                      <img src={displayImage} alt={est.name} className="h-56 w-full object-cover transition duration-500 group-hover:scale-105" />
+                      <div className="relative h-56 overflow-hidden">
+                        <img src={displayImage} alt={est.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                        {est.images.length > 1 && (
+                          <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/75 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                            {est.images.length} photos
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <div className="flex h-56 items-center justify-center bg-gradient-to-br from-[#0E5A72] via-[#168AAD] to-[#D96C4E]">
                         <Icon className="h-14 w-14 text-white/70" strokeWidth={1.8} />
@@ -752,8 +763,50 @@ export default function TourismHome() {
       {selectedEstablishment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" onClick={() => setSelectedEstablishment(null)}>
           <div className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            {selectedEstablishment.images && selectedEstablishment.images.length > 0 ? (
-              <img src={selectedEstablishment.images[0]} alt={selectedEstablishment.name} className="h-72 w-full object-cover" />
+            {selectedPhotos.length > 0 ? (
+              <div className="bg-slate-950">
+                <div className="relative">
+                  <img src={selectedPhoto} alt={`${selectedEstablishment.name} photo ${selectedPhotoIndex + 1}`} className="h-72 w-full object-cover sm:h-96" />
+                  {selectedPhotos.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhotoIndex((current) => (current === 0 ? selectedPhotos.length - 1 : current - 1))}
+                        className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-xl font-semibold text-slate-900 shadow-lg transition hover:bg-white"
+                        aria-label="Previous photo"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhotoIndex((current) => (current + 1) % selectedPhotos.length)}
+                        className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-xl font-semibold text-slate-900 shadow-lg transition hover:bg-white"
+                        aria-label="Next photo"
+                      >
+                        ›
+                      </button>
+                      <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/75 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+                        {selectedPhotoIndex + 1} / {selectedPhotos.length}
+                      </span>
+                    </>
+                  )}
+                </div>
+                {selectedPhotos.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto p-3">
+                    {selectedPhotos.map((photo, index) => (
+                      <button
+                        key={`${photo}-${index}`}
+                        type="button"
+                        onClick={() => setSelectedPhotoIndex(index)}
+                        className={`h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition ${index === selectedPhotoIndex ? 'border-white' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                        aria-label={`View photo ${index + 1}`}
+                      >
+                        <img src={photo} alt={`${selectedEstablishment.name} thumbnail ${index + 1}`} className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex h-56 items-center justify-center bg-gradient-to-br from-[#0E5A72] via-[#168AAD] to-[#D96C4E]">
                 {React.createElement(getCategoryIcon(selectedEstablishment.type), { className: 'h-14 w-14 text-white/70', strokeWidth: 1.8 })}
