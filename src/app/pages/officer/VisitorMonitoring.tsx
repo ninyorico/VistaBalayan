@@ -173,56 +173,56 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 text-[13px] sm:space-y-6 sm:text-sm lg:text-base">
       {!embedded && (
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Visitor Monitoring</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Visitor Monitoring</h1>
+          <p className="mt-1 text-sm text-gray-600 sm:text-base">
             Monitor and review visitor data from all establishments
           </p>
         </div>
       )}
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Visitors</p>
-          <p className="text-3xl font-bold text-gray-900">{totalVisitors}</p>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+          <p className="mb-1 text-xs text-gray-600 sm:text-sm">Total Visitors</p>
+          <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{totalVisitors}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Male</p>
-          <p className="text-3xl font-bold text-blue-600">{totalMale}</p>
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+          <p className="mb-1 text-xs text-gray-600 sm:text-sm">Male</p>
+          <p className="text-2xl font-bold text-blue-600 sm:text-3xl">{totalMale}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Female</p>
-          <p className="text-3xl font-bold text-purple-600">{totalFemale}</p>
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+          <p className="mb-1 text-xs text-gray-600 sm:text-sm">Female</p>
+          <p className="text-2xl font-bold text-purple-600 sm:text-3xl">{totalFemale}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Records</p>
-          <p className="text-3xl font-bold text-gray-900">{filteredRecords.length}</p>
+        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+          <p className="mb-1 text-xs text-gray-600 sm:text-sm">Total Records</p>
+          <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{filteredRecords.length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-64">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1 basis-full sm:basis-64">
             <div className="relative">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:h-5 sm:w-5" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by establishment or location..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 sm:pl-10 sm:pr-4 sm:text-base"
               />
             </div>
           </div>
-          <div>
+          <div className="min-w-0 flex-1 sm:flex-none">
             <select
               value={filterResidence}
               onChange={(e) => setFilterResidence(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 sm:px-4 sm:text-base"
             >
               <option value="all">All Places of Residence</option>
               <option value="Batangas Resident">Batangas Resident</option>
@@ -230,10 +230,10 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
               <option value="Foreign">Foreign</option>
             </select>
           </div>
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
             <button
               type="button"
-              className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white transition"
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white transition sm:text-sm"
               aria-pressed="true"
             >
               Month
@@ -243,11 +243,11 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
             type="month"
             value={specificMonth}
             onChange={(e) => setSpecificMonth(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-blue-500 sm:flex-none sm:px-4 sm:text-base"
             title="Select report month"
           />
           <button 
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-700 sm:px-4 sm:text-base"
             onClick={handleExport}
           >
             <Download className="w-4 h-4" />
@@ -257,22 +257,22 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
       </div>
 
       {/* Visitor Records by Establishment */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-          <h2 className="font-semibold text-gray-900">Visitor records by establishment</h2>
-          <p className="mt-1 text-sm text-gray-600">Click an establishment to expand and view the full {monthLabel} record.</p>
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
+          <h2 className="text-base font-semibold text-gray-900 sm:text-lg">Visitor records by establishment</h2>
+          <p className="mt-1 text-xs leading-5 text-gray-600 sm:text-sm">Click an establishment to expand and view the full {monthLabel} record.</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px]">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[700px] sm:min-w-[860px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Establishment</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Records</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Male</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Female</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total Visitors</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Places of Residence</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Locations</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3 sm:text-xs">Establishment</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3 sm:text-xs">Records</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3 sm:text-xs">Male</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3 sm:text-xs">Female</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3 sm:text-xs">Total Visitors</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3 sm:text-xs">Places of Residence</th>
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3 sm:text-xs">Locations</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -282,45 +282,45 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                   return (
                     <Fragment key={group.establishment}>
                       <tr className="cursor-pointer hover:bg-gray-50" onClick={() => toggleEstablishment(group.establishment)}>
-                        <td className="px-6 py-4 font-medium text-gray-900">
-                          <div className="flex items-center gap-2">
-                            {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
+                        <td className="px-3 py-3 text-xs font-medium text-gray-900 sm:px-6 sm:py-4 sm:text-sm">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            {isExpanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-500 sm:h-4 sm:w-4" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-500 sm:h-4 sm:w-4" />}
                             {group.establishment}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-gray-600">{group.records.length}</td>
-                        <td className="px-6 py-4 text-blue-600 font-medium">{group.male}</td>
-                        <td className="px-6 py-4 text-purple-600 font-medium">{group.female}</td>
-                        <td className="px-6 py-4 text-gray-900 font-semibold">{group.total}</td>
-                        <td className="px-6 py-4 text-gray-600">{Array.from(group.residenceTypes).join(", ")}</td>
-                        <td className="px-6 py-4 text-gray-600">{Array.from(group.locations).join(", ")}</td>
+                        <td className="px-3 py-3 text-xs text-gray-600 sm:px-6 sm:py-4 sm:text-sm">{group.records.length}</td>
+                        <td className="px-3 py-3 text-xs font-medium text-blue-600 sm:px-6 sm:py-4 sm:text-sm">{group.male}</td>
+                        <td className="px-3 py-3 text-xs font-medium text-purple-600 sm:px-6 sm:py-4 sm:text-sm">{group.female}</td>
+                        <td className="px-3 py-3 text-xs font-semibold text-gray-900 sm:px-6 sm:py-4 sm:text-sm">{group.total}</td>
+                        <td className="max-w-[9rem] px-3 py-3 text-xs text-gray-600 sm:max-w-none sm:px-6 sm:py-4 sm:text-sm">{Array.from(group.residenceTypes).join(", ")}</td>
+                        <td className="max-w-[11rem] px-3 py-3 text-xs text-gray-600 sm:max-w-none sm:px-6 sm:py-4 sm:text-sm">{Array.from(group.locations).join(", ")}</td>
                       </tr>
                       {isExpanded && (
                         <tr key={`${group.establishment}-details`} className="bg-slate-50/80">
-                          <td colSpan={7} className="px-6 py-4">
-                            <div className="max-h-80 overflow-auto overscroll-contain rounded-lg border border-gray-200 bg-white">
-                              <table className="w-full min-w-[760px]">
+                          <td colSpan={7} className="px-2 py-3 sm:px-6 sm:py-4">
+                            <div className="max-h-72 overflow-auto overscroll-contain rounded-lg border border-gray-200 bg-white sm:max-h-80">
+                              <table className="w-full min-w-[640px] sm:min-w-[760px]">
                                 <thead className="sticky top-0 z-10 bg-white border-b border-gray-200">
                                   <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Date</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Guest/Group</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Male</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Female</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Total</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Place of Residence</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Location</th>
+                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Date</th>
+                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Guest/Group</th>
+                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Male</th>
+                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Female</th>
+                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Total</th>
+                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Place of Residence</th>
+                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Location</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                   {group.records.map((record) => (
                                     <tr key={record.id}>
-                                      <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
-                                      <td className="px-4 py-3 text-sm text-gray-900">{record.guestName}</td>
-                                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{record.male}</td>
-                                      <td className="px-4 py-3 text-sm font-medium text-purple-600">{record.female}</td>
-                                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.total}</td>
-                                      <td className="px-4 py-3 text-sm text-gray-600">{record.residenceType}</td>
-                                      <td className="px-4 py-3 text-sm text-gray-600">{record.location}</td>
+                                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.date}</td>
+                                      <td className="px-2.5 py-2 text-xs text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.guestName}</td>
+                                      <td className="px-2.5 py-2 text-xs font-medium text-blue-600 sm:px-4 sm:py-3 sm:text-sm">{record.male}</td>
+                                      <td className="px-2.5 py-2 text-xs font-medium text-purple-600 sm:px-4 sm:py-3 sm:text-sm">{record.female}</td>
+                                      <td className="px-2.5 py-2 text-xs font-semibold text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.total}</td>
+                                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.residenceType}</td>
+                                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.location}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -334,7 +334,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-xs text-gray-500 sm:px-6 sm:py-8 sm:text-sm">
                     No visitor records found.
                   </td>
                 </tr>
