@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 const BALAYAN_CENTER = { latitude: 13.9385, longitude: 120.7332 }
 const LEAFLET_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY || ''
 
 const listingPinIcon = L.divIcon({
   className: '',
@@ -67,6 +68,61 @@ const buildMapSearchCandidates = (searchText: string, establishmentName: string,
     .map(cleanSearchPart)
     .filter(Boolean)))
     .map((candidate) => `${candidate}, Balayan, Batangas, Philippines`)
+}
+
+type MapSearchResult = {
+  latitude: number
+  longitude: number
+  displayName?: string
+  provider: 'Geoapify' | 'OpenStreetMap'
+}
+
+const searchGeoapify = async (searchQuery: string): Promise<MapSearchResult | null> => {
+  if (!GEOAPIFY_API_KEY) return null
+
+  const url = new URL('https://api.geoapify.com/v1/geocode/search')
+  url.searchParams.set('text', searchQuery)
+  url.searchParams.set('filter', 'countrycode:ph')
+  url.searchParams.set('bias', `proximity:${BALAYAN_CENTER.longitude},${BALAYAN_CENTER.latitude}`)
+  url.searchParams.set('limit', '1')
+  url.searchParams.set('apiKey', GEOAPIFY_API_KEY)
+
+  const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } })
+  if (!response.ok) throw new Error(`Geoapify search failed (${response.status}).`)
+
+  const data = await response.json()
+  const feature = Array.isArray(data?.features) ? data.features[0] : null
+  const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates : []
+  const longitude = parseCoordinate(String(coordinates[0]), -180, 180)
+  const latitude = parseCoordinate(String(coordinates[1]), -90, 90)
+  if (latitude === null || longitude === null) return null
+
+  return {
+    latitude,
+    longitude,
+    displayName: feature?.properties?.formatted || feature?.properties?.address_line1,
+    provider: 'Geoapify',
+  }
+}
+
+const searchOpenStreetMap = async (searchQuery: string): Promise<MapSearchResult | null> => {
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=${encodeURIComponent(searchQuery)}`, {
+    headers: { Accept: 'application/json' },
+  })
+  if (!response.ok) throw new Error('OpenStreetMap search failed.')
+
+  const results = await response.json()
+  const firstResult = Array.isArray(results) ? results[0] : null
+  const latitude = firstResult ? parseCoordinate(String(firstResult.lat), -90, 90) : null
+  const longitude = firstResult ? parseCoordinate(String(firstResult.lon), -180, 180) : null
+  if (latitude === null || longitude === null) return null
+
+  return {
+    latitude,
+    longitude,
+    displayName: firstResult.display_name,
+    provider: 'OpenStreetMap',
+  }
 }
 
 export default function ManageListing() {
@@ -315,7 +371,7 @@ export default function ManageListing() {
     map.panTo(latLng)
   }, [formData.latitude, formData.longitude])
 
-  const searchOpenStreetMap = async () => {
+  const handleMapSearch = async () => {
     const candidates = buildMapSearchCandidates(mapSearch, formData.name, formData.address)
     if (candidates.length === 0) {
       toast.error('Enter an establishment name, address, or nearby landmark to search.')
@@ -324,46 +380,42 @@ export default function ManageListing() {
 
     setMapStatus('searching')
     try {
-      let firstResult: any = null
+      let foundResult: MapSearchResult | null = null
       let matchedQuery = ''
 
       for (const searchQuery of candidates) {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=${encodeURIComponent(searchQuery)}`, {
-          headers: { Accept: 'application/json' },
-        })
-        if (!response.ok) throw new Error('OpenStreetMap search failed.')
-
-        const results = await response.json()
-        firstResult = Array.isArray(results) ? results[0] : null
-        const latitude = firstResult ? parseCoordinate(String(firstResult.lat), -90, 90) : null
-        const longitude = firstResult ? parseCoordinate(String(firstResult.lon), -180, 180) : null
-        if (latitude !== null && longitude !== null) {
+        foundResult = await searchGeoapify(searchQuery)
+        if (!foundResult && !GEOAPIFY_API_KEY) {
+          foundResult = await searchOpenStreetMap(searchQuery)
+        }
+        if (foundResult) {
           matchedQuery = searchQuery
           break
         }
       }
 
-      const latitude = firstResult ? parseCoordinate(String(firstResult.lat), -90, 90) : null
-      const longitude = firstResult ? parseCoordinate(String(firstResult.lon), -180, 180) : null
-
-      if (latitude === null || longitude === null) {
-        toast.error('No OpenStreetMap location found. Try the barangay, nearby landmark, or paste coordinates manually.')
+      if (!foundResult) {
+        toast.error(GEOAPIFY_API_KEY
+          ? 'No Geoapify location found. Try the barangay, nearby landmark, or paste coordinates manually.'
+          : 'Geoapify API key is not configured yet. OpenStreetMap could not find it, so try a nearby landmark or paste coordinates manually.')
         setMapStatus('ready')
         return
       }
 
-      setExactPin(latitude, longitude)
-      if (firstResult.display_name) {
-        setFormData((current) => ({ ...current, address: firstResult.display_name }))
+      setExactPin(foundResult.latitude, foundResult.longitude)
+      if (foundResult.displayName) {
+        setFormData((current) => ({ ...current, address: foundResult?.displayName || current.address }))
       }
       const usedFallback = candidates.length > 1 && matchedQuery !== candidates[0]
       toast.success(usedFallback
-        ? 'OpenStreetMap found a nearby address/location for this listing. Review the pin before publishing.'
-        : 'OpenStreetMap found a location. Review the pin before publishing.')
+        ? `${foundResult.provider} found a nearby address/location for this listing. Review the pin before publishing.`
+        : `${foundResult.provider} found a location. Review the pin before publishing.`)
       setMapStatus('ready')
     } catch (error) {
-      console.error('OpenStreetMap search failed:', error)
-      toast.error('OpenStreetMap search is unavailable. You can still click the map or paste coordinates.')
+      console.error('Map search failed:', error)
+      toast.error(GEOAPIFY_API_KEY
+        ? 'Geoapify search is unavailable. You can still click the map or paste coordinates.'
+        : 'Map search is unavailable. Add a Geoapify API key, or click the map/paste coordinates manually.')
       setMapStatus('error')
     }
   }
@@ -578,19 +630,19 @@ export default function ManageListing() {
                 </div>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Search OpenStreetMap</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Search Geoapify</label>
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <input
                         type="text"
                         value={mapSearch}
                         onChange={(e) => setMapSearch(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchOpenStreetMap() } }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMapSearch() } }}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                         placeholder="Search your establishment or nearby landmark"
                       />
                       <button
                         type="button"
-                        onClick={searchOpenStreetMap}
+                        onClick={handleMapSearch}
                         disabled={mapStatus === 'searching'}
                         className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0E5A72] px-3 py-2 text-xs font-semibold text-white hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:opacity-60"
                       >
@@ -602,7 +654,7 @@ export default function ManageListing() {
                     <div ref={mapContainerRef} className="h-72 w-full" />
                     {mapStatus === 'searching' && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white/75 text-sm font-medium text-[#0E5A72]">
-                        Searching OpenStreetMap...
+                        Searching Geoapify...
                       </div>
                     )}
                     {mapStatus === 'error' && (
