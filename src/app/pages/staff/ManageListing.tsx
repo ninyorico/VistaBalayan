@@ -65,41 +65,82 @@ export default function ManageListing() {
     setLoading(false)
   }
 
+  const saveListingImages = async (nextImages: string[]) => {
+    if (!establishment) return false
+
+    const { error } = await supabase
+      .from('establishments')
+      .update({
+        images: nextImages,
+        updated_at: new Date(),
+      })
+      .eq('id', establishment.id)
+
+    if (error) {
+      toast.error('Photos uploaded, but publishing them failed: ' + error.message)
+      return false
+    }
+
+    setImages(nextImages)
+    setEstablishment((current: any) => current ? { ...current, images: nextImages } : current)
+    return true
+  }
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0 || !establishment) return
-    
+
     setUploading(true)
-    const newImages = [...images]
-    
-    for (const file of Array.from(files)) {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `public/${establishment.id}/${fileName}`
-      
-      const { error: uploadError } = await supabase.storage
-        .from('establishment-images')
-        .upload(filePath, file)
-      
-      if (uploadError) {
-        console.error('Upload error:', uploadError)
-        continue
+    const uploadedImages: string[] = []
+    let failedUploads = 0
+
+    try {
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        const filePath = `public/${establishment.id}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('establishment-images')
+          .upload(filePath, file)
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          failedUploads += 1
+          continue
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('establishment-images')
+          .getPublicUrl(filePath)
+
+        uploadedImages.push(publicUrl)
       }
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('establishment-images')
-        .getPublicUrl(filePath)
-      
-      newImages.push(publicUrl)
+
+      if (uploadedImages.length === 0) {
+        toast.error('No photos were uploaded. Please try again.')
+        return
+      }
+
+      const nextImages = [...images, ...uploadedImages]
+      const published = await saveListingImages(nextImages)
+      if (published) {
+        toast.success(
+          failedUploads > 0
+            ? `${uploadedImages.length} photo(s) uploaded and published. ${failedUploads} failed.`
+            : 'Photos uploaded and published to the public website.'
+        )
+      }
+    } finally {
+      setUploading(false)
+      e.target.value = ''
     }
-    
-    setImages(newImages)
-    setUploading(false)
-    toast.success('Photos uploaded')
   }
 
   const removeImage = async (index: number) => {
-    setImages(images.filter((_, i) => i !== index))
+    const nextImages = images.filter((_, i) => i !== index)
+    const published = await saveListingImages(nextImages)
+    if (published) toast.success('Photo removed from the public website.')
   }
 
   const handleSubmit = async () => {
