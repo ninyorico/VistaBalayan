@@ -1,10 +1,47 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Save, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X, Navigation, Crosshair } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { compressListingImage } from '../../../lib/listingImages'
 import { toast } from 'sonner'
 
 const BALAYAN_CENTER = { latitude: 13.9385, longitude: 120.7332 }
+const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+let googleMapsPromise: Promise<any> | null = null
+
+declare global {
+  interface Window {
+    google?: any
+    initVistaBalayanGoogleMaps?: () => void
+  }
+}
+
+const loadGoogleMapsApi = () => {
+  if (typeof window === 'undefined') return Promise.reject(new Error('Google Maps can only load in the browser.'))
+  if (window.google?.maps) return Promise.resolve(window.google)
+  if (!googleMapsApiKey) return Promise.reject(new Error('Google Maps API key is not configured.'))
+  if (googleMapsPromise) return googleMapsPromise
+
+  googleMapsPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-vistabalayan-google-maps="true"]')
+    window.initVistaBalayanGoogleMaps = () => resolve(window.google)
+
+    if (existingScript) {
+      existingScript.addEventListener('load', () => window.google?.maps ? resolve(window.google) : reject(new Error('Google Maps API did not initialize.')), { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('Unable to load Google Maps API.')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.dataset.vistabalayanGoogleMaps = 'true'
+    script.async = true
+    script.defer = true
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&libraries=places&callback=initVistaBalayanGoogleMaps`
+    script.onerror = () => reject(new Error('Unable to load Google Maps API.'))
+    document.head.appendChild(script)
+  })
+
+  return googleMapsPromise
+}
 
 const toCoordinateInput = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? String(value) : '')
 
@@ -45,6 +82,12 @@ export default function ManageListing() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [images, setImages] = useState<string[]>([])
+  const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'ready' | 'missing-key' | 'error'>(googleMapsApiKey ? 'idle' : 'missing-key')
+  const mapContainerRef = useRef<HTMLDivElement | null>(null)
+  const mapSearchInputRef = useRef<HTMLInputElement | null>(null)
+  const googleMapRef = useRef<any>(null)
+  const googleMarkerRef = useRef<any>(null)
+  const googleAutocompleteRef = useRef<any>(null)
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -200,6 +243,111 @@ export default function ManageListing() {
 
   const currentMapQuery = getMapQuery(formData.latitude, formData.longitude, formData.address)
   const hasExactCoordinates = parseCoordinate(formData.latitude, -90, 90) !== null && parseCoordinate(formData.longitude, -180, 180) !== null
+
+  const setExactPin = (latitude: number, longitude: number) => {
+    setFormData((current) => ({
+      ...current,
+      latitude: latitude.toFixed(7),
+      longitude: longitude.toFixed(7),
+    }))
+  }
+
+  const getCurrentPinPosition = () => {
+    const latitude = parseCoordinate(formData.latitude, -90, 90)
+    const longitude = parseCoordinate(formData.longitude, -180, 180)
+    return latitude !== null && longitude !== null ? { lat: latitude, lng: longitude } : null
+  }
+
+  useEffect(() => {
+    if (!mapContainerRef.current || !establishment || !googleMapsApiKey) return
+
+    let cancelled = false
+    setMapStatus('loading')
+
+    loadGoogleMapsApi()
+      .then((google) => {
+        if (cancelled || !mapContainerRef.current) return
+
+        const exactPosition = getCurrentPinPosition()
+        const initialCenter = exactPosition || { lat: BALAYAN_CENTER.latitude, lng: BALAYAN_CENTER.longitude }
+        const map = googleMapRef.current || new google.maps.Map(mapContainerRef.current, {
+          center: initialCenter,
+          zoom: exactPosition ? 17 : 14,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+        })
+        googleMapRef.current = map
+        map.setCenter(initialCenter)
+
+        const marker = googleMarkerRef.current || new google.maps.Marker({
+          map,
+          draggable: true,
+          title: 'Exact establishment location',
+        })
+        googleMarkerRef.current = marker
+        marker.setPosition(initialCenter)
+
+        if (!googleMarkerRef.current.__vistabalayanDragListener) {
+          googleMarkerRef.current.__vistabalayanDragListener = marker.addListener('dragend', () => {
+            const position = marker.getPosition()
+            if (position) setExactPin(position.lat(), position.lng())
+          })
+        }
+
+        if (!googleMapRef.current.__vistabalayanClickListener) {
+          googleMapRef.current.__vistabalayanClickListener = map.addListener('click', (event: any) => {
+            if (!event.latLng) return
+            marker.setPosition(event.latLng)
+            map.panTo(event.latLng)
+            setExactPin(event.latLng.lat(), event.latLng.lng())
+          })
+        }
+
+        if (mapSearchInputRef.current && !googleAutocompleteRef.current && google.maps.places?.Autocomplete) {
+          const autocomplete = new google.maps.places.Autocomplete(mapSearchInputRef.current, {
+            fields: ['geometry', 'formatted_address', 'name'],
+            componentRestrictions: { country: 'ph' },
+          })
+          autocomplete.bindTo('bounds', map)
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace()
+            if (!place.geometry?.location) {
+              toast.error('No map location found for that search.')
+              return
+            }
+            const location = place.geometry.location
+            map.panTo(location)
+            map.setZoom(17)
+            marker.setPosition(location)
+            setExactPin(location.lat(), location.lng())
+            if (place.formatted_address) {
+              setFormData((current) => ({ ...current, address: place.formatted_address }))
+            }
+          })
+          googleAutocompleteRef.current = autocomplete
+        }
+
+        setMapStatus('ready')
+      })
+      .catch((error) => {
+        console.error('Google Maps API picker failed:', error)
+        setMapStatus(googleMapsApiKey ? 'error' : 'missing-key')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [establishment?.id, googleMapsApiKey])
+
+  useEffect(() => {
+    const map = googleMapRef.current
+    const marker = googleMarkerRef.current
+    const exactPosition = getCurrentPinPosition()
+    if (!map || !marker || !exactPosition) return
+    marker.setPosition(exactPosition)
+    map.panTo(exactPosition)
+  }, [formData.latitude, formData.longitude])
 
   const useCurrentLocationAsPin = () => {
     if (!navigator.geolocation) {
@@ -401,17 +549,50 @@ export default function ManageListing() {
                     />
                   </div>
                 </div>
-                <div className="mt-4 overflow-hidden rounded-xl border border-teal-100 bg-white">
-                  <iframe
-                    title="Google Maps listing pin preview"
-                    src={getGoogleMapsEmbedUrl(currentMapQuery)}
-                    className="h-56 w-full"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
+                <div className="mt-4 space-y-3">
+                  {googleMapsApiKey && (
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-600">Search Google Maps</label>
+                      <input
+                        ref={mapSearchInputRef}
+                        type="text"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        placeholder="Search your establishment or nearby landmark"
+                      />
+                    </div>
+                  )}
+                  <div className="relative overflow-hidden rounded-xl border border-teal-100 bg-white">
+                    {googleMapsApiKey ? (
+                      <>
+                        <div ref={mapContainerRef} className="h-72 w-full" />
+                        {mapStatus === 'loading' && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/75 text-sm font-medium text-[#0E5A72]">
+                            Loading Google Maps picker...
+                          </div>
+                        )}
+                        {mapStatus === 'error' && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/90 p-4 text-center text-sm text-red-600">
+                            Google Maps picker could not load. Check the API key/domain settings, or paste coordinates manually.
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <iframe
+                        title="Google Maps listing pin preview"
+                        src={getGoogleMapsEmbedUrl(currentMapQuery)}
+                        className="h-56 w-full"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                    )}
+                  </div>
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  {hasExactCoordinates ? 'Exact coordinates are ready to publish.' : 'Tip: open Google Maps, right-click the exact pin, then paste the copied latitude and longitude here.'}
+                  {googleMapsApiKey
+                    ? hasExactCoordinates
+                      ? 'Exact coordinates are ready to publish. You can still drag the marker or click the map to adjust the pin.'
+                      : 'Search, click the map, or drag the marker to set the exact pin.'
+                    : 'Add VITE_GOOGLE_MAPS_API_KEY to enable the interactive Google Maps pin picker. You can still paste coordinates manually.'}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
