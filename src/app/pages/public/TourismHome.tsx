@@ -154,6 +154,18 @@ const getOpenStreetMapEmbedUrl = (establishment: Establishment) => {
   const delta = 0.006
   return `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - delta}%2C${latitude - delta}%2C${longitude + delta}%2C${latitude + delta}&layer=mapnik&marker=${latitude}%2C${longitude}`
 }
+const getOpenStreetMapDirectionsUrl = (establishment: Establishment, origin?: UserLocation | null) => {
+  const storedLocation = getStoredLocation(establishment)
+  const destination = storedLocation
+    ? `${storedLocation.latitude},${storedLocation.longitude}`
+    : getLocationQuery(establishment)
+
+  if (storedLocation && origin) {
+    return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.latitude}%2C${origin.longitude}%3B${storedLocation.latitude}%2C${storedLocation.longitude}`
+  }
+
+  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&to=${encodeURIComponent(destination)}`
+}
 
 const readBehavior = (): BehaviorProfile => {
   if (typeof window === 'undefined') return emptyBehavior
@@ -608,6 +620,28 @@ export default function TourismHome() {
   const selectedPhotos = selectedEstablishment?.images?.filter((image) => typeof image === 'string' && image.trim().length > 0) || []
   const selectedPhoto = selectedPhotos[selectedPhotoIndex] || selectedPhotos[0]
 
+  const openDirectionsToEstablishment = (establishment: Establishment) => {
+    const openDirections = (origin?: UserLocation | null) => {
+      window.open(getOpenStreetMapDirectionsUrl(establishment, origin), '_blank', 'noopener,noreferrer')
+    }
+
+    if (!navigator.geolocation) {
+      openDirections(null)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        openDirections({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        })
+      },
+      () => openDirections(null),
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+  }
+
   return (
     <main className="min-h-[100dvh] bg-[#f5faf8] text-[#0B2530]">
       <section className="relative overflow-hidden border-b border-[#d7e5e2] bg-[#0B2530] text-white">
@@ -900,15 +934,25 @@ export default function TourismHome() {
                   <div>
                     <h3 className="font-semibold text-slate-950">Location on OpenStreetMap</h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      {hasExactLocation(selectedEstablishment) ? 'Open the exact pinned establishment location on OpenStreetMap.' : 'Open the mapped address for this establishment on OpenStreetMap.'}
+                      {hasExactLocation(selectedEstablishment) ? 'Get directions to the exact pinned establishment location.' : 'Get directions to the mapped address for this establishment.'}
                     </p>
                   </div>
-                  <Button asChild className="rounded-2xl bg-[#0E5A72] px-4 py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#073B4C]">
-                    <a href={getOpenStreetMapUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => openDirectionsToEstablishment(selectedEstablishment)}
+                      className="rounded-2xl bg-[#0E5A72] px-4 py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#073B4C]"
+                    >
                       <Navigation className="h-4 w-4" strokeWidth={1.8} />
-                      View location
-                    </a>
-                  </Button>
+                      Get directions
+                    </Button>
+                    <Button asChild variant="outline" className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]">
+                      <a href={getOpenStreetMapUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
+                        <MapPin className="h-4 w-4" strokeWidth={1.8} />
+                        View map
+                      </a>
+                    </Button>
+                  </div>
                 </div>
                 <iframe
                   title={`${selectedEstablishment.name} OpenStreetMap location`}
