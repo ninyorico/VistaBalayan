@@ -48,6 +48,27 @@ const writeLocationPin = (amenities: string, latitude: number | null, longitude:
   return `${cleanAmenities}${cleanAmenities ? '\n' : ''}[LOCATION_PIN:${latitude},${longitude}]`
 }
 
+const cleanSearchPart = (value = '') => value.replace(/\s+/g, ' ').trim()
+const buildMapSearchCandidates = (searchText: string, establishmentName: string, address: string) => {
+  const typedQuery = cleanSearchPart(searchText)
+  const name = cleanSearchPart(establishmentName)
+  const listingAddress = cleanSearchPart(address)
+  const primaryQuery = typedQuery || name || listingAddress
+  const rawCandidates = [
+    primaryQuery && listingAddress && primaryQuery !== listingAddress ? `${primaryQuery}, ${listingAddress}` : '',
+    primaryQuery,
+    typedQuery && name && listingAddress && typedQuery !== name ? `${name}, ${listingAddress}` : '',
+    name && listingAddress ? `${name}, ${listingAddress}` : '',
+    listingAddress,
+    name,
+  ]
+
+  return Array.from(new Set(rawCandidates
+    .map(cleanSearchPart)
+    .filter(Boolean)))
+    .map((candidate) => `${candidate}, Balayan, Batangas, Philippines`)
+}
+
 export default function ManageListing() {
   const [establishment, setEstablishment] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -295,27 +316,38 @@ export default function ManageListing() {
   }, [formData.latitude, formData.longitude])
 
   const searchOpenStreetMap = async () => {
-    const query = mapSearch.trim() || formData.name || formData.address
-    if (!query.trim()) {
+    const candidates = buildMapSearchCandidates(mapSearch, formData.name, formData.address)
+    if (candidates.length === 0) {
       toast.error('Enter an establishment name, address, or nearby landmark to search.')
       return
     }
 
     setMapStatus('searching')
     try {
-      const searchQuery = `${query}, Balayan, Batangas, Philippines`
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=${encodeURIComponent(searchQuery)}`, {
-        headers: { Accept: 'application/json' },
-      })
-      if (!response.ok) throw new Error('OpenStreetMap search failed.')
+      let firstResult: any = null
+      let matchedQuery = ''
 
-      const results = await response.json()
-      const firstResult = Array.isArray(results) ? results[0] : null
+      for (const searchQuery of candidates) {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=${encodeURIComponent(searchQuery)}`, {
+          headers: { Accept: 'application/json' },
+        })
+        if (!response.ok) throw new Error('OpenStreetMap search failed.')
+
+        const results = await response.json()
+        firstResult = Array.isArray(results) ? results[0] : null
+        const latitude = firstResult ? parseCoordinate(String(firstResult.lat), -90, 90) : null
+        const longitude = firstResult ? parseCoordinate(String(firstResult.lon), -180, 180) : null
+        if (latitude !== null && longitude !== null) {
+          matchedQuery = searchQuery
+          break
+        }
+      }
+
       const latitude = firstResult ? parseCoordinate(String(firstResult.lat), -90, 90) : null
       const longitude = firstResult ? parseCoordinate(String(firstResult.lon), -180, 180) : null
 
       if (latitude === null || longitude === null) {
-        toast.error('No OpenStreetMap location found. Try a nearby landmark or paste coordinates manually.')
+        toast.error('No OpenStreetMap location found. Try the barangay, nearby landmark, or paste coordinates manually.')
         setMapStatus('ready')
         return
       }
@@ -324,7 +356,10 @@ export default function ManageListing() {
       if (firstResult.display_name) {
         setFormData((current) => ({ ...current, address: firstResult.display_name }))
       }
-      toast.success('OpenStreetMap found a location. Review the pin before publishing.')
+      const usedFallback = candidates.length > 1 && matchedQuery !== candidates[0]
+      toast.success(usedFallback
+        ? 'OpenStreetMap found a nearby address/location for this listing. Review the pin before publishing.'
+        : 'OpenStreetMap found a location. Review the pin before publishing.')
       setMapStatus('ready')
     } catch (error) {
       console.error('OpenStreetMap search failed:', error)
