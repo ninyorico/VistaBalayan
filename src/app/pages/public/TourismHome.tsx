@@ -897,16 +897,17 @@ export default function TourismHome() {
 
       {selectedEstablishment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" onClick={() => setSelectedEstablishment(null)}>
-          <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => setSelectedEstablishment(null)}
-              className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-lg ring-1 ring-slate-900/10 transition hover:bg-white hover:text-slate-950"
+              className="absolute right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-lg ring-1 ring-slate-900/10 transition hover:bg-white hover:text-slate-950"
               aria-label="Close establishment details"
             >
               <X className="h-5 w-5" strokeWidth={1.9} />
             </button>
-            {selectedPhotos.length > 0 ? (
+            <div className="max-h-[90dvh] overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
+              {selectedPhotos.length > 0 ? (
               <div className="bg-slate-950">
                 <div className="relative">
                   <img src={selectedPhoto} alt={`${selectedEstablishment.name} photo ${selectedPhotoIndex + 1}`} className="h-72 w-full object-cover sm:h-96" />
@@ -1093,6 +1094,7 @@ export default function TourismHome() {
               >
                 Close
               </Button>
+            </div>
             </div>
           </div>
         </div>
