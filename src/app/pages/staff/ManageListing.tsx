@@ -5,7 +5,11 @@ import { compressListingImage } from '../../../lib/listingImages'
 import { toast } from 'sonner'
 
 const BALAYAN_CENTER = { latitude: 13.9385, longitude: 120.7332 }
-const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+const getGoogleMapsApiKey = () => {
+  const envKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
+  const runtimeKey = typeof window !== 'undefined' ? ((window as any).__VISTABALAYAN_GOOGLE_MAPS_API_KEY__ || '') : ''
+  return envKey || runtimeKey
+}
 let googleMapsPromise: Promise<any> | null = null
 
 declare global {
@@ -18,7 +22,8 @@ declare global {
 const loadGoogleMapsApi = () => {
   if (typeof window === 'undefined') return Promise.reject(new Error('Google Maps can only load in the browser.'))
   if (window.google?.maps) return Promise.resolve(window.google)
-  if (!googleMapsApiKey) return Promise.reject(new Error('Google Maps API key is not configured.'))
+  const apiKey = getGoogleMapsApiKey()
+  if (!apiKey) return Promise.reject(new Error('Google Maps API key is not configured.'))
   if (googleMapsPromise) return googleMapsPromise
 
   googleMapsPromise = new Promise((resolve, reject) => {
@@ -35,7 +40,7 @@ const loadGoogleMapsApi = () => {
     script.dataset.vistabalayanGoogleMaps = 'true'
     script.async = true
     script.defer = true
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(googleMapsApiKey)}&libraries=places&callback=initVistaBalayanGoogleMaps`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&callback=initVistaBalayanGoogleMaps`
     script.onerror = () => reject(new Error('Unable to load Google Maps API.'))
     document.head.appendChild(script)
   })
@@ -82,7 +87,7 @@ export default function ManageListing() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [images, setImages] = useState<string[]>([])
-  const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'ready' | 'missing-key' | 'error'>(googleMapsApiKey ? 'idle' : 'missing-key')
+  const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'ready' | 'missing-key' | 'error'>(() => getGoogleMapsApiKey() ? 'idle' : 'missing-key')
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapSearchInputRef = useRef<HTMLInputElement | null>(null)
   const googleMapRef = useRef<any>(null)
@@ -242,6 +247,7 @@ export default function ManageListing() {
   }
 
   const currentMapQuery = getMapQuery(formData.latitude, formData.longitude, formData.address)
+  const hasGoogleMapsApiKey = Boolean(getGoogleMapsApiKey())
   const hasExactCoordinates = parseCoordinate(formData.latitude, -90, 90) !== null && parseCoordinate(formData.longitude, -180, 180) !== null
 
   const setExactPin = (latitude: number, longitude: number) => {
@@ -259,7 +265,11 @@ export default function ManageListing() {
   }
 
   useEffect(() => {
-    if (!mapContainerRef.current || !establishment || !googleMapsApiKey) return
+    const apiKey = getGoogleMapsApiKey()
+    if (!mapContainerRef.current || !establishment || !apiKey) {
+      if (!apiKey) setMapStatus('missing-key')
+      return
+    }
 
     let cancelled = false
     setMapStatus('loading')
@@ -332,13 +342,13 @@ export default function ManageListing() {
       })
       .catch((error) => {
         console.error('Google Maps API picker failed:', error)
-        setMapStatus(googleMapsApiKey ? 'error' : 'missing-key')
+        setMapStatus(getGoogleMapsApiKey() ? 'error' : 'missing-key')
       })
 
     return () => {
       cancelled = true
     }
-  }, [establishment?.id, googleMapsApiKey])
+  }, [establishment?.id])
 
   useEffect(() => {
     const map = googleMapRef.current
@@ -550,7 +560,7 @@ export default function ManageListing() {
                   </div>
                 </div>
                 <div className="mt-4 space-y-3">
-                  {googleMapsApiKey && (
+                  {hasGoogleMapsApiKey && (
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-600">Search Google Maps</label>
                       <input
@@ -562,7 +572,7 @@ export default function ManageListing() {
                     </div>
                   )}
                   <div className="relative overflow-hidden rounded-xl border border-teal-100 bg-white">
-                    {googleMapsApiKey ? (
+                    {hasGoogleMapsApiKey ? (
                       <>
                         <div ref={mapContainerRef} className="h-72 w-full" />
                         {mapStatus === 'loading' && (
@@ -588,7 +598,7 @@ export default function ManageListing() {
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  {googleMapsApiKey
+                  {hasGoogleMapsApiKey
                     ? hasExactCoordinates
                       ? 'Exact coordinates are ready to publish. You can still drag the marker or click the map to adjust the pin.'
                       : 'Search, click the map, or drag the marker to set the exact pin.'
