@@ -17,6 +17,7 @@ import {
   Search,
   Sparkles,
   Star,
+  X,
 } from 'lucide-react'
 import React from 'react'
 import { Button } from '../../components/ui/button'
@@ -162,19 +163,6 @@ const getGoogleMapsDirectionsUrl = (establishment: Establishment, origin?: UserL
   const originParam = origin ? `&origin=${origin.latitude},${origin.longitude}` : ''
   return `https://www.google.com/maps/dir/?api=1${originParam}&destination=${encodeURIComponent(destination)}&travelmode=driving`
 }
-const getOpenStreetMapDirectionsUrl = (establishment: Establishment, origin?: UserLocation | null) => {
-  const storedLocation = getStoredLocation(establishment)
-  const destination = storedLocation
-    ? `${storedLocation.latitude},${storedLocation.longitude}`
-    : getLocationQuery(establishment)
-
-  if (storedLocation && origin) {
-    return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${origin.latitude}%2C${origin.longitude}%3B${storedLocation.latitude}%2C${storedLocation.longitude}`
-  }
-
-  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&to=${encodeURIComponent(destination)}`
-}
-
 const readBehavior = (): BehaviorProfile => {
   if (typeof window === 'undefined') return emptyBehavior
   try {
@@ -649,26 +637,17 @@ export default function TourismHome() {
   const selectedPhotos = selectedEstablishment?.images?.filter((image) => typeof image === 'string' && image.trim().length > 0) || []
   const selectedPhoto = selectedPhotos[selectedPhotoIndex] || selectedPhotos[0]
 
-  const openDirectionsToEstablishment = (establishment: Establishment, provider: 'google' | 'openstreetmap') => {
+  const openDirectionsToEstablishment = (establishment: Establishment) => {
     if (userLocation) {
-      window.open(
-        provider === 'google'
-          ? getGoogleMapsDirectionsUrl(establishment, userLocation)
-          : getOpenStreetMapDirectionsUrl(establishment, userLocation),
-        '_blank'
-      )
+      window.open(getGoogleMapsDirectionsUrl(establishment, userLocation), '_blank')
       return
     }
 
-    const fallbackUrl = provider === 'google'
-      ? getGoogleMapsDirectionsUrl(establishment, null)
-      : getOpenStreetMapDirectionsUrl(establishment, null)
+    const fallbackUrl = getGoogleMapsDirectionsUrl(establishment, null)
     const directionsWindow = window.open(fallbackUrl, '_blank')
 
     const navigateToDirections = (origin?: UserLocation | null) => {
-      const directionsUrl = provider === 'google'
-        ? getGoogleMapsDirectionsUrl(establishment, origin)
-        : getOpenStreetMapDirectionsUrl(establishment, origin)
+      const directionsUrl = getGoogleMapsDirectionsUrl(establishment, origin)
 
       if (directionsWindow) {
         directionsWindow.location.href = directionsUrl
@@ -908,7 +887,15 @@ export default function TourismHome() {
 
       {selectedEstablishment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" onClick={() => setSelectedEstablishment(null)}>
-          <div className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setSelectedEstablishment(null)}
+              className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-lg ring-1 ring-slate-900/10 transition hover:bg-white hover:text-slate-950"
+              aria-label="Close establishment details"
+            >
+              <X className="h-5 w-5" strokeWidth={1.9} />
+            </button>
             {selectedPhotos.length > 0 ? (
               <div className="bg-slate-950">
                 <div className="relative">
@@ -989,26 +976,17 @@ export default function TourismHome() {
                   <div>
                     <h3 className="font-semibold text-slate-950">Location on OpenStreetMap</h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      {hasExactLocation(selectedEstablishment) ? 'Get directions with Google Maps or OpenStreetMap.' : 'Get directions with Google Maps or OpenStreetMap.'}
+                      {hasExactLocation(selectedEstablishment) ? 'Get directions with Google Maps or view the exact map pin.' : 'Get directions with Google Maps or view the map.'}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
-                      onClick={() => openDirectionsToEstablishment(selectedEstablishment, 'google')}
+                      onClick={() => openDirectionsToEstablishment(selectedEstablishment)}
                       className="rounded-2xl bg-[#0E5A72] px-4 py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#073B4C]"
                     >
                       <Navigation className="h-4 w-4" strokeWidth={1.8} />
                       Google directions
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => openDirectionsToEstablishment(selectedEstablishment, 'openstreetmap')}
-                      variant="outline"
-                      className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]"
-                    >
-                      <Navigation className="h-4 w-4" strokeWidth={1.8} />
-                      OSM directions
                     </Button>
                     <Button asChild variant="outline" className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]">
                       <a href={getOpenStreetMapUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
