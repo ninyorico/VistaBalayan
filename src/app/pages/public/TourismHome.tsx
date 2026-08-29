@@ -146,8 +146,14 @@ const getLocationQuery = (establishment: Establishment) => {
   return establishment.address || establishment.name
 }
 
-const getGoogleMapsEmbedUrl = (establishment: Establishment) => `https://maps.google.com/maps?q=${encodeURIComponent(getLocationQuery(establishment))}&z=17&output=embed`
-const getGoogleMapsUrl = (establishment: Establishment) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getLocationQuery(establishment))}`
+const getOpenStreetMapUrl = (establishment: Establishment) => `https://www.openstreetmap.org/search?query=${encodeURIComponent(getLocationQuery(establishment))}`
+const getOpenStreetMapEmbedUrl = (establishment: Establishment) => {
+  const storedLocation = getStoredLocation(establishment)
+  if (!storedLocation) return `https://www.openstreetmap.org/export/embed.html?bbox=120.7132%2C13.9185%2C120.7532%2C13.9585&layer=mapnik`
+  const { latitude, longitude } = storedLocation
+  const delta = 0.006
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - delta}%2C${latitude - delta}%2C${longitude + delta}%2C${latitude + delta}&layer=mapnik&marker=${latitude}%2C${longitude}`
+}
 
 const readBehavior = (): BehaviorProfile => {
   if (typeof window === 'undefined') return emptyBehavior
@@ -892,21 +898,21 @@ export default function TourismHome() {
               <div className="mt-5 overflow-hidden rounded-2xl border border-[#d7e5e2] bg-[#f8fbf8]">
                 <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h3 className="font-semibold text-slate-950">Location on Google Maps</h3>
+                    <h3 className="font-semibold text-slate-950">Location on OpenStreetMap</h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      {hasExactLocation(selectedEstablishment) ? 'Open the exact pinned establishment location.' : 'Open the mapped address for this establishment.'}
+                      {hasExactLocation(selectedEstablishment) ? 'Open the exact pinned establishment location on OpenStreetMap.' : 'Open the mapped address for this establishment on OpenStreetMap.'}
                     </p>
                   </div>
                   <Button asChild className="rounded-2xl bg-[#0E5A72] px-4 py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#073B4C]">
-                    <a href={getGoogleMapsUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
+                    <a href={getOpenStreetMapUrl(selectedEstablishment)} target="_blank" rel="noopener noreferrer">
                       <Navigation className="h-4 w-4" strokeWidth={1.8} />
                       View location
                     </a>
                   </Button>
                 </div>
                 <iframe
-                  title={`${selectedEstablishment.name} Google Maps location`}
-                  src={getGoogleMapsEmbedUrl(selectedEstablishment)}
+                  title={`${selectedEstablishment.name} OpenStreetMap location`}
+                  src={getOpenStreetMapEmbedUrl(selectedEstablishment)}
                   className="h-64 w-full border-0"
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"

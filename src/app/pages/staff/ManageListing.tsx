@@ -1,52 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
-import { Save, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X, Navigation, Crosshair } from 'lucide-react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import { Save, Globe, Clock, Phone, Mail, MapPin, Info, ImagePlus, Building2, X, Navigation, Crosshair, Search } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { compressListingImage } from '../../../lib/listingImages'
 import { toast } from 'sonner'
 
 const BALAYAN_CENTER = { latitude: 13.9385, longitude: 120.7332 }
-const getGoogleMapsApiKey = () => {
-  const envKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''
-  const runtimeKey = typeof window !== 'undefined' ? ((window as any).__VISTABALAYAN_GOOGLE_MAPS_API_KEY__ || '') : ''
-  return envKey || runtimeKey
-}
-let googleMapsPromise: Promise<any> | null = null
+const LEAFLET_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
-declare global {
-  interface Window {
-    google?: any
-    initVistaBalayanGoogleMaps?: () => void
-  }
-}
-
-const loadGoogleMapsApi = () => {
-  if (typeof window === 'undefined') return Promise.reject(new Error('Google Maps can only load in the browser.'))
-  if (window.google?.maps) return Promise.resolve(window.google)
-  const apiKey = getGoogleMapsApiKey()
-  if (!apiKey) return Promise.reject(new Error('Google Maps API key is not configured.'))
-  if (googleMapsPromise) return googleMapsPromise
-
-  googleMapsPromise = new Promise((resolve, reject) => {
-    const existingScript = document.querySelector<HTMLScriptElement>('script[data-vistabalayan-google-maps="true"]')
-    window.initVistaBalayanGoogleMaps = () => resolve(window.google)
-
-    if (existingScript) {
-      existingScript.addEventListener('load', () => window.google?.maps ? resolve(window.google) : reject(new Error('Google Maps API did not initialize.')), { once: true })
-      existingScript.addEventListener('error', () => reject(new Error('Unable to load Google Maps API.')), { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.dataset.vistabalayanGoogleMaps = 'true'
-    script.async = true
-    script.defer = true
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&callback=initVistaBalayanGoogleMaps`
-    script.onerror = () => reject(new Error('Unable to load Google Maps API.'))
-    document.head.appendChild(script)
-  })
-
-  return googleMapsPromise
-}
+const listingPinIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:30px;height:30px;border-radius:9999px 9999px 9999px 0;transform:rotate(-45deg);background:#0E5A72;border:3px solid white;box-shadow:0 8px 20px rgba(15,23,42,.28);"><div style="width:10px;height:10px;border-radius:9999px;background:white;margin:7px auto;"></div></div>',
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+})
 
 const toCoordinateInput = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? String(value) : '')
 
@@ -62,8 +30,7 @@ const getMapQuery = (latitude?: string | number | null, longitude?: string | num
   return fallbackAddress || `${BALAYAN_CENTER.latitude},${BALAYAN_CENTER.longitude}`
 }
 
-const getGoogleMapsEmbedUrl = (query: string) => `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=17&output=embed`
-const getGoogleMapsUrl = (query: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+const getOpenStreetMapUrl = (query: string) => `https://www.openstreetmap.org/search?query=${encodeURIComponent(query)}`
 const LOCATION_PIN_PATTERN = /\n?\[LOCATION_PIN:-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?\]/
 
 const readLocationPinFromAmenities = (amenities = '') => {
@@ -87,12 +54,11 @@ export default function ManageListing() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [images, setImages] = useState<string[]>([])
-  const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'ready' | 'missing-key' | 'error'>(() => getGoogleMapsApiKey() ? 'idle' : 'missing-key')
+  const [mapStatus, setMapStatus] = useState<'idle' | 'loading' | 'ready' | 'searching' | 'error'>('idle')
+  const [mapSearch, setMapSearch] = useState('')
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
-  const mapSearchInputRef = useRef<HTMLInputElement | null>(null)
-  const googleMapRef = useRef<any>(null)
-  const googleMarkerRef = useRef<any>(null)
-  const googleAutocompleteRef = useRef<any>(null)
+  const leafletMapRef = useRef<L.Map | null>(null)
+  const leafletMarkerRef = useRef<L.Marker | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -247,7 +213,6 @@ export default function ManageListing() {
   }
 
   const currentMapQuery = getMapQuery(formData.latitude, formData.longitude, formData.address)
-  const hasGoogleMapsApiKey = Boolean(getGoogleMapsApiKey())
   const hasExactCoordinates = parseCoordinate(formData.latitude, -90, 90) !== null && parseCoordinate(formData.longitude, -180, 180) !== null
 
   const setExactPin = (latitude: number, longitude: number) => {
@@ -265,99 +230,108 @@ export default function ManageListing() {
   }
 
   useEffect(() => {
-    const apiKey = getGoogleMapsApiKey()
-    if (!mapContainerRef.current || !establishment || !apiKey) {
-      if (!apiKey) setMapStatus('missing-key')
-      return
+    if (!mapContainerRef.current || !establishment) return
+
+    const exactPosition = getCurrentPinPosition()
+    const initialCenter: L.LatLngExpression = exactPosition
+      ? [exactPosition.lat, exactPosition.lng]
+      : [BALAYAN_CENTER.latitude, BALAYAN_CENTER.longitude]
+
+    const map = leafletMapRef.current || L.map(mapContainerRef.current, {
+      zoomControl: true,
+      scrollWheelZoom: false,
+    })
+    leafletMapRef.current = map
+
+    if (!mapContainerRef.current.dataset.vistabalayanLeafletReady) {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: LEAFLET_ATTRIBUTION,
+      }).addTo(map)
+      mapContainerRef.current.dataset.vistabalayanLeafletReady = 'true'
     }
 
-    let cancelled = false
-    setMapStatus('loading')
+    map.setView(initialCenter, exactPosition ? 17 : 14)
 
-    loadGoogleMapsApi()
-      .then((google) => {
-        if (cancelled || !mapContainerRef.current) return
+    const marker = leafletMarkerRef.current || L.marker(initialCenter, {
+      draggable: true,
+      icon: listingPinIcon,
+      title: 'Exact establishment location',
+    }).addTo(map)
+    leafletMarkerRef.current = marker
+    marker.setLatLng(initialCenter)
 
-        const exactPosition = getCurrentPinPosition()
-        const initialCenter = exactPosition || { lat: BALAYAN_CENTER.latitude, lng: BALAYAN_CENTER.longitude }
-        const map = googleMapRef.current || new google.maps.Map(mapContainerRef.current, {
-          center: initialCenter,
-          zoom: exactPosition ? 17 : 14,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: true,
-        })
-        googleMapRef.current = map
-        map.setCenter(initialCenter)
+    marker.off('dragend')
+    marker.on('dragend', () => {
+      const position = marker.getLatLng()
+      setExactPin(position.lat, position.lng)
+    })
 
-        const marker = googleMarkerRef.current || new google.maps.Marker({
-          map,
-          draggable: true,
-          title: 'Exact establishment location',
-        })
-        googleMarkerRef.current = marker
-        marker.setPosition(initialCenter)
+    map.off('click')
+    map.on('click', (event: L.LeafletMouseEvent) => {
+      marker.setLatLng(event.latlng)
+      map.panTo(event.latlng)
+      setExactPin(event.latlng.lat, event.latlng.lng)
+    })
 
-        if (!googleMarkerRef.current.__vistabalayanDragListener) {
-          googleMarkerRef.current.__vistabalayanDragListener = marker.addListener('dragend', () => {
-            const position = marker.getPosition()
-            if (position) setExactPin(position.lat(), position.lng())
-          })
-        }
+    setMapStatus('ready')
 
-        if (!googleMapRef.current.__vistabalayanClickListener) {
-          googleMapRef.current.__vistabalayanClickListener = map.addListener('click', (event: any) => {
-            if (!event.latLng) return
-            marker.setPosition(event.latLng)
-            map.panTo(event.latLng)
-            setExactPin(event.latLng.lat(), event.latLng.lng())
-          })
-        }
-
-        if (mapSearchInputRef.current && !googleAutocompleteRef.current && google.maps.places?.Autocomplete) {
-          const autocomplete = new google.maps.places.Autocomplete(mapSearchInputRef.current, {
-            fields: ['geometry', 'formatted_address', 'name'],
-            componentRestrictions: { country: 'ph' },
-          })
-          autocomplete.bindTo('bounds', map)
-          autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace()
-            if (!place.geometry?.location) {
-              toast.error('No map location found for that search.')
-              return
-            }
-            const location = place.geometry.location
-            map.panTo(location)
-            map.setZoom(17)
-            marker.setPosition(location)
-            setExactPin(location.lat(), location.lng())
-            if (place.formatted_address) {
-              setFormData((current) => ({ ...current, address: place.formatted_address }))
-            }
-          })
-          googleAutocompleteRef.current = autocomplete
-        }
-
-        setMapStatus('ready')
-      })
-      .catch((error) => {
-        console.error('Google Maps API picker failed:', error)
-        setMapStatus(getGoogleMapsApiKey() ? 'error' : 'missing-key')
-      })
+    setTimeout(() => map.invalidateSize(), 0)
 
     return () => {
-      cancelled = true
+      map.off('click')
+      marker.off('dragend')
     }
   }, [establishment?.id])
 
   useEffect(() => {
-    const map = googleMapRef.current
-    const marker = googleMarkerRef.current
+    const map = leafletMapRef.current
+    const marker = leafletMarkerRef.current
     const exactPosition = getCurrentPinPosition()
     if (!map || !marker || !exactPosition) return
-    marker.setPosition(exactPosition)
-    map.panTo(exactPosition)
+    const latLng: L.LatLngExpression = [exactPosition.lat, exactPosition.lng]
+    marker.setLatLng(latLng)
+    map.panTo(latLng)
   }, [formData.latitude, formData.longitude])
+
+  const searchOpenStreetMap = async () => {
+    const query = mapSearch.trim() || formData.name || formData.address
+    if (!query.trim()) {
+      toast.error('Enter an establishment name, address, or nearby landmark to search.')
+      return
+    }
+
+    setMapStatus('searching')
+    try {
+      const searchQuery = `${query}, Balayan, Batangas, Philippines`
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=${encodeURIComponent(searchQuery)}`, {
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('OpenStreetMap search failed.')
+
+      const results = await response.json()
+      const firstResult = Array.isArray(results) ? results[0] : null
+      const latitude = firstResult ? parseCoordinate(String(firstResult.lat), -90, 90) : null
+      const longitude = firstResult ? parseCoordinate(String(firstResult.lon), -180, 180) : null
+
+      if (latitude === null || longitude === null) {
+        toast.error('No OpenStreetMap location found. Try a nearby landmark or paste coordinates manually.')
+        setMapStatus('ready')
+        return
+      }
+
+      setExactPin(latitude, longitude)
+      if (firstResult.display_name) {
+        setFormData((current) => ({ ...current, address: firstResult.display_name }))
+      }
+      toast.success('OpenStreetMap found a location. Review the pin before publishing.')
+      setMapStatus('ready')
+    } catch (error) {
+      console.error('OpenStreetMap search failed:', error)
+      toast.error('OpenStreetMap search is unavailable. You can still click the map or paste coordinates.')
+      setMapStatus('error')
+    }
+  }
 
   const useCurrentLocationAsPin = () => {
     if (!navigator.geolocation) {
@@ -374,7 +348,7 @@ export default function ManageListing() {
         }))
         toast.success('Map pin set from your current location. Review the preview before publishing.')
       },
-      () => toast.error('Unable to get your location. You can still paste the coordinates from Google Maps.'),
+      () => toast.error('Unable to get your location. You can still paste coordinates manually.'),
       { enableHighAccuracy: true, timeout: 10000 }
     )
   }
@@ -507,7 +481,7 @@ export default function ManageListing() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
-                      <MapPin className="w-4 h-4 text-[#0E5A72]" /> Exact Google Maps Pin
+                      <MapPin className="w-4 h-4 text-[#0E5A72]" /> Exact OpenStreetMap Pin
                     </label>
                     <p className="text-xs leading-5 text-gray-600">
                       Set the establishment coordinates so visitors can open the exact pinned location from the public website.
@@ -522,12 +496,12 @@ export default function ManageListing() {
                       <Crosshair className="w-4 h-4" /> Use my location
                     </button>
                     <a
-                      href={getGoogleMapsUrl(currentMapQuery)}
+                      href={getOpenStreetMapUrl(currentMapQuery)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-white px-3 py-2 text-xs font-semibold text-[#0E5A72] hover:bg-teal-50"
                     >
-                      <Navigation className="w-4 h-4" /> Open Google Maps
+                      <Navigation className="w-4 h-4" /> Open OpenStreetMap
                     </a>
                   </div>
                 </div>
@@ -560,49 +534,45 @@ export default function ManageListing() {
                   </div>
                 </div>
                 <div className="mt-4 space-y-3">
-                  {hasGoogleMapsApiKey && (
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Search Google Maps</label>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Search OpenStreetMap</label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <input
-                        ref={mapSearchInputRef}
                         type="text"
+                        value={mapSearch}
+                        onChange={(e) => setMapSearch(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchOpenStreetMap() } }}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                         placeholder="Search your establishment or nearby landmark"
                       />
+                      <button
+                        type="button"
+                        onClick={searchOpenStreetMap}
+                        disabled={mapStatus === 'searching'}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0E5A72] px-3 py-2 text-xs font-semibold text-white hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Search className="w-4 h-4" /> {mapStatus === 'searching' ? 'Searching...' : 'Search'}
+                      </button>
                     </div>
-                  )}
+                  </div>
                   <div className="relative overflow-hidden rounded-xl border border-teal-100 bg-white">
-                    {hasGoogleMapsApiKey ? (
-                      <>
-                        <div ref={mapContainerRef} className="h-72 w-full" />
-                        {mapStatus === 'loading' && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-white/75 text-sm font-medium text-[#0E5A72]">
-                            Loading Google Maps picker...
-                          </div>
-                        )}
-                        {mapStatus === 'error' && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-white/90 p-4 text-center text-sm text-red-600">
-                            Google Maps picker could not load. Check the API key/domain settings, or paste coordinates manually.
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <iframe
-                        title="Google Maps listing pin preview"
-                        src={getGoogleMapsEmbedUrl(currentMapQuery)}
-                        className="h-56 w-full"
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                      />
+                    <div ref={mapContainerRef} className="h-72 w-full" />
+                    {mapStatus === 'searching' && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/75 text-sm font-medium text-[#0E5A72]">
+                        Searching OpenStreetMap...
+                      </div>
+                    )}
+                    {mapStatus === 'error' && (
+                      <div className="pointer-events-none absolute inset-x-4 top-4 rounded-lg bg-white/95 p-3 text-center text-xs text-red-600 shadow-sm">
+                        Search is unavailable. The map still works: click to pin, drag the marker, or paste coordinates manually.
+                      </div>
                     )}
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  {hasGoogleMapsApiKey
-                    ? hasExactCoordinates
-                      ? 'Exact coordinates are ready to publish. You can still drag the marker or click the map to adjust the pin.'
-                      : 'Search, click the map, or drag the marker to set the exact pin.'
-                    : 'Add VITE_GOOGLE_MAPS_API_KEY to enable the interactive Google Maps pin picker. You can still paste coordinates manually.'}
+                  {hasExactCoordinates
+                    ? 'Exact coordinates are ready to publish. You can still drag the marker or click the map to adjust the pin.'
+                    : 'Search OpenStreetMap, click the map, drag the marker, use your location, or paste coordinates manually.'}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -706,7 +676,7 @@ export default function ManageListing() {
               {formData.description && <li>✓ Your description</li>}
               {images.length > 0 && <li>✓ {images.length} photo(s)</li>}
               {formData.contact_number && <li>✓ Contact information</li>}
-              {hasExactCoordinates && <li>✓ Exact Google Maps location pin</li>}
+              {hasExactCoordinates && <li>✓ Exact OpenStreetMap location pin</li>}
             </ul>
           </div>
 
