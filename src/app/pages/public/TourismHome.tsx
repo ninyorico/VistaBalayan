@@ -974,7 +974,7 @@ export default function TourismHome() {
 
               {selectedEstablishment.description && (
                 <div className="mt-5 rounded-2xl bg-[#f8fbf8] p-5">
-                  <h3 className="font-semibold text-slate-950">About this stay</h3>
+                  <h3 className="font-semibold text-slate-950">Establishment overview</h3>
                   <p className="mt-2 leading-7 text-slate-600">{selectedEstablishment.description}</p>
                 </div>
               )}
@@ -982,9 +982,9 @@ export default function TourismHome() {
               <div className="mt-5 overflow-hidden rounded-2xl border border-[#d7e5e2] bg-[#f8fbf8]">
                 <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h3 className="font-semibold text-slate-950">Location on OpenStreetMap</h3>
+                    <h3 className="font-semibold text-slate-950">Location & Directions</h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      {hasExactLocation(selectedEstablishment) ? 'Get directions with Google Maps or view the exact map pin.' : 'Get directions with Google Maps or view the map.'}
+                      Find the establishment or get directions.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -994,7 +994,7 @@ export default function TourismHome() {
                       className="rounded-2xl bg-[#0E5A72] px-4 py-2.5 text-sm font-semibold text-white shadow-none hover:bg-[#073B4C]"
                     >
                       <Navigation className="h-4 w-4" strokeWidth={1.8} />
-                      Google directions
+                      Get Directions
                     </Button>
                     <Button
                       type="button"
