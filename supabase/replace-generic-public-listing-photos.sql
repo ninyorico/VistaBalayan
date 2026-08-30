@@ -1,0 +1,31 @@
+-- Replace generic Unsplash public-listing photos with verified public establishment photos.
+-- Empty arrays are intentional for listings where no reliable real public photo was found;
+-- the public UI will show its neutral category fallback instead of a misleading generic stock image.
+
+update establishments set images = array[]::text[] where name in (
+  'Altina Beach House Resort',
+  'Chrisova Resort',
+  'Meraviglia Lodge',
+  'Villa Beadoy Resorts and Pavilion'
+);
+
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWlQGB0U1XwmkxJgEELUaE2CrfmTHAJt8xVyOAB--biPTKj3-Ds-NgCJju0C23eNKTQaEiTvCShr98t_xIic-ocKU1fHJpbztcqbTUo2JMBGygpkrO5lJcL2bNc6ERIjDR9ktoxj=w408-h306-k-no']::text[] where name = 'Espineli Inn and Pavilion';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkGXTEUSrMCqxV5i9ndLuvmCRRGAVSr9_OD_Q2RXRIeN7TLI4m0MjJVakbhmW6S-ezouYl4yEGM_9zE-l_zyjhUE-eAoIZwVqjEIf1smbtu5SP927mILy5xwTLSDmIWZBHr56uR=w533-h240-k-no']::text[] where name = 'Henaida';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmHzYUQW2nKo52G7nC4Qyckzo3TfDu4vALulE-IsBgfATFNkq8zvN3tzWxNz1snkujodswPApIFxuPtcfGYu6Tr2kFC5ZIVuhnyFtmDTTYg9Fwz-pUzo0Y86OohfmU_XhzyuJe95N8HFoOM=w408-h306-k-no']::text[] where name = 'Hotel Casa Ilustre';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-proxy/ALd4DhGyEVx8O_OSoad0BtWzrQ7j5qjc-VLkTAIP1WOi3-MoUy5vREg1JvmUMosayvgyHGQv6ACcWbqr3mZD317nhsujLW1Xqc9J598PI6HnlaTI2jTLNR-SQ3EOBHoD4TZTv-h0KUQgHmKQptXzc01VyEISehIOX9U2GpKzPZpv7hFb54VBvVtpEI8l9Q=w408-h296-k-no']::text[] where name = 'Kalika Balayan';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWlbJDF0ZofZjJCki9tvFRHbRzOFtFu5VEs5GcHz6SELkCGuUgTZ3oPVVPDipnU50PL48BSl3R0CeCOWjjUd6YJ-Mjejcg5p5FFneuLz_bq3r5R_Q9Ag4sE-Tnz469_zF-ScY0M=w408-h306-k-no']::text[] where name = 'King & Queen Resorts';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWloPsuta0jKVl8SJT1FKSNV6QZwpK69-BMHGwxIZP1qKtcZMaW_MCUauDTDdX2XFZTZCTNuHw_w9-d3ViByaOlwZQ9PCdq0zZ_u5ZXTDzOUq55RFKsnKlSPZVDmduSMhT47Iiz5=w408-h544-k-no']::text[] where name = 'La Georgina Resorts';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkJfVOlVTcXbt28MXsa3uDp0cecKkbl-BJsfYxgqs2-DzJRnLBPIJ1Iea-DcLIVp9J6vxcPCTI6gC-iQ1D7BPpCOZ1-Gs-GsINCuvfKtCxQ_tLvF63T749sWEJInoGeH-IGXnlX=w408-h544-k-no']::text[] where name = 'La Jamayca Resort';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWk_jLXdDchTtq1W0Dk-DmuH458v64gybHzL_EJ5k0z4hE3dJXne2RbJ0yGGBUZZJGjpHVX-bWSjIMpPMzxU0HURVm__wi5BXgHg7uxJpin4JxNYH-C1g5WC-LXFZrsetD3nIMqU9BgIDe02=w408-h571-k-no']::text[] where name = 'La Piscina Resort';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnoSZDbdi1Qf4QzVgAaa5VjxUuaudk3LBceUWWuXp6hCcZQeBDair75zR0ys9AKThkHRp501t0KCSersmtRYKVr-ttJ3JuSOUndtAl1tmcRN7HLGisRlfzxpJhAxy1VRQXP4v43=w408-h544-k-no']::text[] where name = 'Magsino Chokdee Farm';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkhuzawETM6nrGciwESYodIUfo29NxPL4Q8fC2z9AIi7_bTKRjVMHIpvZM0dsPIZKh3O4ka2z0glc5tR3cbjiXycF-y2ZHQ2kms8OinGdAvD2asRFiax28tngOFDNen-y36SaP8xA=w408-h544-k-no']::text[] where name = 'Malabanan Swimming Pool';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnALTbb9LdZVHqoDjqGz5rmXp4xuxe8rN6APvqKjWd3oXVC44fLEthmlSiqC9luABEK27InEax4BaQya4J0bJafZL2E1xASq_dqGKBBQ5_5cPCIAzu9vtXkZs2w1Gdv9BQqrAL2ow=w408-h306-k-no']::text[] where name = 'My Place Resort';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkvC2WVfc1TKAefHfWFBbFYyfsT0z-fJldqq_4q8Xpwb20pOPiW3_-uQ7Uto9woZXq7cxfU5rxDG6sMf6op0rMoCFKwEv7KJVL4IOVMYOktlCoubue8ORqxNgPr2ztovpQMiI-t=w426-h240-k-no']::text[] where name = 'Palayan Inn';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWk1ANzu9OTZWq4X9r1pYwjpmWRgzvCJ6BjgpNyEGeFa3u6ZCdWTZnPKASzdZ9f86yNzJadbNT5Up6U8XVKEN3z4rZ3aIPbaaSCECCsPXOSz_5aP5nKxsru3YLGRbbvDB-_FxnXvEQ=w408-h272-k-no']::text[] where name = 'Soggiorno Lorenzana';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnALTbb9LdZVHqoDjqGz5rmXp4xuxe8rN6APvqKjWd3oXVC44fLEthmlSiqC9luABEK27InEax4BaQya4J0bJafZL2E1xASq_dqGKBBQ5_5cPCIAzu9vtXkZs2w1Gdv9BQqrAL2ow=w408-h306-k-no']::text[] where name = 'Soler Sea Resort';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkZq9phn069naf3mizlOi-2MXutC8S0QeOO5JgcowO8eJTudkJRC7lzILRdu4YWQ3X6HEhJSTORznj-dp3XebB_I92_S8aT2uPxdwEzaenkvUyK2Ye1AFYTMb8Ui7yZKnXA8G0p=w408-h306-k-no']::text[] where name = 'Souq Salamanca';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWngiR4yilXXbUM1yTmyjG8iO3ufxXmNpddP-UfCZmnqdvlr__56u0b1NGGTvwRHyJ1bZtMMn9z1VMQ-wmdof0PiOtmZqtx_GhvjxWUHRYXQn5rFqvRLD8R6GWttBeORpw-sY7I=w426-h240-k-no']::text[] where name = 'Summer8 Resort';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkHn8CFWxibGVjSFYzelSifMo3ddIZ3qqboz9bzisB4-6DUV0VDmQ8XC9J45Nnt-YFSE00lbNqFsk_s_4VyQIUtolhgnYM_oFy-Yvel0eY96l5J43t8EgsEHWKkmmR9ThFPEdUp=w408-h306-k-no']::text[] where name = 'Valentino''s Hotel';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-proxy/ALd4DhEOMCdF4KhWOLI4QlX0cLsVOLsjntcx4QaNQI99P-5iYi3ITwXgGlhbEXUaTHyPdujsPL8UhAB5VRCrSUfWKvLsQ0fM9U3yx6B5KHZ50KJ9iDZ0BjQFS_X6_XfGkf419O7NFL3mlaASYq1yy9nTZS__Gd55JsUL6fUPyecuHvpt81YuyO6OpWcA=w408-h306-k-no']::text[] where name = 'Viktoria Garden Resort';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnpEpzDDy2SJteDDkRAgX-h_6IqDnjg2f8THohKftMwPIVhvIqYOwlIbRiehGUWgxMU9ycSmmj8wI8v-D5lI-P29qmDCTchv0L0Re-53dSKjurbVXMJMV4WPEs_Utye7ub2HjkBVw=w408-h306-k-no']::text[] where name = 'Villa Casa Mia';
+update establishments set images = array['https://lh3.googleusercontent.com/gps-cs-s/AHRPTWlgQxyPUrTdgZqBl9ePYgC94ildWf-8BVF-0GReTBUBMGDI8ZvefnIuRHyGjHYnONX9J8_9xRzIKklsVd7G-wBHjosP8WLQk3fyFtM5V6lgHg-VVSLkm2AJ-MuxtyGqIC_m9Lo=w408-h408-k-no']::text[] where name = 'Villa Scarlet Garden Resort';
