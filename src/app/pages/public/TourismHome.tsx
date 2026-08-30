@@ -1136,7 +1136,6 @@ export default function TourismHome() {
 
 function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: RatingReview[] }) {
   const [selectedRating, setSelectedRating] = useState(0)
-  const maxCount = Math.max(1, ...[1, 2, 3, 4, 5].map((star) => summary.breakdown[star as keyof RatingBreakdown] || 0))
   const sortedReviews = sortReviewsForDisplay(reviews)
   const filteredReviews = selectedRating > 0
     ? sortedReviews.filter((review) => review.rating === selectedRating)
@@ -1164,32 +1163,35 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
         </div>
       </div>
 
-      <div className="mt-4 space-y-2" aria-label="Filter reviews by star rating">
+      <div className="mt-4 grid grid-cols-5 gap-1.5" aria-label="Filter reviews by star rating">
         {[5, 4, 3, 2, 1].map((star) => {
           const count = summary.breakdown[star as keyof RatingBreakdown] || 0
+          const hasReviews = count > 0
           return (
             <button
               key={star}
               type="button"
               onClick={() => setSelectedRating((current) => current === star ? 0 : star)}
-              className={`grid w-full grid-cols-[4.5rem_1fr_3rem] items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm transition active:translate-y-[1px] ${
-                selectedRating === star ? 'bg-[#e5f1f2] text-[#0B2530]' : 'text-slate-600 hover:bg-[#f8fbf8]'
+              className={`min-w-0 rounded-2xl border px-1.5 py-2 text-center text-xs font-semibold transition active:translate-y-[1px] ${
+                selectedRating === star
+                  ? 'border-[#0E5A72] bg-[#e5f1f2] text-[#0B2530] shadow-sm'
+                  : 'border-slate-100 bg-[#f8fbf8] text-slate-600 hover:border-[#d7e5e2] hover:bg-[#eef7f3]'
               }`}
               aria-pressed={selectedRating === star}
               aria-label={`Show ${star} star review${star === 1 ? '' : 's'}`}
             >
-              <span>{star} star{star === 1 ? '' : 's'}</span>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-[#0E5A72]" style={{ width: `${(count / maxCount) * 100}%` }} />
-              </div>
-              <span className="text-right font-semibold text-slate-800">{count}</span>
+              <span className="flex items-center justify-center gap-0.5 whitespace-nowrap">
+                {star}
+                <Star className={`h-3.5 w-3.5 ${hasReviews ? 'fill-[#0E5A72] text-[#0E5A72]' : 'fill-slate-100 text-slate-300'}`} strokeWidth={1.8} />
+              </span>
+              <span className={`mt-1 block text-[11px] leading-none ${hasReviews ? 'text-slate-800' : 'text-slate-400'}`}>{count}</span>
             </button>
           )
         })}
       </div>
 
       <p className="mt-3 text-xs text-slate-500">
-        {selectedRating > 0 ? `Showing ${selectedRating}-star reviews only.` : 'Tap a rating row to filter reviews.'}
+        {selectedRating > 0 ? `Showing ${selectedRating}-star reviews only.` : 'Tap a star filter to filter reviews.'}
       </p>
 
       <div className="mt-5 space-y-3">
