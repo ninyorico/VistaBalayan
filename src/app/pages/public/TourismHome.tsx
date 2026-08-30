@@ -88,7 +88,6 @@ interface BehaviorProfile {
   searches: string[]
 }
 
-const BALAYAN_CENTER: UserLocation = { latitude: 13.9385, longitude: 120.7332 }
 const BEHAVIOR_KEY = 'vistabalayan_public_behavior_v1'
 const RATING_VISITOR_KEY = 'vistabalayan_public_rating_visitor_v1'
 const LOCAL_RATINGS_KEY = 'vistabalayan_public_local_ratings_v1'
@@ -326,8 +325,6 @@ const applyLocalVisitorRatings = (summaries: Record<string, RatingSummary>, esta
   }, { ...summaries })
 }
 
-const getEstimatedCoordinates = (establishment: Establishment): UserLocation | null => getStoredLocation(establishment)
-
 const PUBLIC_LISTING_REAL_PHOTOS: Record<string, string[]> = {
   'Altina Beach House Resort': [],
   'Chrisova Resort': [],
@@ -361,18 +358,6 @@ const replaceGenericListingPhotos = (establishment: Establishment): Establishmen
   const currentImages = establishment.images || []
   const usesGenericStock = currentImages.some((image) => image.includes('images.unsplash.com'))
   return usesGenericStock ? { ...establishment, images: realPhotos } : establishment
-}
-
-const distanceInKm = (a: UserLocation, b: UserLocation) => {
-  const radius = 6371
-  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180
-  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180
-  const lat1 = (a.latitude * Math.PI) / 180
-  const lat2 = (b.latitude * Math.PI) / 180
-  const h =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  return radius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
 }
 
 export default function TourismHome() {
@@ -695,16 +680,22 @@ export default function TourismHome() {
   }, [establishments, behavior, userLocation, routeDistances])
 
   const nearestStays = useMemo(() => {
-    const base: UserLocation = userLocation || BALAYAN_CENTER
+    if (!userLocation) {
+      return establishments
+        .filter((est) => Boolean(getStoredLocation(est)))
+        .slice(0, 4)
+        .map((est) => ({ ...est, distance: null as number | null }))
+    }
+
     return establishments
       .map((est) => {
-        const coords = getEstimatedCoordinates(est)
-        return coords ? { ...est, distance: distanceInKm(base, coords) } : null
+        const distance = routeDistances[est.id]
+        return typeof distance === 'number' && Number.isFinite(distance) ? { ...est, distance } : null
       })
       .filter((est): est is Establishment & { distance: number } => Boolean(est))
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 4)
-  }, [establishments, userLocation])
+  }, [establishments, userLocation, routeDistances])
 
   const featuredImage = establishments.find((est) => est.images?.length)?.images?.[0]
   const selectedRating = selectedEstablishment ? ratingSummaries[selectedEstablishment.id] || emptyRatingSummary : emptyRatingSummary
@@ -924,7 +915,12 @@ export default function TourismHome() {
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium text-slate-500">Nearest picks</p>
-                <h2 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">Close to you</h2>
+                <h2 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">{userLocation ? 'Close to you' : 'Nearby stays'}</h2>
+                <p className="mt-1 max-w-56 text-xs leading-5 text-slate-500">
+                  {userLocation
+                    ? 'Distances use routed road estimates when available.'
+                    : 'Tap Improve with my location for distance-based results.'}
+                </p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#e5f1f2] text-[#0E5A72]">
                 <Navigation className="h-5 w-5" strokeWidth={1.8} />
@@ -939,7 +935,7 @@ export default function TourismHome() {
                       <p className="mt-1 text-sm text-slate-500">{getPublicCategory(est.type)}</p>
                     </div>
                     <Badge variant="outline" className="rounded-full border-[#d7e5e2] bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-                      {est.distance.toFixed(1)} km
+                      {est.distance === null ? 'Use GPS' : `${est.distance.toFixed(1)} km route`}
                     </Badge>
                   </div>
                 </button>
