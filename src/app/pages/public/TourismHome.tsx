@@ -1062,23 +1062,23 @@ export default function TourismHome() {
               <Separator className="my-6 bg-[#d7e5e2]" />
 
               <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="font-semibold text-slate-950">Rate this establishment</h3>
-                    <p className="mt-1 text-sm text-slate-600">No account needed. Enter your name so visitors can see who shared the review.</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold leading-6 text-slate-950">Rate this establishment</h3>
+                    <p className="mt-1 text-sm leading-5 text-slate-600">No account needed. Enter your name so visitors can see who shared the review.</p>
                   </div>
-                  <div className="flex items-center gap-1" aria-label="Choose a rating from 1 to 5 stars">
+                  <div className="grid shrink-0 grid-cols-5 gap-0.5" aria-label="Choose a rating from 1 to 5 stars">
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <button
                         key={rating}
                         type="button"
                         onClick={() => setSelectedReviewRating(rating)}
                         disabled={submittingRating}
-                        className="rounded-full p-1.5 text-[#0E5A72] transition hover:scale-110 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-full p-1 text-[#0E5A72] transition hover:scale-110 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:p-1.5"
                         aria-label={`Rate ${rating} star${rating === 1 ? '' : 's'}`}
                       >
                         <Star
-                          className={`h-7 w-7 ${rating <= (selectedReviewRating || selectedRating.visitorRating || 0) ? 'fill-[#0E5A72]' : 'fill-white'}`}
+                          className={`h-5 w-5 sm:h-7 sm:w-7 ${rating <= (selectedReviewRating || selectedRating.visitorRating || 0) ? 'fill-[#0E5A72]' : 'fill-white'}`}
                           strokeWidth={1.8}
                         />
                       </button>
