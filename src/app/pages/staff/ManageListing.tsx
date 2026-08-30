@@ -568,47 +568,36 @@ export default function ManageListing() {
               </div>
 
               <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-1 flex items-center gap-1">
-                      <MapPin className="w-4 h-4 text-[#0E5A72]" /> Exact Location Pin
-                    </label>
-                    <p className="text-xs leading-5 text-gray-600">
-                      Set the establishment coordinates so visitors can open the exact pinned location from the public website.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="sr-only" htmlFor="listing-map-search">Search Geoapify</label>
+                  <div className="flex min-w-0 flex-1 gap-2">
+                    <input
+                      id="listing-map-search"
+                      type="text"
+                      value={mapSearch}
+                      onChange={(e) => setMapSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMapSearch() } }}
+                      className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      placeholder="Search your establishment or nearby landmark"
+                    />
                     <button
                       type="button"
-                      onClick={useCurrentLocationAsPin}
-                      className="inline-flex items-center gap-2 rounded-lg bg-[#0E5A72] px-3 py-2 text-xs font-semibold text-white hover:bg-[#073B4C]"
+                      onClick={handleMapSearch}
+                      disabled={mapStatus === 'searching'}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#0E5A72] px-3 py-2 text-xs font-semibold text-white hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Crosshair className="w-4 h-4" /> Use my location
+                      <Search className="w-4 h-4" /> {mapStatus === 'searching' ? 'Searching...' : 'Search'}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={useCurrentLocationAsPin}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#0E5A72] px-3 py-2 text-xs font-semibold text-white hover:bg-[#073B4C]"
+                  >
+                    <Crosshair className="w-4 h-4" /> Use my location
+                  </button>
                 </div>
                 <div className="mt-4 space-y-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Search Geoapify</label>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="text"
-                        value={mapSearch}
-                        onChange={(e) => setMapSearch(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMapSearch() } }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                        placeholder="Search your establishment or nearby landmark"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleMapSearch}
-                        disabled={mapStatus === 'searching'}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0E5A72] px-3 py-2 text-xs font-semibold text-white hover:bg-[#073B4C] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <Search className="w-4 h-4" /> {mapStatus === 'searching' ? 'Searching...' : 'Search'}
-                      </button>
-                    </div>
-                  </div>
                   <div className="relative overflow-hidden rounded-xl border border-teal-100 bg-white">
                     <div ref={mapContainerRef} className="h-72 w-full" />
                     {mapStatus === 'searching' && (

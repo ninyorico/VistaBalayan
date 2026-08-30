@@ -130,11 +130,10 @@ const readLocationPinFromAmenities = (amenities = '') => {
 }
 
 const getStoredLocation = (establishment: Establishment) => {
-  if (typeof establishment.latitude === 'number' &&
-    Number.isFinite(establishment.latitude) &&
-    typeof establishment.longitude === 'number' &&
-    Number.isFinite(establishment.longitude)) {
-    return { latitude: establishment.latitude, longitude: establishment.longitude }
+  const latitude = Number(establishment.latitude)
+  const longitude = Number(establishment.longitude)
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    return { latitude, longitude }
   }
   return readLocationPinFromAmenities(establishment.amenities || '')
 }
@@ -653,8 +652,9 @@ export default function TourismHome() {
       return
     }
 
-    const fallbackUrl = getGoogleMapsDirectionsUrl(establishment, null)
-    const directionsWindow = window.open(fallbackUrl, '_blank')
+    // Open the exact saved pin immediately. If location permission succeeds,
+    // replace the route with the visitor's actual starting point afterward.
+    const directionsWindow = window.open(getGoogleMapsDirectionsUrl(establishment, null), '_blank')
 
     const navigateToDirections = (origin?: UserLocation | null) => {
       const directionsUrl = getGoogleMapsDirectionsUrl(establishment, origin)
