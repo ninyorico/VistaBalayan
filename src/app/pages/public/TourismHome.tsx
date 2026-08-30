@@ -104,13 +104,6 @@ const categories = [
   { id: 'Hotel', name: 'Hotels', icon: Building2 },
 ]
 
-const ratingFilters = [
-  { value: 0, label: 'All ratings' },
-  { value: 5, label: '5 stars' },
-  { value: 4, label: '4+ stars' },
-  { value: 3, label: '3+ stars' },
-]
-
 const emptyBehavior: BehaviorProfile = {
   viewedIds: [],
   categoryClicks: {},
@@ -353,7 +346,6 @@ export default function TourismHome() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState('all')
-  const [selectedRatingFilter, setSelectedRatingFilter] = useState(0)
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null)
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0)
   const [behavior, setBehavior] = useState<BehaviorProfile>(emptyBehavior)
@@ -558,14 +550,8 @@ export default function TourismHome() {
     if (selectedType !== 'all') {
       results = results.filter((e) => getPublicCategory(e.type) === selectedType)
     }
-    if (selectedRatingFilter > 0) {
-      results = results.filter((e) => {
-        const summary = ratingSummaries[e.id]
-        return summary && summary.count > 0 && summary.average >= selectedRatingFilter
-      })
-    }
     setFiltered(results)
-  }, [searchTerm, selectedType, selectedRatingFilter, establishments, ratingSummaries])
+  }, [searchTerm, selectedType, establishments])
 
   useEffect(() => {
     if (!searchTerm.trim()) return
@@ -802,51 +788,27 @@ export default function TourismHome() {
 
       <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:px-8">
         <Card className="rounded-[1.75rem] border-[#d7e5e2] bg-white/92 shadow-[0_24px_80px_rgba(14,90,114,0.10)] backdrop-blur-xl">
-          <CardContent className="flex flex-col gap-5 p-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => {
-                  const Icon = cat.icon
-                  return (
-                    <Button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => handleCategoryChange(cat.id)}
-                      variant={selectedType === cat.id ? 'default' : 'secondary'}
-                      className={`rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-none active:translate-y-[1px] ${
-                        selectedType === cat.id
-                          ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]'
-                          : 'bg-[#e5f1f2] text-[#0B2530] hover:bg-[#d7e5e2]'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" strokeWidth={1.8} />
-                      {cat.name}
-                    </Button>
-                  )
-                })}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f8fbf8] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  <Star className="h-3.5 w-3.5 fill-[#0E5A72] text-[#0E5A72]" strokeWidth={1.8} />
-                  Rating filter
-                </span>
-                {ratingFilters.map((filter) => (
+          <CardContent className="flex flex-col gap-5 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => {
+                const Icon = cat.icon
+                return (
                   <Button
-                    key={filter.value}
+                    key={cat.id}
                     type="button"
-                    onClick={() => setSelectedRatingFilter(filter.value)}
-                    variant={selectedRatingFilter === filter.value ? 'default' : 'secondary'}
-                    className={`rounded-2xl px-3.5 py-2 text-sm font-semibold shadow-none active:translate-y-[1px] ${
-                      selectedRatingFilter === filter.value
+                    onClick={() => handleCategoryChange(cat.id)}
+                    variant={selectedType === cat.id ? 'default' : 'secondary'}
+                    className={`rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-none active:translate-y-[1px] ${
+                      selectedType === cat.id
                         ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]'
-                        : 'bg-white text-[#0B2530] ring-1 ring-[#d7e5e2] hover:bg-[#edf7f6]'
+                        : 'bg-[#e5f1f2] text-[#0B2530] hover:bg-[#d7e5e2]'
                     }`}
                   >
-                    {filter.value > 0 && <Star className={`h-4 w-4 ${selectedRatingFilter === filter.value ? 'fill-white' : 'fill-[#0E5A72] text-[#0E5A72]'}`} strokeWidth={1.8} />}
-                    {filter.label}
+                    <Icon className="h-4 w-4" strokeWidth={1.8} />
+                    {cat.name}
                   </Button>
-                ))}
-              </div>
+                )
+              })}
             </div>
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
               <Filter className="h-4 w-4" strokeWidth={1.8} />
@@ -1173,8 +1135,12 @@ export default function TourismHome() {
 }
 
 function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: RatingReview[] }) {
+  const [selectedRating, setSelectedRating] = useState(0)
   const maxCount = Math.max(1, ...[1, 2, 3, 4, 5].map((star) => summary.breakdown[star as keyof RatingBreakdown] || 0))
   const sortedReviews = sortReviewsForDisplay(reviews)
+  const filteredReviews = selectedRating > 0
+    ? sortedReviews.filter((review) => review.rating === selectedRating)
+    : sortedReviews
 
   return (
     <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
@@ -1191,22 +1157,55 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
         {[5, 4, 3, 2, 1].map((star) => {
           const count = summary.breakdown[star as keyof RatingBreakdown] || 0
           return (
-            <div key={star} className="grid grid-cols-[4.5rem_1fr_3rem] items-center gap-3 text-sm text-slate-600">
+            <button
+              key={star}
+              type="button"
+              onClick={() => setSelectedRating((current) => current === star ? 0 : star)}
+              className={`grid w-full grid-cols-[4.5rem_1fr_3rem] items-center gap-3 rounded-xl px-2 py-1.5 text-left text-sm transition active:translate-y-[1px] ${
+                selectedRating === star ? 'bg-[#e5f1f2] text-[#0B2530]' : 'text-slate-600 hover:bg-[#f8fbf8]'
+              }`}
+              aria-pressed={selectedRating === star}
+              aria-label={`Show ${star} star review${star === 1 ? '' : 's'}`}
+            >
               <span>{star} star{star === 1 ? '' : 's'}</span>
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full rounded-full bg-[#0E5A72]" style={{ width: `${(count / maxCount) * 100}%` }} />
               </div>
               <span className="text-right font-semibold text-slate-800">{count}</span>
-            </div>
+            </button>
           )
         })}
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Filter reviews</span>
+        <Button
+          type="button"
+          onClick={() => setSelectedRating(0)}
+          variant={selectedRating === 0 ? 'default' : 'secondary'}
+          className={`rounded-2xl px-3.5 py-2 text-sm font-semibold shadow-none ${selectedRating === 0 ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]' : 'bg-[#f8fbf8] text-slate-700 hover:bg-[#e5f1f2]'}`}
+        >
+          All ratings
+        </Button>
+        {[5, 4, 3, 2, 1].map((star) => (
+          <Button
+            key={star}
+            type="button"
+            onClick={() => setSelectedRating(star)}
+            variant={selectedRating === star ? 'default' : 'secondary'}
+            className={`rounded-2xl px-3.5 py-2 text-sm font-semibold shadow-none ${selectedRating === star ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-[#edf7f6]'}`}
+          >
+            <Star className={`h-4 w-4 ${selectedRating === star ? 'fill-white' : 'fill-[#0E5A72] text-[#0E5A72]'}`} strokeWidth={1.8} />
+            {star}
+          </Button>
+        ))}
+      </div>
+
       <div className="mt-5 space-y-3">
-        {sortedReviews.length === 0 ? (
-          <p className="rounded-2xl bg-[#f8fbf8] p-4 text-sm text-slate-500">No public review comments yet.</p>
+        {filteredReviews.length === 0 ? (
+          <p className="rounded-2xl bg-[#f8fbf8] p-4 text-sm text-slate-500">{selectedRating > 0 ? `No ${selectedRating}-star reviews yet.` : 'No public review comments yet.'}</p>
         ) : (
-          sortedReviews.map((review, index) => {
+          filteredReviews.map((review, index) => {
             const display = getReviewDisplay(review)
             return (
               <div key={`${review.establishment_id}-${review.created_at}-${index}`} className="rounded-2xl bg-[#f8fbf8] p-4">
