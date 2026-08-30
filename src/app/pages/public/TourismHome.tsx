@@ -326,22 +326,7 @@ const applyLocalVisitorRatings = (summaries: Record<string, RatingSummary>, esta
   }, { ...summaries })
 }
 
-const getEstimatedCoordinates = (establishment: Establishment): UserLocation => {
-  const storedLocation = getStoredLocation(establishment)
-  if (storedLocation) return storedLocation
-
-  let hash = 0
-  for (const char of establishment.id || establishment.name) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0
-  }
-
-  const northSouth = ((hash % 900) - 450) / 100000
-  const eastWest = (((hash >> 8) % 900) - 450) / 100000
-  return {
-    latitude: BALAYAN_CENTER.latitude + northSouth,
-    longitude: BALAYAN_CENTER.longitude + eastWest,
-  }
-}
+const getEstimatedCoordinates = (establishment: Establishment): UserLocation | null => getStoredLocation(establishment)
 
 const distanceInKm = (a: UserLocation, b: UserLocation) => {
   const radius = 6371
@@ -612,7 +597,7 @@ export default function TourismHome() {
       .map((est) => {
         const publicCategory = getPublicCategory(est.type) || 'Resort'
         const coords = getEstimatedCoordinates(est)
-        const distance = userLocation ? distanceInKm(userLocation, coords) : distanceInKm(BALAYAN_CENTER, coords)
+        const distance = userLocation && coords ? distanceInKm(userLocation, coords) : null
         const categoryBoost = behavior.categoryClicks[publicCategory] || 0
         const viewedBoost = behavior.viewedIds.includes(est.id) ? 12 : 0
         const searchBoost = behavior.searches.some((term) =>
@@ -622,10 +607,11 @@ export default function TourismHome() {
           : 0
         const featuredBoost = est.featured ? 8 : 0
         const roomBoost = est.total_rooms ? Math.min(est.total_rooms / 8, 8) : 0
-        const score = 100 - distance * 18 + categoryBoost * 7 + viewedBoost + searchBoost + featuredBoost + roomBoost
-        const reason = userLocation
+        const distanceScore = distance === null ? 0 : 100 - distance * 18
+        const score = distanceScore + categoryBoost * 7 + viewedBoost + searchBoost + featuredBoost + roomBoost
+        const reason = userLocation && distance !== null
           ? `${distance.toFixed(1)} km from your location, with a match to your browsing pattern.`
-          : `Matched to your recent views, searches, and Balayan travel interests.`
+          : 'Recommended from your browsing pattern and Balayan travel interests.'
         return { ...est, publicCategory, distance, score, reason }
       })
       .sort((a, b) => b.score - a.score)
@@ -633,9 +619,13 @@ export default function TourismHome() {
   }, [establishments, behavior, userLocation])
 
   const nearestStays = useMemo(() => {
-    const base = userLocation || BALAYAN_CENTER
+    const base: UserLocation = userLocation || BALAYAN_CENTER
     return establishments
-      .map((est) => ({ ...est, distance: distanceInKm(base, getEstimatedCoordinates(est)) }))
+      .map((est) => {
+        const coords = getEstimatedCoordinates(est)
+        return coords ? { ...est, distance: distanceInKm(base, coords) } : null
+      })
+      .filter((est): est is Establishment & { distance: number } => Boolean(est))
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 4)
   }, [establishments, userLocation])
