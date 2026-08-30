@@ -358,8 +358,50 @@ export default function TourismHome() {
   const [reviewComment, setReviewComment] = useState('')
   const [ratingReviews, setRatingReviews] = useState<Record<string, RatingReview[]>>({})
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
+  const [routeDistances, setRouteDistances] = useState<Record<string, number>>({})
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
   const [showSelectedMap, setShowSelectedMap] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!userLocation) {
+      setRouteDistances({})
+      return () => { cancelled = true }
+    }
+
+    const destinations = establishments
+      .map((est) => ({ establishment: est, coords: getStoredLocation(est) }))
+      .filter((item): item is { establishment: Establishment; coords: UserLocation } => Boolean(item.coords))
+
+    if (destinations.length === 0) {
+      setRouteDistances({})
+      return () => { cancelled = true }
+    }
+
+    const coordinates = [
+      `${userLocation.longitude},${userLocation.latitude}`,
+      ...destinations.map(({ coords }) => `${coords.longitude},${coords.latitude}`),
+    ].join(';')
+
+    fetch(`https://router.project-osrm.org/table/v1/driving/${coordinates}?sources=0&annotations=distance`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Routing unavailable')))
+      .then((result: { distances?: Array<Array<number | null>> }) => {
+        if (cancelled) return
+        const distances = result.distances?.[0] || []
+        setRouteDistances(Object.fromEntries(
+          destinations
+            .map(({ establishment }, index) => {
+              const meters = distances[index + 1]
+              return typeof meters === 'number' && Number.isFinite(meters) ? [establishment.id, meters / 1000] : null
+            })
+            .filter((entry): entry is [string, number] => Boolean(entry))
+        ))
+      })
+      .catch(() => { if (!cancelled) setRouteDistances({}) })
+
+    return () => { cancelled = true }
+  }, [establishments, userLocation])
 
   useEffect(() => {
     setBehavior(readBehavior())
@@ -596,8 +638,7 @@ export default function TourismHome() {
     return establishments
       .map((est) => {
         const publicCategory = getPublicCategory(est.type) || 'Resort'
-        const coords = getEstimatedCoordinates(est)
-        const distance = userLocation && coords ? distanceInKm(userLocation, coords) : null
+        const distance = userLocation ? routeDistances[est.id] ?? null : null
         const categoryBoost = behavior.categoryClicks[publicCategory] || 0
         const viewedBoost = behavior.viewedIds.includes(est.id) ? 12 : 0
         const searchBoost = behavior.searches.some((term) =>
@@ -616,7 +657,7 @@ export default function TourismHome() {
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, 3)
-  }, [establishments, behavior, userLocation])
+  }, [establishments, behavior, userLocation, routeDistances])
 
   const nearestStays = useMemo(() => {
     const base: UserLocation = userLocation || BALAYAN_CENTER
