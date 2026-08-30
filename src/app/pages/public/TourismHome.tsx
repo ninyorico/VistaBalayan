@@ -104,6 +104,13 @@ const categories = [
   { id: 'Hotel', name: 'Hotels', icon: Building2 },
 ]
 
+const ratingFilters = [
+  { value: 0, label: 'All ratings' },
+  { value: 5, label: '5 stars' },
+  { value: 4, label: '4+ stars' },
+  { value: 3, label: '3+ stars' },
+]
+
 const emptyBehavior: BehaviorProfile = {
   viewedIds: [],
   categoryClicks: {},
@@ -346,6 +353,7 @@ export default function TourismHome() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState('all')
+  const [selectedRatingFilter, setSelectedRatingFilter] = useState(0)
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null)
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0)
   const [behavior, setBehavior] = useState<BehaviorProfile>(emptyBehavior)
@@ -550,8 +558,14 @@ export default function TourismHome() {
     if (selectedType !== 'all') {
       results = results.filter((e) => getPublicCategory(e.type) === selectedType)
     }
+    if (selectedRatingFilter > 0) {
+      results = results.filter((e) => {
+        const summary = ratingSummaries[e.id]
+        return summary && summary.count > 0 && summary.average >= selectedRatingFilter
+      })
+    }
     setFiltered(results)
-  }, [searchTerm, selectedType, establishments])
+  }, [searchTerm, selectedType, selectedRatingFilter, establishments, ratingSummaries])
 
   useEffect(() => {
     if (!searchTerm.trim()) return
@@ -788,27 +802,51 @@ export default function TourismHome() {
 
       <section className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:px-8">
         <Card className="rounded-[1.75rem] border-[#d7e5e2] bg-white/92 shadow-[0_24px_80px_rgba(14,90,114,0.10)] backdrop-blur-xl">
-          <CardContent className="flex flex-col gap-5 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => {
-                const Icon = cat.icon
-                return (
+          <CardContent className="flex flex-col gap-5 p-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => {
+                  const Icon = cat.icon
+                  return (
+                    <Button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleCategoryChange(cat.id)}
+                      variant={selectedType === cat.id ? 'default' : 'secondary'}
+                      className={`rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-none active:translate-y-[1px] ${
+                        selectedType === cat.id
+                          ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]'
+                          : 'bg-[#e5f1f2] text-[#0B2530] hover:bg-[#d7e5e2]'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" strokeWidth={1.8} />
+                      {cat.name}
+                    </Button>
+                  )
+                })}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f8fbf8] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  <Star className="h-3.5 w-3.5 fill-[#0E5A72] text-[#0E5A72]" strokeWidth={1.8} />
+                  Rating filter
+                </span>
+                {ratingFilters.map((filter) => (
                   <Button
-                    key={cat.id}
+                    key={filter.value}
                     type="button"
-                    onClick={() => handleCategoryChange(cat.id)}
-                    variant={selectedType === cat.id ? 'default' : 'secondary'}
-                    className={`rounded-2xl px-4 py-2.5 text-sm font-semibold shadow-none active:translate-y-[1px] ${
-                      selectedType === cat.id
+                    onClick={() => setSelectedRatingFilter(filter.value)}
+                    variant={selectedRatingFilter === filter.value ? 'default' : 'secondary'}
+                    className={`rounded-2xl px-3.5 py-2 text-sm font-semibold shadow-none active:translate-y-[1px] ${
+                      selectedRatingFilter === filter.value
                         ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]'
-                        : 'bg-[#e5f1f2] text-[#0B2530] hover:bg-[#d7e5e2]'
+                        : 'bg-white text-[#0B2530] ring-1 ring-[#d7e5e2] hover:bg-[#edf7f6]'
                     }`}
                   >
-                    <Icon className="h-4 w-4" strokeWidth={1.8} />
-                    {cat.name}
+                    {filter.value > 0 && <Star className={`h-4 w-4 ${selectedRatingFilter === filter.value ? 'fill-white' : 'fill-[#0E5A72] text-[#0E5A72]'}`} strokeWidth={1.8} />}
+                    {filter.label}
                   </Button>
-                )
-              })}
+                ))}
+              </div>
             </div>
             <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
               <Filter className="h-4 w-4" strokeWidth={1.8} />
