@@ -380,6 +380,7 @@ export default function TourismHome() {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [routeDistances, setRouteDistances] = useState<Record<string, number>>({})
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'blocked'>('idle')
+  const [routeStatus, setRouteStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [showSelectedMap, setShowSelectedMap] = useState(false)
 
   useEffect(() => {
@@ -387,6 +388,7 @@ export default function TourismHome() {
 
     if (!userLocation) {
       setRouteDistances({})
+      setRouteStatus('idle')
       return () => { cancelled = true }
     }
 
@@ -396,31 +398,45 @@ export default function TourismHome() {
 
     if (destinations.length === 0) {
       setRouteDistances({})
+      setRouteStatus('ready')
       return () => { cancelled = true }
     }
 
-    const coordinates = [
-      `${userLocation.longitude},${userLocation.latitude}`,
-      ...destinations.map(({ coords }) => `${coords.longitude},${coords.latitude}`),
-    ].join(';')
+    const controller = new AbortController()
+    const routeTimeout = window.setTimeout(() => controller.abort(), 20000)
 
-    fetch(`https://router.project-osrm.org/table/v1/driving/${coordinates}?sources=0&annotations=distance`)
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Routing unavailable')))
-      .then((result: { distances?: Array<Array<number | null>> }) => {
-        if (cancelled) return
-        const distances = result.distances?.[0] || []
-        setRouteDistances(Object.fromEntries(
-          destinations
-            .map(({ establishment }, index) => {
-              const meters = distances[index + 1]
-              return typeof meters === 'number' && Number.isFinite(meters) ? [establishment.id, meters / 1000] : null
-            })
-            .filter((entry): entry is [string, number] => Boolean(entry))
-        ))
+    setRouteStatus('loading')
+    Promise.allSettled(
+      destinations.map(async ({ establishment, coords }) => {
+        const routeCoordinates = `${userLocation.longitude},${userLocation.latitude};${coords.longitude},${coords.latitude}`
+        const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${routeCoordinates}?overview=false`, { signal: controller.signal })
+        if (!response.ok) return null
+        const result = await response.json() as { routes?: Array<{ distance?: number }> }
+        const meters = result.routes?.[0]?.distance
+        return typeof meters === 'number' && Number.isFinite(meters) ? [establishment.id, meters / 1000] as [string, number] : null
       })
-      .catch(() => { if (!cancelled) setRouteDistances({}) })
+    )
+      .then((results) => {
+        if (cancelled) return
+        const validEntries = results
+          .map((result) => result.status === 'fulfilled' ? result.value : null)
+          .filter((entry): entry is [string, number] => Boolean(entry))
+        setRouteDistances(Object.fromEntries(validEntries))
+        setRouteStatus(validEntries.length > 0 ? 'ready' : 'error')
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRouteDistances({})
+          setRouteStatus('error')
+        }
+      })
+      .finally(() => window.clearTimeout(routeTimeout))
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      controller.abort()
+      window.clearTimeout(routeTimeout)
+    }
   }, [establishments, userLocation])
 
   useEffect(() => {
@@ -645,12 +661,21 @@ export default function TourismHome() {
 
   const requestLocation = () => {
     setLocationStatus('loading')
+    setRouteStatus('idle')
+    setRouteDistances({})
+    const locationTimeout = window.setTimeout(() => {
+      setLocationStatus((current) => current === 'loading' ? 'blocked' : current)
+    }, 30000)
     getMobileFriendlyLocation(
       (location) => {
+        window.clearTimeout(locationTimeout)
         setUserLocation(location)
         setLocationStatus('ready')
       },
-      () => setLocationStatus('blocked')
+      () => {
+        window.clearTimeout(locationTimeout)
+        setLocationStatus('blocked')
+      }
     )
   }
 
@@ -783,9 +808,11 @@ export default function TourismHome() {
                 <Button
                   type="button"
                   onClick={requestLocation}
-                  className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 shadow-none hover:bg-cyan-50 active:translate-y-[1px]"
+                  disabled={locationStatus === 'loading'}
+                  className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 shadow-none hover:bg-cyan-50 active:translate-y-[1px] disabled:cursor-wait disabled:opacity-80"
                 >
-                  {locationStatus === 'loading' ? 'Locating' : locationStatus === 'ready' ? 'Location on' : 'Use location'}
+                  {locationStatus === 'loading' && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} />}
+                  {locationStatus === 'loading' ? 'Locating...' : locationStatus === 'ready' ? 'Location on' : 'Use location'}
                 </Button>
               </div>
               <div className="space-y-3">
@@ -917,9 +944,15 @@ export default function TourismHome() {
                 <p className="text-sm font-medium text-slate-500">Nearest picks</p>
                 <h2 className="text-xl font-semibold tracking-[-0.025em] text-slate-950">{userLocation ? 'Close to you' : 'Nearby stays'}</h2>
                 <p className="mt-1 max-w-56 text-xs leading-5 text-slate-500">
-                  {userLocation
-                    ? 'Distances use routed road estimates when available.'
-                    : 'Tap Improve with my location for distance-based results.'}
+                  {locationStatus === 'loading'
+                    ? 'Waiting for your phone GPS permission. This will stop if it takes too long.'
+                    : userLocation && routeStatus === 'loading'
+                      ? 'GPS found. Calculating routed road distances...'
+                      : userLocation && routeStatus === 'error'
+                        ? 'GPS found, but road distances are temporarily unavailable.'
+                        : userLocation
+                          ? 'Distances use routed road estimates when available.'
+                          : 'Tap Improve with my location for distance-based results.'}
                 </p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#e5f1f2] text-[#0E5A72]">
@@ -927,6 +960,22 @@ export default function TourismHome() {
               </div>
             </div>
             <div className="space-y-3">
+              {userLocation && routeStatus === 'loading' && (
+                <div className="flex items-center gap-3 rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4 text-sm font-medium text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#0E5A72]" strokeWidth={1.8} />
+                  Calculating road distances...
+                </div>
+              )}
+              {userLocation && routeStatus === 'error' && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-800">
+                  Your GPS location was found, but the route-distance service did not respond. Tap retry, or open directions from any listing.
+                </div>
+              )}
+              {userLocation && routeStatus === 'ready' && nearestStays.length === 0 && (
+                <div className="rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4 text-xs leading-5 text-slate-600">
+                  GPS is on, but road distances are not available for these pins right now. You can still open directions from any listing.
+                </div>
+              )}
               {nearestStays.map((est) => (
                 <button key={est.id} onClick={() => openDetails(est)} className="w-full rounded-2xl border border-[#d7e5e2]/70 bg-[#f8fbf8] p-4 text-left transition hover:bg-[#e5f1f2] active:translate-y-[1px]">
                   <div className="flex items-start justify-between gap-3">
@@ -941,14 +990,20 @@ export default function TourismHome() {
                 </button>
               ))}
             </div>
-            {locationStatus !== 'ready' && (
+            {(locationStatus !== 'ready' || routeStatus === 'error' || (userLocation && routeStatus === 'ready' && nearestStays.length === 0)) && (
               <>
-                <Button onClick={requestLocation} variant="outline" className="mt-5 w-full rounded-2xl border-slate-200 py-3 text-sm font-semibold text-slate-700 shadow-none hover:bg-[#f8fbf8]">
-                  Improve with my location
+                <Button
+                  onClick={requestLocation}
+                  disabled={locationStatus === 'loading'}
+                  variant="outline"
+                  className="mt-5 w-full rounded-2xl border-slate-200 py-3 text-sm font-semibold text-slate-700 shadow-none hover:bg-[#f8fbf8] disabled:cursor-wait disabled:opacity-80"
+                >
+                  {locationStatus === 'loading' && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} />}
+                  {locationStatus === 'loading' ? 'Getting phone location...' : routeStatus === 'error' ? 'Retry GPS distance' : 'Improve with my location'}
                 </Button>
                 {locationStatus === 'blocked' && (
                   <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-                    Phone location is blocked or unavailable. Turn on GPS/location services, allow Location for this browser, then tap again. Directions still work using the establishment pin.
+                    Phone location did not respond or is blocked. Turn on Location Services, allow Location for Safari/Chrome and this website, then tap again. Directions still work using the establishment pin.
                   </p>
                 )}
               </>
