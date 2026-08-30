@@ -1144,23 +1144,23 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
 
   return (
     <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-semibold text-slate-950">Reviews and rating count</h3>
-          <p className="mt-1 text-sm text-slate-600">{summary.count} total review{summary.count === 1 ? '' : 's'} · {summary.commentCount} with comment{summary.commentCount === 1 ? '' : 's'}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold leading-6 text-slate-950 sm:text-base">Reviews & ratings</h3>
+          <p className="mt-1 text-sm leading-5 text-slate-600">{summary.count} total review{summary.count === 1 ? '' : 's'} · {summary.commentCount} with comment{summary.commentCount === 1 ? '' : 's'}</p>
           {summary.localOnly && <p className="mt-1 text-xs font-medium text-amber-700">Saved on this device only until database setup is completed.</p>}
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <MessageSquare className="h-5 w-5 text-[#0E5A72]" strokeWidth={1.8} />
+        <div className="flex shrink-0 items-center gap-2">
           {selectedRating > 0 && (
             <button
               type="button"
               onClick={() => setSelectedRating(0)}
-              className="rounded-full bg-[#e5f1f2] px-3 py-1 text-xs font-semibold text-[#0E5A72] transition hover:bg-[#d7e5e2]"
+              className="whitespace-nowrap rounded-full bg-[#e5f1f2] px-3 py-1.5 text-xs font-semibold text-[#0E5A72] transition hover:bg-[#d7e5e2]"
             >
-              Clear {selectedRating}-star filter
+              Clear filter
             </button>
           )}
+          <MessageSquare className="h-5 w-5 shrink-0 text-[#0E5A72]" strokeWidth={1.8} />
         </div>
       </div>
 
