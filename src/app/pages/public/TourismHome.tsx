@@ -1150,10 +1150,21 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
           <p className="mt-1 text-sm text-slate-600">{summary.count} total review{summary.count === 1 ? '' : 's'} · {summary.commentCount} with comment{summary.commentCount === 1 ? '' : 's'}</p>
           {summary.localOnly && <p className="mt-1 text-xs font-medium text-amber-700">Saved on this device only until database setup is completed.</p>}
         </div>
-        <MessageSquare className="h-5 w-5 text-[#0E5A72]" strokeWidth={1.8} />
+        <div className="flex flex-col items-end gap-2">
+          <MessageSquare className="h-5 w-5 text-[#0E5A72]" strokeWidth={1.8} />
+          {selectedRating > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedRating(0)}
+              className="rounded-full bg-[#e5f1f2] px-3 py-1 text-xs font-semibold text-[#0E5A72] transition hover:bg-[#d7e5e2]"
+            >
+              Clear {selectedRating}-star filter
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2" aria-label="Filter reviews by star rating">
         {[5, 4, 3, 2, 1].map((star) => {
           const count = summary.breakdown[star as keyof RatingBreakdown] || 0
           return (
@@ -1177,29 +1188,9 @@ function ReviewSummary({ summary, reviews }: { summary: RatingSummary; reviews: 
         })}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Filter reviews</span>
-        <Button
-          type="button"
-          onClick={() => setSelectedRating(0)}
-          variant={selectedRating === 0 ? 'default' : 'secondary'}
-          className={`rounded-2xl px-3.5 py-2 text-sm font-semibold shadow-none ${selectedRating === 0 ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]' : 'bg-[#f8fbf8] text-slate-700 hover:bg-[#e5f1f2]'}`}
-        >
-          All ratings
-        </Button>
-        {[5, 4, 3, 2, 1].map((star) => (
-          <Button
-            key={star}
-            type="button"
-            onClick={() => setSelectedRating(star)}
-            variant={selectedRating === star ? 'default' : 'secondary'}
-            className={`rounded-2xl px-3.5 py-2 text-sm font-semibold shadow-none ${selectedRating === star ? 'bg-[#0E5A72] text-white hover:bg-[#073B4C]' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-[#edf7f6]'}`}
-          >
-            <Star className={`h-4 w-4 ${selectedRating === star ? 'fill-white' : 'fill-[#0E5A72] text-[#0E5A72]'}`} strokeWidth={1.8} />
-            {star}
-          </Button>
-        ))}
-      </div>
+      <p className="mt-3 text-xs text-slate-500">
+        {selectedRating > 0 ? `Showing ${selectedRating}-star reviews only.` : 'Tap a rating row to filter reviews.'}
+      </p>
 
       <div className="mt-5 space-y-3">
         {filteredReviews.length === 0 ? (
