@@ -120,6 +120,32 @@ const getCategoryIcon = (type: string) => {
   return getPublicCategory(type) === 'Hotel' ? Building2 : Hotel
 }
 
+const PUBLIC_LISTING_REAL_PINS: Record<string, UserLocation> = {
+  'Altina Beach House Resort': { latitude: 13.9345996, longitude: 120.7362971 },
+  'Aurora Resort': { latitude: 13.9455882, longitude: 120.711106 },
+  'Espineli Inn and Pavilion': { latitude: 13.9407521, longitude: 120.7280871 },
+  Henaida: { latitude: 13.9282729, longitude: 120.716604 },
+  'Hotel Casa Ilustre': { latitude: 13.9504005, longitude: 120.7299843 },
+  'Kalika Balayan': { latitude: 13.9511297, longitude: 120.6834398 },
+  'King & Queen Resorts': { latitude: 13.9475094, longitude: 120.7091793 },
+  'La Georgina Resorts': { latitude: 13.9444017, longitude: 120.7599171 },
+  'La Jamayca Resort': { latitude: 13.9231998, longitude: 120.7076709 },
+  'La Piscina Resort': { latitude: 13.9421314, longitude: 120.7397857 },
+  'Magsino Chokdee Farm': { latitude: 13.9648288, longitude: 120.7624942 },
+  'Malabanan Swimming Pool': { latitude: 13.9425817, longitude: 120.7362508 },
+  'My Place Resort': { latitude: 13.9465681, longitude: 120.7501423 },
+  'Palayan Inn': { latitude: 13.94481, longitude: 120.7105529 },
+  'Soggiorno Lorenzana': { latitude: 13.9517933, longitude: 120.6822078 },
+  'Soler Sea Resort': { latitude: 13.9299726, longitude: 120.7625559 },
+  'Souq Salamanca': { latitude: 13.9454597, longitude: 120.6665522 },
+  'Summer8 Resort': { latitude: 13.9447157, longitude: 120.7397152 },
+  "Valentino's Hotel": { latitude: 13.9607313, longitude: 120.726657 },
+  'Viktoria Garden Resort': { latitude: 13.9330076, longitude: 120.7221941 },
+  'Villa Beadoy Resorts and Pavilion': { latitude: 13.9441293, longitude: 120.7403224 },
+  'Villa Casa Mia': { latitude: 13.974437, longitude: 120.7632905 },
+  'Villa Scarlet Garden Resort': { latitude: 13.94959, longitude: 120.6992248 },
+}
+
 const readLocationPinFromAmenities = (amenities = '') => {
   const match = amenities.match(/\[LOCATION_PIN:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)\]/)
   if (!match) return null
@@ -134,7 +160,9 @@ const getStoredLocation = (establishment: Establishment) => {
   if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
     return { latitude, longitude }
   }
-  return readLocationPinFromAmenities(establishment.amenities || '')
+  const amenitiesPin = readLocationPinFromAmenities(establishment.amenities || '')
+  if (amenitiesPin) return amenitiesPin
+  return PUBLIC_LISTING_REAL_PINS[establishment.name] || null
 }
 
 const hasExactLocation = (establishment: Establishment) => Boolean(getStoredLocation(establishment))
@@ -1111,7 +1139,9 @@ export default function TourismHome() {
                   <div>
                     <h3 className="font-semibold text-slate-950">Location & Directions</h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      Find the establishment or get directions.
+                      {hasExactLocation(selectedEstablishment)
+                        ? 'View the exact saved pin or get driving directions.'
+                        : 'Exact map pin is not available yet for this listing.'}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1127,10 +1157,11 @@ export default function TourismHome() {
                       type="button"
                       onClick={() => setShowSelectedMap(true)}
                       variant="outline"
-                      className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6]"
+                      disabled={!hasExactLocation(selectedEstablishment)}
+                      className="rounded-2xl border-[#d7e5e2] bg-white px-4 py-2.5 text-sm font-semibold text-[#0E5A72] shadow-none hover:bg-[#edf7f6] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <MapPin className="h-4 w-4" strokeWidth={1.8} />
-                      View map
+                      {hasExactLocation(selectedEstablishment) ? 'View map' : 'No exact pin'}
                     </Button>
                   </div>
                 </div>
