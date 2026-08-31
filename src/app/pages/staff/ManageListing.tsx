@@ -598,8 +598,8 @@ export default function ManageListing() {
                   </button>
                 </div>
                 <div className="mt-4 space-y-3">
-                  <div className="relative overflow-hidden rounded-xl border border-teal-100 bg-white">
-                    <div ref={mapContainerRef} className="h-72 w-full" />
+                  <div className="manage-listing-map relative isolate z-0 overflow-hidden rounded-xl border border-teal-100 bg-white">
+                    <div ref={mapContainerRef} className="h-64 w-full sm:h-72" />
                     {mapStatus === 'searching' && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white/75 text-sm font-medium text-[#0E5A72]">
                         Searching Geoapify...

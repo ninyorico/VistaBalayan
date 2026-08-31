@@ -154,6 +154,23 @@
   .tourism-button:active {
     transform: translateY(1px) scale(0.99);
   }
+
+  .manage-listing-map .leaflet-pane,
+  .manage-listing-map .leaflet-top,
+  .manage-listing-map .leaflet-bottom {
+    z-index: 1;
+  }
+
+  .manage-listing-map .leaflet-control-container {
+    position: relative;
+    z-index: 2;
+  }
+
+  .manage-listing-map .leaflet-marker-pane,
+  .manage-listing-map .leaflet-tooltip-pane,
+  .manage-listing-map .leaflet-popup-pane {
+    z-index: 3;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

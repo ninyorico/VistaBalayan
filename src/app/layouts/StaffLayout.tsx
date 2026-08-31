@@ -128,7 +128,7 @@ export default function StaffLayout() {
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Navbar */}
-        <header className="sticky top-0 z-40 border-b border-[#d7e5e2] bg-white/78 shadow-[0_10px_40px_rgba(7,59,76,0.06)] backdrop-blur-xl">
+        <header className="sticky top-0 z-[80] border-b border-[#d7e5e2] bg-white/90 shadow-[0_10px_40px_rgba(7,59,76,0.06)] backdrop-blur-xl">
           <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
