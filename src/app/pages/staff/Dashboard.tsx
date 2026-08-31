@@ -200,9 +200,9 @@ export default function StaffDashboard() {
         )}
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {submissionStats.map((stat) => (
-          <MetricCard key={stat.title} label={stat.title} value={stat.value} icon={stat.icon} tone={stat.tone} />
+          <MetricCard key={stat.title} label={stat.title} value={stat.value} icon={stat.icon} tone={stat.tone} compact />
         ))}
       </section>
 
