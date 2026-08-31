@@ -82,7 +82,7 @@ export default function StaffLayout() {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-[45] lg:hidden"
+          className="fixed inset-0 z-[85] bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -90,7 +90,7 @@ export default function StaffLayout() {
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 lg:top-0 h-full lg:h-full border-r border-[#d7e5e2] bg-white shadow-[0_24px_80px_rgba(7,59,76,0.18)] transition-all duration-300 lg:bg-white/92 lg:backdrop-blur-xl ${
-          sidebarOpen ? "w-[82vw] max-w-80 z-50" : "w-0 lg:w-64 z-40"
+          sidebarOpen ? "w-[82vw] max-w-80 z-[90]" : "w-0 lg:w-64 z-40"
         } overflow-hidden`}
       >
         <div className="border-b border-[#d7e5e2] bg-[linear-gradient(135deg,#ffffff,#f6f8f7_55%,#eef4f2)] p-6">
