@@ -1,5 +1,5 @@
-import { Fragment, useState, useEffect, useMemo } from "react";
-import { ChevronDown, ChevronRight, Download, Search } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ChevronRight, Download, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
 import { datestampedFilename, downloadCsv } from "../../../lib/exportCsv";
@@ -22,7 +22,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
   const [searchTerm, setSearchTerm] = useState("");
   const [filterResidence, setFilterResidence] = useState("all");
   const [specificMonth, setSpecificMonth] = useState("");
-  const [expandedEstablishments, setExpandedEstablishments] = useState<Set<string>>(new Set());
+  const [selectedEstablishment, setSelectedEstablishment] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVisitorRecords();
@@ -125,17 +125,10 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
       .sort((a, b) => a.establishment.localeCompare(b.establishment));
   }, [filteredRecords]);
 
-  const toggleEstablishment = (establishment: string) => {
-    setExpandedEstablishments((current) => {
-      const next = new Set(current);
-      if (next.has(establishment)) {
-        next.delete(establishment);
-      } else {
-        next.add(establishment);
-      }
-      return next;
-    });
-  };
+  const selectedGroup = useMemo(
+    () => groupedRecords.find((group) => group.establishment === selectedEstablishment) || null,
+    [groupedRecords, selectedEstablishment]
+  );
 
   const monthLabel = specificMonth
     ? new Date(`${specificMonth}-01T00:00:00`).toLocaleString("default", { month: "long", year: "numeric" })
@@ -260,7 +253,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
           <h2 className="text-base font-semibold text-gray-900 sm:text-lg">Visitor records by establishment</h2>
-          <p className="mt-1 text-xs leading-5 text-gray-600 sm:text-sm">Click an establishment to expand and view the full {monthLabel} record.</p>
+          <p className="mt-1 text-xs leading-5 text-gray-600 sm:text-sm">Click an establishment to open the full {monthLabel} record in a modal.</p>
         </div>
         <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[700px] sm:min-w-[860px]">
@@ -277,14 +270,11 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
             </thead>
             <tbody className="divide-y divide-gray-200">
               {groupedRecords.length > 0 ? (
-                groupedRecords.map((group) => {
-                  const isExpanded = expandedEstablishments.has(group.establishment);
-                  return (
-                    <Fragment key={group.establishment}>
-                      <tr className="cursor-pointer hover:bg-gray-50" onClick={() => toggleEstablishment(group.establishment)}>
+                groupedRecords.map((group) => (
+                      <tr key={group.establishment} className="cursor-pointer hover:bg-gray-50" onClick={() => setSelectedEstablishment(group.establishment)}>
                         <td className="px-3 py-3 text-xs font-medium text-gray-900 sm:px-6 sm:py-4 sm:text-sm">
                           <div className="flex items-center gap-1.5 sm:gap-2">
-                            {isExpanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-500 sm:h-4 sm:w-4" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-500 sm:h-4 sm:w-4" />}
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-500 sm:h-4 sm:w-4" />
                             {group.establishment}
                           </div>
                         </td>
@@ -295,43 +285,7 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
                         <td className="max-w-[9rem] px-3 py-3 text-xs text-gray-600 sm:max-w-none sm:px-6 sm:py-4 sm:text-sm">{Array.from(group.residenceTypes).join(", ")}</td>
                         <td className="max-w-[11rem] px-3 py-3 text-xs text-gray-600 sm:max-w-none sm:px-6 sm:py-4 sm:text-sm">{Array.from(group.locations).join(", ")}</td>
                       </tr>
-                      {isExpanded && (
-                        <tr key={`${group.establishment}-details`} className="bg-slate-50/80">
-                          <td colSpan={7} className="px-2 py-3 sm:px-6 sm:py-4">
-                            <div className="max-h-72 overflow-auto overscroll-contain rounded-lg border border-gray-200 bg-white sm:max-h-80">
-                              <table className="w-full min-w-[640px] sm:min-w-[760px]">
-                                <thead className="sticky top-0 z-10 bg-white border-b border-gray-200">
-                                  <tr>
-                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Date</th>
-                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Guest/Group</th>
-                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Male</th>
-                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Female</th>
-                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Total</th>
-                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Place of Residence</th>
-                                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Location</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                  {group.records.map((record) => (
-                                    <tr key={record.id}>
-                                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.date}</td>
-                                      <td className="px-2.5 py-2 text-xs text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.guestName}</td>
-                                      <td className="px-2.5 py-2 text-xs font-medium text-blue-600 sm:px-4 sm:py-3 sm:text-sm">{record.male}</td>
-                                      <td className="px-2.5 py-2 text-xs font-medium text-purple-600 sm:px-4 sm:py-3 sm:text-sm">{record.female}</td>
-                                      <td className="px-2.5 py-2 text-xs font-semibold text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.total}</td>
-                                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.residenceType}</td>
-                                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.location}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })
+                ))
               ) : (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-xs text-gray-500 sm:px-6 sm:py-8 sm:text-sm">
@@ -343,6 +297,72 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
           </table>
         </div>
       </div>
+
+      {selectedGroup && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setSelectedEstablishment(null)}>
+          <div className="max-h-[90dvh] w-full overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-5xl sm:rounded-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-gray-200 bg-gray-50 px-4 py-4 sm:px-6">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Visitor records</p>
+                <h3 className="mt-1 truncate text-lg font-semibold text-gray-900 sm:text-xl">{selectedGroup.establishment}</h3>
+                <p className="mt-1 text-xs text-gray-600 sm:text-sm">{selectedGroup.records.length} record(s) for {monthLabel}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEstablishment(null)}
+                className="rounded-full p-2 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
+                aria-label="Close visitor records modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 border-b border-gray-100 px-4 py-3 text-center sm:px-6">
+              <div className="rounded-lg bg-blue-50 px-3 py-2">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-blue-700 sm:text-xs">Male</p>
+                <p className="text-lg font-bold text-blue-700 sm:text-2xl">{selectedGroup.male}</p>
+              </div>
+              <div className="rounded-lg bg-purple-50 px-3 py-2">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-purple-700 sm:text-xs">Female</p>
+                <p className="text-lg font-bold text-purple-700 sm:text-2xl">{selectedGroup.female}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-3 py-2">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-700 sm:text-xs">Total</p>
+                <p className="text-lg font-bold text-slate-900 sm:text-2xl">{selectedGroup.total}</p>
+              </div>
+            </div>
+
+            <div className="max-h-[58dvh] overflow-auto overscroll-contain p-4 sm:max-h-[60vh] sm:p-6">
+              <table className="w-full min-w-[640px] sm:min-w-[760px]">
+                <thead className="sticky top-0 z-10 border-b border-gray-200 bg-white">
+                  <tr>
+                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Date</th>
+                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Guest/Group</th>
+                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Male</th>
+                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Female</th>
+                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Total</th>
+                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Place of Residence</th>
+                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Location</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedGroup.records.map((record) => (
+                    <tr key={record.id}>
+                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.date}</td>
+                      <td className="px-2.5 py-2 text-xs text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.guestName}</td>
+                      <td className="px-2.5 py-2 text-xs font-medium text-blue-600 sm:px-4 sm:py-3 sm:text-sm">{record.male}</td>
+                      <td className="px-2.5 py-2 text-xs font-medium text-purple-600 sm:px-4 sm:py-3 sm:text-sm">{record.female}</td>
+                      <td className="px-2.5 py-2 text-xs font-semibold text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.total}</td>
+                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.residenceType}</td>
+                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.location}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
