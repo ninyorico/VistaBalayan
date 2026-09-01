@@ -332,33 +332,78 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
               </div>
             </div>
 
-            <div className="max-h-[58dvh] overflow-auto overscroll-contain p-4 sm:max-h-[60vh] sm:p-6">
-              <table className="w-full min-w-[640px] sm:min-w-[760px]">
-                <thead className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-                  <tr>
-                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Date</th>
-                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Guest/Group</th>
-                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Male</th>
-                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Female</th>
-                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Total</th>
-                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Place of Residence</th>
-                    <th className="px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-600 sm:px-4 sm:text-xs">Location</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {selectedGroup.records.map((record) => (
-                    <tr key={record.id}>
-                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.date}</td>
-                      <td className="px-2.5 py-2 text-xs text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.guestName}</td>
-                      <td className="px-2.5 py-2 text-xs font-medium text-blue-600 sm:px-4 sm:py-3 sm:text-sm">{record.male}</td>
-                      <td className="px-2.5 py-2 text-xs font-medium text-purple-600 sm:px-4 sm:py-3 sm:text-sm">{record.female}</td>
-                      <td className="px-2.5 py-2 text-xs font-semibold text-gray-900 sm:px-4 sm:py-3 sm:text-sm">{record.total}</td>
-                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.residenceType}</td>
-                      <td className="px-2.5 py-2 text-xs text-gray-600 sm:px-4 sm:py-3 sm:text-sm">{record.location}</td>
+            <div className="max-h-[54dvh] overflow-y-auto overscroll-contain px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:max-h-[60vh] sm:p-6">
+              <div className="space-y-3 sm:hidden">
+                {selectedGroup.records.map((record) => (
+                  <div key={record.id} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Date</p>
+                        <p className="mt-0.5 text-sm font-semibold text-gray-900">{record.date}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-3 py-1.5 text-right">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Total</p>
+                        <p className="text-lg font-bold text-slate-900">{record.total}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-lg bg-blue-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-blue-700">Male</p>
+                        <p className="font-bold text-blue-700">{record.male}</p>
+                      </div>
+                      <div className="rounded-lg bg-purple-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-purple-700">Female</p>
+                        <p className="font-bold text-purple-700">{record.female}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2 text-xs text-gray-600">
+                      <div className="flex justify-between gap-3">
+                        <span className="font-medium text-gray-500">Guest/Group</span>
+                        <span className="text-right font-semibold text-gray-900">{record.guestName}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="font-medium text-gray-500">Residence</span>
+                        <span className="text-right text-gray-900">{record.residenceType}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="font-medium text-gray-500">Location</span>
+                        <span className="max-w-[12rem] text-right text-gray-900">{record.location}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full min-w-[760px]">
+                  <thead className="sticky top-0 z-10 border-b border-gray-200 bg-white">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Guest/Group</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Male</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Female</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Total</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Place of Residence</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">Location</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {selectedGroup.records.map((record) => (
+                      <tr key={record.id}>
+                        <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{record.guestName}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-blue-600">{record.male}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-purple-600">{record.female}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.total}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{record.residenceType}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{record.location}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
