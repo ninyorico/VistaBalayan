@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, type TouchEvent } from "react";
 import { ChevronRight, Download, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../../../lib/supabase";
@@ -23,6 +23,34 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
   const [filterResidence, setFilterResidence] = useState("all");
   const [specificMonth, setSpecificMonth] = useState("");
   const [selectedEstablishment, setSelectedEstablishment] = useState<string | null>(null);
+  const tableTouchRef = useRef<{ x: number; y: number; lastX: number; axis: "x" | "y" | null }>({
+    x: 0,
+    y: 0,
+    lastX: 0,
+    axis: null,
+  });
+
+  const handleTableTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    tableTouchRef.current = { x: touch.clientX, y: touch.clientY, lastX: touch.clientX, axis: null };
+  };
+
+  const handleTableTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    const state = tableTouchRef.current;
+    const deltaX = touch.clientX - state.x;
+    const deltaY = touch.clientY - state.y;
+
+    if (!state.axis && Math.max(Math.abs(deltaX), Math.abs(deltaY)) > 8) {
+      state.axis = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+    }
+
+    if (state.axis === "x") {
+      event.preventDefault();
+      event.currentTarget.scrollLeft += state.lastX - touch.clientX;
+      state.lastX = touch.clientX;
+    }
+  };
 
   useEffect(() => {
     fetchVisitorRecords();
@@ -336,7 +364,11 @@ export default function VisitorMonitoring({ embedded = false }: { embedded?: boo
               <div className="px-4 py-2 text-[11px] font-medium text-gray-500 sm:hidden">
                 Swipe sideways to see all table columns.
               </div>
-              <div className="overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] sm:touch-auto">
+              <div
+                className="overflow-x-auto overscroll-x-contain touch-auto [-webkit-overflow-scrolling:touch]"
+                onTouchStart={handleTableTouchStart}
+                onTouchMove={handleTableTouchMove}
+              >
                 <table className="w-full min-w-[620px] table-fixed sm:min-w-[760px]">
                   <colgroup>
                     <col className="w-[20%]" />
