@@ -1,9 +1,23 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { supabase } from '../lib/supabase'
 import { createAuditLog, confidenceTone } from '../lib/governance'
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '')
 const MODEL_NAME = 'models/gemini-2.5-flash'
+
+const requestAi = async (operation: string, payload: Record<string, any>) => {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+  if (sessionError || !sessionData.session) throw new Error('Authentication required')
+
+  const response = await fetch('/api/ai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${sessionData.session.access_token}`,
+    },
+    body: JSON.stringify({ operation, payload }),
+  })
+  if (!response.ok) throw new Error('AI service is temporarily unavailable')
+  return response.json()
+}
 
 type Insight = {
   title: string
@@ -101,36 +115,7 @@ export const geminiService = {
 
   async generateAndSaveInsights(analyticsData: any) {
     try {
-      const model = genAI.getGenerativeModel({ model: MODEL_NAME })
-      const prompt = `
-        You are a tourism data analyst for Balayan, Batangas.
-
-        Based on this tourism data, provide INSIGHTS AND RECOMMENDATIONS:
-        Total Visitors: ${analyticsData.totalVisitors || 0}
-        Average Occupancy: ${analyticsData.avgOccupancy || 0}%
-        Monthly Trends: ${JSON.stringify(analyticsData.monthlyTrends || {})}
-
-        Return ONLY valid JSON in this exact format:
-        {
-          "insights": [
-            {
-              "title": "max 6 words",
-              "description": "one sentence, max 18 words, include the key evidence",
-              "impact": "high|medium|low",
-              "category": "Seasonal|Operations|Marketing|Infrastructure",
-              "recommended_action": "one action sentence, max 14 words",
-              "confidence_score": 0.0
-            }
-          ]
-        }
-
-        Provide exactly 4 recommendations. Keep every field brief but meaningful. No paragraphs. Avoid generic advice.
-      `
-
-      const result = await model.generateContent(prompt)
-      const responseText = await result.response.text()
-      const parsed = extractJsonObject(responseText)
-      const insights = normalizeInsights(parsed?.insights || [])
+      const { insights } = await requestAi('insights', analyticsData)
 
       for (const insight of insights) {
         const payload = {
@@ -182,36 +167,7 @@ export const geminiService = {
 
   async generateAndSaveInsightsForEstablishment(establishmentData: any) {
     try {
-      const model = genAI.getGenerativeModel({ model: MODEL_NAME })
-      const prompt = `
-        You are a tourism data analyst for ${establishmentData.establishmentName}.
-
-        Based on this establishment tourism data, provide INSIGHTS AND RECOMMENDATIONS:
-        Total Visitors: ${establishmentData.totalVisitors || 0}
-        Average Occupancy: ${establishmentData.avgOccupancy || 0}%
-        Monthly Trends: ${JSON.stringify(establishmentData.monthlyTrends || {})}
-
-        Return ONLY valid JSON in this exact format:
-        {
-          "insights": [
-            {
-              "title": "max 6 words",
-              "description": "one sentence, max 18 words, include the key evidence",
-              "impact": "high|medium|low",
-              "category": "Operations|Marketing|Revenue",
-              "recommended_action": "one action sentence, max 14 words",
-              "confidence_score": 0.0
-            }
-          ]
-        }
-
-        Provide exactly 3 recommendations. Keep every field brief but meaningful. No paragraphs. Avoid generic advice.
-      `
-
-      const result = await model.generateContent(prompt)
-      const responseText = await result.response.text()
-      const parsed = extractJsonObject(responseText)
-      const insights = normalizeInsights(parsed?.insights || [])
+      const { insights } = await requestAi('establishmentInsights', establishmentData)
 
       for (const insight of insights) {
         const payload = {
@@ -249,33 +205,8 @@ export const geminiService = {
     if (!visitorData || visitorData.length === 0) return []
 
     try {
-      const model = genAI.getGenerativeModel({ model: MODEL_NAME })
       const inputSnapshot = visitorData.slice(0, 50)
-      const prompt = `
-        You are a tourism data analyst for Balayan, Batangas.
-
-        Analyze this visitor data and identify ANOMALIES:
-        ${JSON.stringify(inputSnapshot, null, 2)}
-
-        Return ONLY valid JSON in this exact format:
-        {
-          "anomalies": [
-            {
-              "type": "Unusual Drop",
-              "severity": "high|medium|low",
-              "description": "describe the anomaly",
-              "recommendation": "what to do about it",
-              "establishment": "name of affected establishment",
-              "confidence_score": 0.0
-            }
-          ]
-        }
-      `
-
-      const result = await model.generateContent(prompt)
-      const responseText = await result.response.text()
-      const parsed = extractJsonObject(responseText)
-      const anomalies = normalizeAnomalies(parsed?.anomalies || [])
+      const { anomalies } = await requestAi('anomalies', { visitorData: inputSnapshot })
 
       for (const anomaly of anomalies) {
         let establishmentId = null
@@ -329,32 +260,8 @@ export const geminiService = {
     if (!visitorData || visitorData.length === 0) return []
 
     try {
-      const model = genAI.getGenerativeModel({ model: MODEL_NAME })
       const inputSnapshot = visitorData.slice(0, 30)
-      const prompt = `
-        You are a tourism data analyst for ${establishmentName}.
-
-        Analyze this visitor data for this specific establishment and identify ANOMALIES:
-        ${JSON.stringify(inputSnapshot, null, 2)}
-
-        Return ONLY valid JSON in this exact format:
-        {
-          "anomalies": [
-            {
-              "type": "Unusual Drop",
-              "severity": "high|medium|low",
-              "description": "describe the anomaly specific to this establishment",
-              "recommendation": "what to do about it",
-              "confidence_score": 0.0
-            }
-          ]
-        }
-      `
-
-      const result = await model.generateContent(prompt)
-      const responseText = await result.response.text()
-      const parsed = extractJsonObject(responseText)
-      const anomalies = normalizeAnomalies(parsed?.anomalies || [])
+      const { anomalies } = await requestAi('establishmentAnomalies', { visitorData: inputSnapshot, establishmentId, establishmentName })
 
       for (const anomaly of anomalies) {
         await safeInsert('ai_anomalies_cache', {
